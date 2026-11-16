@@ -17,6 +17,9 @@
 #   - as DREAMS_RUN_ROLE=agent: run-dreams.sh refuses to start while anything else runs (exit 75)
 #     and a user launch stops this run (the user always wins).
 # Frame capture is on (500 ms) so the agent can see the run: tools/capture_sheet.py.
+# Saves: agent runs use their own guest user dir (DREAMS_USER_DIR, default work/agent-user, seeded
+# once from a copy of the user's work/user) and DREAMS_SKIP_INTRO=1 (main menu in ~23 s). The game
+# writes its SYSTEM save while running, so agents must never run against the user's work/user.
 # Limit: it's still the same physical GPU. A GPU hang can still reset the GPU for everyone.
 set -euo pipefail
 ROOT=$(cd -- "$(dirname -- "$0")/.." && pwd)
@@ -60,6 +63,7 @@ timeout -s KILL "$SECONDS_MAX" "${SCOPE[@]}" \
     XDG_RUNTIME_DIR="$RUN_DIR" WAYLAND_DISPLAY="$SOCKET" SDL_VIDEO_DRIVER=wayland \
     SDL_AUDIO_DRIVER=dummy BB_AUDIO=none DREAMS_RUN_ROLE=agent BB_GAME_PROFILE=none \
     DREAMS_CAPTURE="${DREAMS_CAPTURE:-500}" DREAMS_TIMEOUT="${DREAMS_TIMEOUT:-0}" \
+    DREAMS_USER_DIR="${DREAMS_USER_DIR:-$WORK/agent-user}" DREAMS_SKIP_INTRO="${DREAMS_SKIP_INTRO:-1}" \
     "${SANDBOX[@]}" "${DREAMS_PORT_DIR:-$ROOT/port}/run-dreams.sh" "$@"
 status=$?
 set -e
