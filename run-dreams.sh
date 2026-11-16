@@ -18,13 +18,25 @@ RUN_ID=$(date +%Y%m%d-%H%M%S)
 # then the user's run hung the GPU and the amdgpu full reset took the desktop down). The lock is
 # held on fd 9, which survives the exec below, so it lasts exactly as long as dreams-probe.
 # DREAMS_ALLOW_PARALLEL=1 skips it (don't, unless you know why).
+# Roles (DREAMS_RUN_ROLE): "user" (default: the person at the PC) or "agent" (set by
+# tools/agent-run.sh: sandboxed, headless). The user always wins: a user launch stops a running
+# agent run and takes the GPU; an agent launch while anything runs exits 75 (retry later).
+ROLE=${DREAMS_RUN_ROLE:-user}
 if [[ ${DREAMS_ALLOW_PARALLEL:-0} != 1 ]]; then
     exec 9>"$WORK/.dreams-run.lock"
     if ! flock -n 9; then
-        echo "run-dreams.sh: another Dreams run is active ($(cat "$WORK/.dreams-run.who" 2>/dev/null || echo unknown)); not starting a second one" >&2
-        exit 75
+        holder=$(cat "$WORK/.dreams-run.who" 2>/dev/null || echo unknown)
+        if [[ $ROLE == user && $holder == *"role agent"* ]]; then
+            hpid=$(sed -E 's/^pid ([0-9]+).*/\1/' <<< "$holder")
+            echo "run-dreams.sh: stopping the agent test run ($holder) so you can play" >&2
+            kill -TERM "$hpid" 2>/dev/null || true
+            if ! flock -w 20 9; then kill -KILL "$hpid" 2>/dev/null || true; flock -w 10 9 || { echo "run-dreams.sh: could not take over from the agent run" >&2; exit 75; }; fi
+        else
+            echo "run-dreams.sh: another Dreams run is active ($holder); not starting a second one" >&2
+            exit 75
+        fi
     fi
-    echo "pid $$ since $RUN_ID" > "$WORK/.dreams-run.who"
+    echo "pid $$ role $ROLE since $RUN_ID" > "$WORK/.dreams-run.who"
 fi
 
 # Every run keeps its own log, also when launched from a terminal: work/logs/run-<RUN_ID>.log
