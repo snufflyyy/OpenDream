@@ -250,3 +250,18 @@
   - Note: until now agent runs used `work/user` too, and the game writes its SYSTEM save during runs
     (e.g. 19:47 by a research run).
 
+- **Incident 2 (2026-11-15 20:58): second GPU hang**, same signature as 19:07 (`ring gfx_0.0.0 timeout`,
+  `Process Main ... thread shadPS4:Present`, ring reset failed, MODE1 reset, VRAM lost; desktop died,
+  kernel recovered without reboot). User run `run-20261115-205625` (DREAMS_60HZ=1, DREAMS_SKIP_INTRO=1,
+  user's own save) hung 133 s in. Evidence: `work/crash/20261115-205951/` (tools/collect_crash.sh).
+  Captures show both hangs happened in the **first-time intro cutscene** (imps swarming the camera before
+  "Waiting for you to choose your very own"); the first hang (30 fps, before 60 Hz existed) was at the
+  same point (~150 s), so it isn't 60 Hz-specific. A 9-minute 30 fps session earlier passed the same
+  scene, so it's intermittent. Checked: the fork's unbounded "ordered turnstile" spin loop is only
+  emitted with SHADPS4_DREAMS_ORDERED_COUNT_TURNSTILE=1 (not set); the float min/max CAS loop always
+  makes progress. Open hypotheses: (1) a Dreams shader's own wait loop (translated, emit_spirv.cpp loop)
+  that relies on PS4 ordered-count forward-progress guarantees, broken on 2.52 where 22 DOC shaders use
+  the generic atomic fallback; (2) driver/timing. Safe repro path: `DREAMS_SOFTWARE_GPU=1` (lavapipe, no
+  /dev/dri) in agent-run.sh, not working yet (ErrorOutOfDeviceMemory in BufferCache::GetArena).
+  Workaround for the user: skip the first-time intro (DREAMS_SKIP_INTRO=1 DREAMS_TUTORIAL_SKIP_MY_SAVE=1,
+  backs up the save first).
