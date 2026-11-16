@@ -358,3 +358,42 @@
   `/sys/class/drm/card1/device/gpu_busy_percent` and other GPU clients before suspecting the code.
 - `work/agent-user` was reset (its homespace never loaded since ~22:08: empty maps/dreams in that
   copy); agent-run.sh re-seeds it from work/user.
+
+
+## 2026-11-15 (loop-guard agent): GPU hang guard (docs/dreams/GPU_HANG.md section 4)
+
+- ref/shadps4 branch `loopguard` (on `vcore`), all edits `// vcore:`: **loop guard** in the SPIR-V
+  backend (`emit_spirv_loop_guard.{h,cpp}`, hooks in `Traverse`/`EmitSPIRV`, 4 EmitContext fields):
+  per-invocation counter, back edges repeat only while `++counter < VCORE_LOOP_GUARD` (default
+  1<<20, 0 = off), reset at outermost loop merges; trips are reported through a u64 specialization
+  constant (BDA of a 64 KiB host-visible buffer, no descriptor change) and logged once per shader by
+  `vk_loop_guard.cpp`. Cache key: `loop-guard-<N>` subdir of the private/regular pipeline cache.
+  **Indirect clamp** (`vk_indirect_clamp.{h,cpp}`, `vcore_indirect_clamp.comp`): GPU-written dispatch
+  and draw arguments copied into a ring with clamped sizes before every indirect call
+  (`VCORE_INDIRECT_CLAMP=0` off). **CopyImage** region clamped to the destination size (height was
+  unchecked). The D32 layer-coercion copy before the hang is in bounds (an image growing a layer).
+- Port branch `loopguard`: `tools/spirv_val.c` (validator), `tools/loop_guard_test.cpp` (lavapipe
+  unit test: an endless loop in a real guarded cache shader ends after 1<<20 iterations, 64 trips
+  reported with the hash; clamp shader checks; 11/11 pass), `tools/fps_sample.py`.
+- Real GPU: guarded 90 s boot `run-20261115-214308` fine (no trips/clamps; 79 of 263 modules
+  guarded, all valid apart from 7 pre-existing validation errors also in the old cache). A guarded
+  `DREAMS_FPS=240` run (`-215208`) ended at 40 s with the headless weston connection closed; not yet
+  compared against an unguarded run.
+- Stopped GPU work on request (the GPU went to the hole fixes): overhead runs and the guarded intro
+  repro remain (GPU_HANG.md section 6). `work/hang-user` is prepared for the repro.
+
+## 2026-11-15 23:15 (loop-guard agent): rebased, measured, guarded intro repro passes
+
+- Rebased `loopguard` onto ref/shadps4 `vcore` d03472b2 (clean) and port `dreams` 7f6ddb3 (WORKLOG
+  conflict only). Caches still separate (`loop-guard-1048576` subdir, recreated after the rebase).
+- Overhead, main menu: 30 Hz and 60 Hz unchanged (30.0/60.0 fps, p50 33.3/16.7 ms); uncapped
+  (`DREAMS_FPS=240`) 90.3 vs 91.6 fps (-1.4%). The earlier 240 fps "Wayland display connection
+  closed" stop did not recur in either mode.
+- **Guarded intro repro passed the hang scene** (`run-20261115-230538`): at the black transition after
+  the imp swarm (t~181 s) the indirect clamp caught 6 indexed draws with 243 indices x 1,949,696
+  instances (~474M vertex invocations each) and clamped them; the game went on to "Choose your
+  imp!" and ran to 300 s with no device loss. No loop guard trip. Likely root cause of the hangs:
+  a garbage/stale instance count (0x1DC000) in GPU-written draw arguments. The clamp now also logs
+  the draw's vs/fs hashes (17e99fee) to find the producer. Details: GPU_HANG.md 4.3 and 6.
+- Shared `work/agent-user` save ran at 0.6-4 fps (guard on or off, other agents too); a fresh save
+  dir runs at 30 fps.
