@@ -67,6 +67,15 @@ timeout -s KILL "$SECONDS_MAX" "${SCOPE[@]}" \
     "${SANDBOX[@]}" "${DREAMS_PORT_DIR:-$ROOT/port}/run-dreams.sh" "$@"
 status=$?
 set -e
+# A timeout can kill the wrapper while the scope's game process survives. The game inherits the
+# single-instance flock (run-dreams.sh fd 9), so a survivor blocks every later run. Kill only a
+# game whose --user is THIS run's private dir; the user's own run can never match.
+private_user=${DREAMS_USER_DIR:-$WORK/agent-user}
+for pid in $(pgrep -f 'dreams-probe' 2>/dev/null || true); do
+    if tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | grep -q -- "--user $private_user"; then
+        kill -KILL "$pid" 2>/dev/null || true
+    fi
+done
 echo "agent-run.sh: exit $status (124/137 = stopped at the ${SECONDS_MAX}s limit; 75 = GPU busy, retry later)" >&2
 echo "agent-run.sh: newest log: $(ls -t "$WORK"/logs/run-*.log 2>/dev/null | head -1)" >&2
 echo "agent-run.sh: newest capture: $(ls -td "$WORK"/captures/*/ 2>/dev/null | head -1)" >&2
