@@ -16,6 +16,8 @@ This is a **snapshot**, not a status doc: current state lives in `HANDOFF.md`/`S
   `DREAMS_TESTS_STRICT=1` fails on them.
 - **L6/E5** — host-independent docs + `doc_lint.py`, `INDEX.md`, `CONVENTIONS.md`,
   `TEST_HARDWARE.md`, `README.DREAMS.md`; `preflight.sh` is the agent gate.
+- **S8** — the runner now reaps a timed-out game by its private `--user` dir, so a survivor cannot
+  hold the single-instance lock.
 - **L1/L3** — Dreams banners on `port/README*.md`; stale backend/branch statements corrected.
 
 Still open from the list below: behavioural scene gate (T5), measured submit/readback counters
@@ -63,6 +65,7 @@ Paths are repository-relative. `[verified]` = inspected, `[hypothesis]` = risk a
 | S5 | Generated/config inputs live outside `port/`: vcore config and `import_names_dreams.inc` come from root `notes/`; route table is generated into `ref/shadps4` | Medium | S | Document a repo map + source-of-truth; prefer a `port/config/` template with a notes fallback |
 | S6 | The fork switch set is duplicated in `run-dreams.sh` and `tools/run-shadps4-reference.sh` | Medium | S | One sourced env module + a test that both agree |
 | S7 | `ref/shadps4/i-didnt-check-my-work.md` is a generated marker required by that tree's AGENTS.md, not stray noise | Low | — | Keep; do not delete (contrary to a naive `git status` cleanup) |
+| S8 | `tools/agent-run.sh`'s timeout could kill the wrapper while the game process survived and held the single-instance `flock`, blocking later runs | Medium | S | **Done**: after the timeout, kill only a `dreams-probe` whose `--user` is this run's private dir (never the user's run) |
 
 ### Identity, legacy, and docs drift
 
