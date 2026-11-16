@@ -346,3 +346,26 @@
   m326284ee5d6145). A freshly seeded save dir (`DREAMS_USER_DIR=work/agent-user-docmatch2`, run
   223112) is back to normal: purple backdrop, homespace with painterly clouds and the puppet.
   Reseed `work/agent-user` (delete it; agent-run.sh seeds it again from work/user).
+
+
+## 2026-11-15 (loop-guard agent): GPU hang guard (docs/dreams/GPU_HANG.md section 4)
+
+- ref/shadps4 branch `loopguard` (on `vcore`), all edits `// vcore:`: **loop guard** in the SPIR-V
+  backend (`emit_spirv_loop_guard.{h,cpp}`, hooks in `Traverse`/`EmitSPIRV`, 4 EmitContext fields):
+  per-invocation counter, back edges repeat only while `++counter < VCORE_LOOP_GUARD` (default
+  1<<20, 0 = off), reset at outermost loop merges; trips are reported through a u64 specialization
+  constant (BDA of a 64 KiB host-visible buffer, no descriptor change) and logged once per shader by
+  `vk_loop_guard.cpp`. Cache key: `loop-guard-<N>` subdir of the private/regular pipeline cache.
+  **Indirect clamp** (`vk_indirect_clamp.{h,cpp}`, `vcore_indirect_clamp.comp`): GPU-written dispatch
+  and draw arguments copied into a ring with clamped sizes before every indirect call
+  (`VCORE_INDIRECT_CLAMP=0` off). **CopyImage** region clamped to the destination size (height was
+  unchecked). The D32 layer-coercion copy before the hang is in bounds (an image growing a layer).
+- Port branch `loopguard`: `tools/spirv_val.c` (validator), `tools/loop_guard_test.cpp` (lavapipe
+  unit test: an endless loop in a real guarded cache shader ends after 1<<20 iterations, 64 trips
+  reported with the hash; clamp shader checks; 11/11 pass), `tools/fps_sample.py`.
+- Real GPU: guarded 90 s boot `run-20261115-214308` fine (no trips/clamps; 79 of 263 modules
+  guarded, all valid apart from 7 pre-existing validation errors also in the old cache). A guarded
+  `DREAMS_FPS=240` run (`-215208`) ended at 40 s with the headless weston connection closed; not yet
+  compared against an unguarded run.
+- Stopped GPU work on request (the GPU went to the hole fixes): overhead runs and the guarded intro
+  repro remain (GPU_HANG.md section 6). `work/hang-user` is prepared for the repro.

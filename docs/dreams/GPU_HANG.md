@@ -1,7 +1,11 @@
 # GPU hang in the first-time intro (2026-11-15): investigation notes
 
-Status: **root cause not yet confirmed; no fix merged.** Work stopped early (usage limit). This file
-records what is known so the next agent can continue without repeating it.
+Status (2026-11-15, evening): **root cause not confirmed; a hang guard is implemented** (section 4,
+ref/shadps4 branch `loopguard`, port branch `loopguard`, not merged yet): bounded loops in translated
+shaders, clamped indirect dispatch/draw arguments, a copy-extent fix. Validated offline (SPIR-V
+validation, lavapipe unit test) and in two guarded boots on the real GPU. **Still open:** overhead
+numbers and the single guarded repro of the intro hang (section 6), postponed because the GPU was
+needed for other work.
 
 ## 1. Symptom and evidence
 
@@ -149,7 +153,32 @@ Files: `src/video_core/renderer_vulkan/vk_indirect_clamp.{h,cpp}`,
 - A clamp logs once: `vcore indirect clamp: dispatch arguments AxBxC clamped ...` /
   `... draw arguments count=... instances=... clamped ...` (report area after the loop-guard slots).
 
-### 4.3 The layered D32 copy before the hang ("Coercing copy source layers N and destination layers N+1")
+### 4.3 Tests so far
+
+- **Unit test on lavapipe** (`tools/loop_guard_test.cpp`, Mesa's CPU Vulkan driver, never the GPU):
+  runs the real guarded cache module of compute shader `0x5c35f8ee` (loop bound = flatbuffer dword 6)
+  and the clamp shader. Bound 64: 0.03 s, no report. Bound 2^31-1 (minutes unguarded): ends in
+  0.97 s, report slot 2858 counts 64 trips (one per invocation) and holds the hash. Without the
+  specialization constant: ends, no report. Clamp: a sane dispatch passes unchanged;
+  `0xffffffff x 0x3f800000 x 7` becomes `4194304x1x1` and is reported with its original dims; x=0
+  stays empty; a sane indexed draw is copied unchanged and a garbage one is clamped with the other
+  words kept. All 11 checks pass.
+  ```
+  g++ -std=c++20 -O1 tools/loop_guard_test.cpp -o out/loop-guard-test -lvulkan -I vcore/build/host_shaders/include
+  VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json out/loop-guard-test \
+      ../work/vcore-shader-cache/build-*-cache-v4/loop-guard-1048576/CUSA08010/0x000000005c35f8ee_0.spv
+  ```
+- **Guarded boot, real GPU** (`run-20261115-214308`, agent run, 90 s, 30 fps, skip-intro save):
+  main menu as before (captures every 0.5 s to the end), startup lines present, no trip, no clamp,
+  no device loss; the new cache dir `loop-guard-1048576` filled with 263 modules (79 guarded, all
+  validating as described in 4.1); the old cache dir untouched.
+- `run-20261115-215208` (guarded, `DREAMS_FPS=240`, meant as overhead run A) **ended at 40 s** with
+  `ERROR: Wayland display connection closed by server (fatal)` (the headless weston went away; its
+  log is deleted by agent-run.sh). No GPU error, no trip. Unknown whether related to the guard: the
+  unguarded comparison run (B) was not made. Check this first when the GPU is free (run B, then A
+  again).
+
+### 4.4 The layered D32 copy before the hang ("Coercing copy source layers N and destination layers N+1")
 
 `Runtime::CopyImage` (vk_runtime.cpp) at the hang is an image *growing* by one layer (same guest
 address `0x10e8428000`, 512x512 D32, 1 mip, src 1..3 layers -> dst 2..4): `SanitizeCopyLayers` copies
@@ -168,7 +197,25 @@ cache creates 4 GiB sparse arenas (`ARENA_PAGE_BITS = 32`), and lavapipe's `maxB
 on request. Lavapipe also reports `sparseAddressSpaceSize` 2 GiB and `maxStorageBufferRange` 128 MiB,
 so more failures may follow.
 
-## 6. Repro recipe (only with the guard in place)
+## 6. Remaining GPU work (postponed: the GPU went to the hole-fixing work)
+
+1. Overhead, 4 agent runs of `port-loopguard` with the sampler (`tools/fps_sample.py OUT.csv 40 85
+   port-loopguard/out/dreams-probe` started next to `tools/agent-run.sh --seconds 90`):
+   A guard+clamp `DREAMS_FPS=240`; B `VCORE_LOOP_GUARD=0 VCORE_INDIRECT_CLAMP=0 DREAMS_FPS=240`
+   (render fps there is CPU-bound, so it shows the clamp pass / re-bind cost); C/D the same at the
+   default 30 fps (compare gpu_busy_percent). Summarise with `tools/fps_sample.py --summary`.
+   If the clamp's draw splits cost too much, `VCORE_INDIRECT_CLAMP=0` keeps the loop guard alone.
+2. The 240 fps early exit above: does B reproduce it?
+3. One guarded repro of the intro hang: `work/hang-user` is prepared (copy of `work/user` with the
+   pre-skip save `savedata.json.before-tutorial-skip-20261115-210501` restored, tutorial flags
+   false). `DREAMS_USER_DIR=$PWD/work/hang-user DREAMS_SKIP_INTRO=0 DREAMS_PORT_DIR=$PWD/port-loopguard
+   tools/agent-run.sh --seconds 240`, with ✕ via `BB_PAD_FILE` at the indreams.me card, the
+   preferences screen and the control-scheme popup (watch the captures; don't press during the
+   cutscene). Expected outcome with the guard: the scene passes, and the log names the culprit
+   (`vcore loop guard: TRIPPED in shader 0x...` or `vcore indirect clamp: ...`). If the GPU still
+   hangs: `tools/collect_crash.sh`, stop, report.
+
+## 7. Repro recipe (only with the guard in place)
 
 The scene is reached with a save that hasn't done the first-time intro: `cp -r work/user
 work/hang-user` (never run against work/user), then

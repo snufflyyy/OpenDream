@@ -117,6 +117,11 @@ Other stubs/limitations inside the shim:
 
 Everything else is upstream/fork code byte for byte. To re-sync: rebase `vcore` onto a new `dreams`.
 
+Branch `loopguard` (on `vcore`, not merged yet) adds the GPU hang guard: loop guard in the SPIR-V
+backend, indirect-argument clamp, CopyImage extent clamp, plus small hooks in the compute/graphics
+pipeline creation, pipeline cache path, rasterizer indirect calls and `Scheduler::IsRendering()`.
+Env: `VCORE_LOOP_GUARD`, `VCORE_INDIRECT_CLAMP`, `VCORE_INDIRECT_MAX_GROUPS`. See GPU_HANG.md section 4.
+
 ## 5. Build and run
 
 ```
