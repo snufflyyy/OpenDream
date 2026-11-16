@@ -392,6 +392,20 @@ static ABI int32_t at9enc_encode(void *work, const int16_t *input, uint8_t *outp
 }
 
 /* ---- libkernel misc ---- */
+/* ---- libkernel sceKernelIsProspero (ref kernel/process.cpp: shadPS4 returns 0) ----
+ * 0 = a PS4 (the default). DREAMS_PROSPERO=1 answers 1 ("running on a PS5"): Dreams 2.28+ then
+ * runs its UI (Dreamiverse menus) at 60 fps, its own PS5 path (docs/dreams/FPS.md: the flip-rate
+ * decision at eboot +0xe34d0d clears its 30 Hz flag when this is 1 in UI mode). */
+static ABI int32_t kernel_is_prospero(void) {
+    static int value=-1;
+    if (value<0) {
+        const char *env=getenv("DREAMS_PROSPERO");
+        value=env && env[0]=='1';
+        if (value) printf("Runtime: sceKernelIsProspero answers 1 (DREAMS_PROSPERO=1: PS5 paths, 60 fps UI)\n");
+    }
+    return value;
+}
+
 static ABI int32_t kernel_sleep(uint32_t seconds) { /* ref kernel/time.cpp sceKernelSleep */
     struct timespec t={(time_t)seconds,0};
     while (nanosleep(&t,&t)) {}
@@ -434,7 +448,7 @@ static const RuntimeExport exports[]={
     {"_sceUlobjmgrRegisterObject",ok}, {"_sceUlobjmgrUnregisterObject",ok},
     {"_sceKernelSetThreadAtexitCount",ok}, {"_sceKernelSetThreadAtexitReport",ok},
     {"sceKernelGetSanitizerNewReplaceExternal",ok}, {"sceKernelGetSanitizerMallocReplaceExternal",ok},
-    {"sceKernelIsAddressSanitizerEnabled",ok}, {"sceKernelIsNeoMode",ok}, {"sceKernelIsProspero",ok},
+    {"sceKernelIsAddressSanitizerEnabled",ok}, {"sceKernelIsNeoMode",ok}, {"sceKernelIsProspero",kernel_is_prospero},
     {"sceCommonDialogIsUsed",ok},
     {"sceShareUtilityAdvanceInitialize",ok}, {"sceShareUtilityAdvanceSetUploadContentData",ok},
     {"sceVideoRecordingSetInfo",ok}, {"sceVideoRecordingClose",ok},
