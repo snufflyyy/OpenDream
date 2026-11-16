@@ -265,3 +265,4 @@
   /dev/dri) in agent-run.sh, not working yet (ErrorOutOfDeviceMemory in BufferCache::GetArena).
   Workaround for the user: skip the first-time intro (DREAMS_SKIP_INTRO=1 DREAMS_TUTORIAL_SKIP_MY_SAVE=1,
   backs up the save first).
+- 2026-11-15 21:08: fixed skip-my-save launch crash (FaultManager read past its buffer on >1023 page faults per batch; shadPS4 vcore commit). Verified 100 s sandbox run with a copy of the flagged save.
