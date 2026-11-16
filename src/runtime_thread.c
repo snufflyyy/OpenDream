@@ -264,6 +264,12 @@ static void run_guest(void *p) {
     if (!setjmp(t->exit_jump)) t->result=t->entry(t->argument);
 }
 void runtime_re_watch_thread(void);
+/* Dreams port: libc.prx registers its thread-exit destructor hook (thread_local / atexit-per-thread
+ * cleanup) through _sceKernelSetThreadDtors (rNhWz+lvOMU) during _init_env. libkernel calls it on
+ * every guest thread's exit, before thread-specific data destructors
+ * (ref/shadps4/src/core/libraries/kernel/threads/pthread.cpp: ExitThread order). */
+static GuestCallback thread_dtors;
+static ABI void set_thread_dtors(GuestCallback dtors) { __atomic_store_n(&thread_dtors,dtors,__ATOMIC_RELEASE); }
 static void *host_start(void *p) {
     GuestThread *t=p;
     attach(t);
@@ -277,6 +283,8 @@ static void *host_start(void *p) {
 #else
     run_guest(t);
 #endif
+    GuestCallback dtors=__atomic_load_n(&thread_dtors,__ATOMIC_ACQUIRE);
+    if (dtors) dtors(); /* still on this guest thread, after return or pthread_exit */
     runtime_thread_keys_cleanup();
     pthread_mutex_lock(&lock); t->finished=1; ++exited; pthread_mutex_unlock(&lock);
     return t->result;
@@ -346,6 +354,15 @@ static ABI __attribute__((noreturn)) void thread_exit(void *value) {
 /* pthread_exit for the online module's threads (gpu/bbnet20). */
 __attribute__((noreturn)) void runtime_thread_exit(void *value) { thread_exit(value); }
 static ABI int32_t thread_yield(void) { sched_yield(); return 0; }
+/* Dreams port: scePthreadGetname (How7B8Oet6k) copies the name given at creation (PS4 names are at
+ * most 32 bytes incl. NUL); scePthreadGetthreadid (EI-5-jlq2dE) returns a per-thread integer id.
+ * Dreams' job/profiling code calls both on startup (eboot+0xce4edc). Ref: shadPS4 pthread.cpp. */
+static ABI int32_t thread_get_name(GuestThread *t, char *name) {
+    if (!name || !find_thread(t)) return ERR(3);
+    snprintf(name,32,"%s",t->name);
+    return 0;
+}
+static ABI int32_t thread_get_id(void) { return (int32_t)gettid(); }
 static ABI int32_t thread_get_prio(GuestThread *t,int *prio) {
     if (!find_thread(t)) return ERR(3);
     if (!prio) return ERR(22);
@@ -418,8 +435,19 @@ uintptr_t runtime_thread_resolve(const char *name) {
         {"Jmi+9w9u0E4#I#J",posix_create_name}, {"h9CcP3J0oVM#I#J",posix_join},
         {"FJrT5LuUBAU#I#J",thread_exit},
     };
-    for (size_t i=0;i<sizeof(table)/sizeof(*table);++i)
-        if (!strcmp(name,table[i].nid)) return (uintptr_t)table[i].fn;
+    /* Dreams port: match on the NID alone. The "#p#J" / "#I#J" suffixes are per-executable
+     * library/module letter codes (Bloodborne's); Dreams' imports carry other letters. The NID is a
+     * hash of the symbol name, so scePthreadX (libkernel) and pthread_X (libScePosix) still differ. */
+    for (size_t i=0;i<sizeof(table)/sizeof(*table);++i) {
+        char nid[16];
+        size_t n=strcspn(table[i].nid,"#");
+        if (n>=sizeof(nid)) continue;
+        memcpy(nid,table[i].nid,n); nid[n]=0;
+        if (runtime_nid_is(name,nid)) return (uintptr_t)table[i].fn;
+    }
+    if (runtime_nid_is(name,"rNhWz+lvOMU")) return (uintptr_t)set_thread_dtors; /* _sceKernelSetThreadDtors */
+    if (runtime_nid_is(name,"How7B8Oet6k")) return (uintptr_t)thread_get_name;  /* scePthreadGetname */
+    if (runtime_nid_is(name,"EI-5-jlq2dE")) return (uintptr_t)thread_get_id;    /* scePthreadGetthreadid */
     return 0;
 }
 void runtime_thread_report(void) {

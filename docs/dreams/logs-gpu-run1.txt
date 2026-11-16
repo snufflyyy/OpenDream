@@ -1,0 +1,554 @@
+Environment: BB_GAME_PROFILE=none
+CPU: the draw pipeline's stages on cores of their own (CPUs 1 and 2, siblings idle), 12 other hardware threads for the rest (BB_CORE_RESERVE=0: off)
+Game profile: none (BB_GAME_PROFILE=none): the game runs as an unknown one
+Display 1: ASUSTek COMPUTER INC XG27AQDMG TBLMRV001125 (DP-1) 2560x1440 (primary) <- the game's (BB_DISPLAY)
+Display 2: LG Electronics LG ULTRAGEAR 407NTJJ22492 (DP-2) 2560x1440
+GPU: AMD Radeon RX 7800 XT (RADV NAVI32), 16368 MiB VRAM; radv 26.2.6 (Mesa 26.2.6), Vulkan 1.4.354
+gpu warning (Render.Vulkan): Format A2B10G10R10SnormPack32 (data 9, number 1) lacks { SampledImage | StorageImage | ColorAttachment | TransferSrc | TransferDst } [instance.cpp:883]
+gpu warning (Render.Vulkan): Format A2B10G10R10SintPack32 (data 9, number 5) lacks { SampledImage | StorageImage | ColorAttachment | TransferSrc | TransferDst } [instance.cpp:883]
+gpu warning (Render.Vulkan): Format R32G32B32Uint (data 13, number 4) lacks { SampledImage | TransferSrc | TransferDst } [instance.cpp:883]
+gpu warning (Render.Vulkan): Format R32G32B32Sint (data 13, number 5) lacks { SampledImage | TransferSrc | TransferDst } [instance.cpp:883]
+gpu warning (Render.Vulkan): Format R32G32B32Sfloat (data 13, number 7) lacks { SampledImage | TransferSrc | TransferDst } [instance.cpp:883]
+GPU: 3 Vulkan recording threads, segments of 64 KiB
+GPU: submissions go out from the recording threads (BB_ASYNC_SUBMIT)
+Swapchain: Mailbox, 4 images, 1268x1348
+Buffer: StagingBufferPool:Segment 16 MiB, system memory
+Buffer: StagingBufferPool:Segment 16 MiB, system memory
+Buffer: StagingBufferPool:Segment 16 MiB, system memory
+Buffer: StagingBufferPool:Segment 16 MiB, system memory
+Buffer: StagingBufferPool:Segment 16 MiB, system memory
+Buffer: StagingBufferPool:Segment 16 MiB, system memory
+Buffer: StagingBufferPool:Segment 16 MiB, system memory
+Buffer: StagingBufferPool:Segment 16 MiB, system memory
+Buffer:  128 MiB, VRAM
+Guest memory: the layer's memory module on this GPU (vendor 0x1002): no sparse binding of the game's memory
+Guest memory: CPU reads through the driver's dma-buf: 16655 MB/s
+Guest memory: the layer's memory module binds the game's memory in place (chunk buffers, no sparse arena for it; BB_LAYER_MEMORY=1)
+Buffer: BDA Page Table Buffer 16 MiB, VRAM
+GPU: draw preparation workers: 3 (+1 scanner, 12 hardware threads)
+Object motion: buffer addresses new (motion shaders compiled this session, cached from the next)
+Object motion: on (4194304 vertices per frame)
+gpu warning (Render): Pipeline cache cleared (0 files): it is rebuilt for this build [blob_store.cpp:204]
+Frame generation: FSR 3.1 available
+Frame generation: DLSS Frame Generation unavailable: the DLSS bridge and NVIDIA's DLSS libraries are not installed
+Upscaler: FSR 3.1 available (on) on scene color before compute shader 000000009a9cf8a9
+Guest memory: direct memory chunks come from Vulkan
+Button prompts: /app0/dvdroot_ps4/menu/common.tpf.dcx not found: the game's icons stay
+Buffer: bbport constant ring 32 MiB, VRAM
+Overlay: menu ready (Insert, or hold L3+R3)
+Low latency: neither VK_NV_low_latency2 (NVIDIA Reflex: NVIDIA's driver 550 or newer) nor VK_AMD_anti_lag (AMD Anti-Lag 2: AMD's driver, Mesa's anti-lag layer)
+GPU: window and Vulkan presenter ready; SDK 0x08508001, 327 HLE symbols
+VideoOut: vblank 60 Hz, frame limit 0 FPS
+Game menu: unexpected code at 0xf6f340, not hooked
+Game menu: hooks failed, off (2 pages in System)
+Frame rate: the game's frame pacer is not the expected code: 30 FPS
+Mapped 187712088 bytes, 12 segments; applied 35240 relocations
+Starting linked module 0 at image offset 0xb040000; native bindings=235
+STUB: pB-yGZ2nQ9o#p#J = _sceKernelSetThreadAtexitCount returns 0 (first call from libc.prx+0x79c, arg0=0x80b0623e0)
+STUB: WhCc1w3EhSI#p#J = _sceKernelSetThreadAtexitReport returns 0 (first call from libc.prx+0x7a8, arg0=0x80b062610)
+Runtime: application heap API registered
+STUB: bnZxYgAFeA0#p#J = sceKernelGetSanitizerNewReplaceExternal returns 0 (first call from libc.prx+0xa33c4, arg0=0x801a00168)
+STUB: NWtTN10cJzE#libSceLibcInternalExt = sceLibcHeapGetTraceInfo returns 0 (first call from libc.prx+0x52c91, arg0=0x7ffe5085ce10)
+entering user_malloc_init() took 0.991s
+STUB: WslcK1FQcGI#p#J = sceKernelIsNeoMode returns 0 (first call from eboot+0x115737, arg0=0x80452a280)
+Guest memory: direct memory 0+295 MiB in GPU-visible memory (dma-buf), 295 MiB so far
+Runtime: direct allocation offset=0x0, size=309329920 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1000000000, size=309329920, prot=0x3
+STUB: jh+8XiK4LeE#p#J = sceKernelIsAddressSanitizerEnabled returns 0 (first call from libc.prx+0x5432e, arg0=0x801795756)
+Memory stats after allocating memory system: 'GeneralPurpose' (1)
+Module 0 initializer returned 0
+Starting linked module 1 at image offset 0xb160000; native bindings=235
+Module 1 initializer returned 0
+Starting linked module 2 at image offset 0xb2f0000; native bindings=235
+Module 2 initializer returned 0
+Entering original x86-64 code at guest offset 0x80
+Runtime: _init_env returned (verified libc implementation: RET)
+STUB: DLORcroUqbc#libSceOpenPsId = sceKernelGetOpenPsId returns 0 (first call from eboot+0x12f25b, arg0=0x80bf0bf20)
+STUB: 8zLSfEfW5AU#libSceCoredump = sceCoredumpRegisterCoredumpHandler returns 0 (first call from eboot+0xcb7b0d, arg0=0x8015006e0)
+entering main() took 1.011s
+    \_    |\
+    `\~-._| \
+     `\   ~\ )
+       \-  //             
+  ,,.--(_ ("""'^=--   UNICORN
+ ;;( ,___, ,/~`\;   Built on Nov 21 2022 17:01:48
+;' )/>/  '--,             
+   | `\   |"          
+STUB: 0NTHN1NKONI#p#J = sceKernelConvertLocaltimeToUtc returns 0 (first call from libc.prx+0x326b7, arg0=0x637baefc)
+STUB: -o5uEDpN+oY#p#J = sceKernelConvertUtcToLocaltime returns 0 (first call from libc.prx+0x326d2, arg0=0x80b158e30)
+{"BuildID":{
+	"time":185962024,
+	"perforce_revision":208537, 
+	"serialise_revision":99999,
+	"asserts":0,
+	"debug":0,
+	"platform":"ps4"
+}}
+FINAL IS DEFINED
+MMATHOME is NOT defined
+OUTREACH is NOT defined
+SHOW is NOT defined
+ENABLE_IMGUI is NOT defined
+Runtime: guest thread 'SubmitDoneBoot' created (stack=1048576, prio=767)
+Runtime: guest thread 'MetadataDeserialise' created (stack=1048576, prio=767)
+Runtime: guest thread 'SearchQuery' created (stack=1048576, prio=767)
+Runtime: system module 0xfe loaded (host implementation)
+Runtime: semaphore id=1, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=2, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=3, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=4, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=5, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=6, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=7, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=8, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=9, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=10, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=11, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=12, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=13, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=14, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=15, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=16, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=17, attr=1, initial=0, max=2147483647
+Runtime: guest thread 'Job Manager Game' created (stack=131072, prio=699)
+Runtime: guest thread 'Job Manager Game' created (stack=131072, prio=699)
+Runtime: guest thread 'Job Manager Game' created (stack=131072, prio=699)
+Runtime: guest thread 'Job Manager Game' created (stack=131072, prio=699)
+STUB: BG26hBGiNlw#ulobjmgr = _sceUlobjmgrRegisterObject returns 0 (first call from libSceJobManager.prx+0x1b23, arg0=0x1000010d00)
+STUB: EI-5-jlq2dE#p#J = scePthreadGetthreadid returns 0 (first call from eboot+0xce4ee9, arg0=0x0)
+STUB: How7B8Oet6k#p#J = scePthreadGetname returns 0 (first call from eboot+0x3ad2a7, arg0=0x80b6c8300)
+STUB: 9FowWFMEIM8#libSceRazorCpu = sceRazorCpuJobManagerSequence returns 0 (first call from libSceJobManager.prx+0x63b8, arg0=0x80175b567)
+Runtime: system module 0xfe loaded (host implementation)
+Runtime: semaphore id=18, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=19, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=20, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=21, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=22, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=23, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=24, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=25, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=26, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=27, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=28, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=29, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=30, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=31, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=32, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=33, attr=1, initial=0, max=2147483647
+Runtime: semaphore id=34, attr=1, initial=0, max=2147483647
+Runtime: guest thread 'Job Manager Render' created (stack=131072, prio=699)
+Runtime: guest thread 'Job Manager Render' created (stack=131072, prio=699)
+Runtime: guest thread 'Job Manager Render' created (stack=131072, prio=699)
+Runtime: guest thread 'Job Manager Render' created (stack=131072, prio=699)
+ini setting not settable in final - DefaultLanguage
+ini setting not settable in final - AgeRestriction
+STUB: aNz11fnnzi4#p#J = sceKernelAvailableFlexibleMemorySize returns 0 (first call from eboot+0xcb81ef, arg0=0x80bef8878)
+Guest memory: direct memory 0x12700000+13 MiB in GPU-visible memory (dma-buf), 308 MiB so far
+Runtime: direct allocation offset=0x12700000, size=14008320 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1012700000, size=14008320, prot=0x3
+Guest memory: direct memory 0x1345c000+170 MiB in GPU-visible memory (dma-buf), 479 MiB so far
+Runtime: direct allocation offset=0x1345c000, size=179077120 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x101345c000, size=179077120, prot=0x3
+Guest memory: direct memory 0x1df24000+0 MiB in GPU-visible memory (dma-buf), 479 MiB so far
+Runtime: direct allocation offset=0x1df24000, size=16384 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x101df24000, size=16384, prot=0x3
+Guest memory: direct memory 0x1df28000+0 MiB in GPU-visible memory (dma-buf), 479 MiB so far
+Runtime: direct allocation offset=0x1df28000, size=131072 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x101df28000, size=131072, prot=0x3
+Guest memory: direct memory 0x1df48000+128 MiB in GPU-visible memory (dma-buf), 607 MiB so far
+Runtime: direct allocation offset=0x1df48000, size=134217728 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x101df48000, size=134217728, prot=0x3
+Guest memory: direct memory 0x25f48000+16 MiB in GPU-visible memory (dma-buf), 623 MiB so far
+Runtime: direct allocation offset=0x25f48000, size=16777216 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1025f48000, size=16777216, prot=0x3
+Guest memory: direct memory 0x26f48000+0 MiB in GPU-visible memory (dma-buf), 623 MiB so far
+Runtime: direct allocation offset=0x26f48000, size=16384 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1026f48000, size=16384, prot=0x3
+Guest memory: direct memory 0x26f4c000+2 MiB in GPU-visible memory (dma-buf), 625 MiB so far
+Runtime: direct allocation offset=0x26f4c000, size=2097152 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1026f4c000, size=2097152, prot=0x3
+Guest memory: direct memory 0x2714c000+0 MiB in GPU-visible memory (dma-buf), 625 MiB so far
+Runtime: direct allocation offset=0x2714c000, size=16384 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x102714c000, size=16384, prot=0x3
+Guest memory: direct memory 0x27150000+0 MiB in GPU-visible memory (dma-buf), 625 MiB so far
+Runtime: direct allocation offset=0x27150000, size=32768 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1027150000, size=32768, prot=0x3
+Guest memory: direct memory 0x27158000+0 MiB in GPU-visible memory (dma-buf), 625 MiB so far
+Runtime: direct allocation offset=0x27158000, size=32768 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1027158000, size=32768, prot=0x3
+Guest memory: direct memory 0x27160000+1 MiB in GPU-visible memory (dma-buf), 626 MiB so far
+Runtime: direct allocation offset=0x27160000, size=1048576 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1027160000, size=1048576, prot=0x3
+Guest memory: direct memory 0x27260000+0 MiB in GPU-visible memory (dma-buf), 626 MiB so far
+Runtime: direct allocation offset=0x27260000, size=32768 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1027260000, size=32768, prot=0x3
+Guest memory: direct memory 0x27268000+0 MiB in GPU-visible memory (dma-buf), 626 MiB so far
+Runtime: direct allocation offset=0x27268000, size=180224 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1027268000, size=180224, prot=0x3
+Guest memory: direct memory 0x27294000+1 MiB in GPU-visible memory (dma-buf), 628 MiB so far
+Runtime: direct allocation offset=0x27294000, size=1605632 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1027294000, size=1605632, prot=0x3
+Guest memory: direct memory 0x2741c000+2 MiB in GPU-visible memory (dma-buf), 630 MiB so far
+Runtime: direct allocation offset=0x2741c000, size=2097152 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x102741c000, size=2097152, prot=0x3
+Guest memory: direct memory 0x2761c000+0 MiB in GPU-visible memory (dma-buf), 630 MiB so far
+Runtime: direct allocation offset=0x2761c000, size=65536 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x102761c000, size=65536, prot=0x3
+Guest memory: direct memory 0x2762c000+0 MiB in GPU-visible memory (dma-buf), 630 MiB so far
+Runtime: direct allocation offset=0x2762c000, size=32768 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x102762c000, size=32768, prot=0x3
+Guest memory: direct memory 0x27634000+0 MiB in GPU-visible memory (dma-buf), 630 MiB so far
+Runtime: direct allocation offset=0x27634000, size=245760 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1027634000, size=245760, prot=0x3
+Guest memory: direct memory 0x27670000+11 MiB in GPU-visible memory (dma-buf), 641 MiB so far
+Runtime: direct allocation offset=0x27670000, size=11534336 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1027670000, size=11534336, prot=0x3
+Guest memory: direct memory 0x28170000+1 MiB in GPU-visible memory (dma-buf), 642 MiB so far
+Runtime: direct allocation offset=0x28170000, size=1392640 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1028170000, size=1392640, prot=0x3
+Guest memory: direct memory 0x282c4000+0 MiB in GPU-visible memory (dma-buf), 643 MiB so far
+Runtime: direct allocation offset=0x282c4000, size=524288 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x10282c4000, size=524288, prot=0x3
+Guest memory: direct memory 0x28344000+0 MiB in GPU-visible memory (dma-buf), 643 MiB so far
+Runtime: direct allocation offset=0x28344000, size=491520 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1028344000, size=491520, prot=0x3
+Guest memory: direct memory 0x283bc000+115 MiB in GPU-visible memory (dma-buf), 759 MiB so far
+Runtime: direct allocation offset=0x283bc000, size=120930304 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x10283bc000, size=120930304, prot=0x3
+Guest memory: direct memory 0x2f710000+9 MiB in GPU-visible memory (dma-buf), 768 MiB so far
+Runtime: direct allocation offset=0x2f710000, size=10371072 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x102f710000, size=10371072, prot=0x3
+Guest memory: direct memory 0x30100000+16 MiB in GPU-visible memory (dma-buf), 784 MiB so far
+Runtime: direct allocation offset=0x30100000, size=16777216 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1030100000, size=16777216, prot=0x3
+Guest memory: direct memory 0x31100000+35 MiB in GPU-visible memory (dma-buf), 820 MiB so far
+Runtime: direct allocation offset=0x31100000, size=37388288 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1031100000, size=37388288, prot=0x3
+Guest memory: direct memory 0x334a8000+13 MiB in GPU-visible memory (dma-buf), 834 MiB so far
+Runtime: direct allocation offset=0x334a8000, size=14467072 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x10334a8000, size=14467072, prot=0x3
+Memory stats after allocating memory system: 'Static' (2)
+Runtime: semaphore id=35, attr=1, initial=1, max=1
+Runtime: system module 0xa4 loaded (host implementation)
+Runtime: system module 0xac loaded (host implementation)
+Runtime: system module 0xe4 loaded (host implementation)
+Runtime: system module 0xb3 loaded (host implementation)
+Runtime: system module 0xa0 loaded (host implementation)
+Runtime: system module 0xab loaded (host implementation)
+Runtime: system module 0xb2 loaded (host implementation)
+Runtime: system module 0xeb loaded (host implementation)
+Runtime: system module 0xfd loaded (host implementation)
+Runtime: system module 0xa8 loaded (host implementation)
+Runtime: system module 0x19 loaded (host implementation)
+Guest memory: direct memory 0x34400000+16 MiB in GPU-visible memory (dma-buf), 850 MiB so far
+Runtime: direct allocation offset=0x34400000, size=16777216 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1034400000, size=16777216, prot=0x3
+Guest memory: direct memory 0x35400000+4 MiB in GPU-visible memory (dma-buf), 854 MiB so far
+Runtime: direct allocation offset=0x35400000, size=4194304 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1035400000, size=4194304, prot=0x3
+Guest memory: direct memory 0x35800000+4 MiB in GPU-visible memory (dma-buf), 858 MiB so far
+Runtime: direct allocation offset=0x35800000, size=4194304 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1035800000, size=4194304, prot=0x3
+Guest memory: direct memory 0x35c00000+2 MiB in GPU-visible memory (dma-buf), 860 MiB so far
+Runtime: direct allocation offset=0x35c00000, size=2097152 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1035c00000, size=2097152, prot=0x3
+Memory stats after allocating memory system: 'Scrathpad' (5)
+Runtime: guest thread 'Http' created (stack=1048576, prio=767)
+STUB: hvoLYhc4cq0#libSceSystemServicePlatformPrivacy = sceSystemServiceGetPlatformPrivacySetting returns 0 (first call from eboot+0x134f40, arg0=0x80bef808c)
+Runtime: UserService initialized (user 1 logged in)
+Runtime: system module 0x8f loaded (host implementation)
+Runtime: system module 0xba loaded (host implementation)
+Runtime: system module 0x9d loaded (host implementation)
+Runtime: system module 0xd1 loaded (host implementation)
+Runtime: system module 0xbc loaded (host implementation)
+Runtime: system module 0xa7 loaded (host implementation)
+STUB: j1ITE-EoJmE#libSceMove = sceMoveInit returns 0 (first call from eboot+0xcbcecf, arg0=0x80bef8130)
+STUB: PI7jIZj4pcE#libSceRandom = sceRandomGetRandomNumber returns 0 (first call from eboot+0xcbcef7, arg0=0x80befbae0)
+Guest memory: direct memory 0x35e00000+286 MiB in GPU-visible memory (dma-buf), 1146 MiB so far
+Runtime: direct allocation offset=0x35e00000, size=299892736 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1035e00000, size=299892736, prot=0x32
+Guest memory: direct memory 0x47c00000+8 MiB in GPU-visible memory (dma-buf), 1154 MiB so far
+Runtime: direct allocation offset=0x47c00000, size=8388608 bytes, type=3 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1047c00000, size=8388608, prot=0x12
+Guest memory: direct memory 0x48400000+2528 MiB in GPU-visible memory (dma-buf), 3682 MiB so far
+Runtime: direct allocation offset=0x48400000, size=2650800128 bytes, type=3 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1048400000, size=2650800128, prot=0x32
+Guest memory: direct memory 0xe6400000+490 MiB in GPU-visible memory (dma-buf), 4172 MiB so far
+Runtime: direct allocation offset=0xe6400000, size=513802240 bytes, type=3 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x10e6400000, size=513802240, prot=0x31
+Guest memory: direct memory 0x104e00000+17 MiB in GPU-visible memory (dma-buf), 4189 MiB so far
+Runtime: direct allocation offset=0x104e00000, size=17825792 bytes, type=3 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1104e00000, size=17825792, prot=0x32
+Guest memory: direct memory 0x106000000+16 MiB in GPU-visible memory (dma-buf), 4205 MiB so far
+Runtime: direct allocation offset=0x106000000, size=16777216 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1106000000, size=16777216, prot=0x32
+Guest memory: direct memory 0x107000000+106 MiB in GPU-visible memory (dma-buf), 4311 MiB so far
+Runtime: direct allocation offset=0x107000000, size=111149056 bytes, type=3 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1107000000, size=111149056, prot=0x31
+Guest memory: direct memory 0x10da00000+106 MiB in GPU-visible memory (dma-buf), 4417 MiB so far
+Runtime: direct allocation offset=0x10da00000, size=111149056 bytes, type=3 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x110da00000, size=111149056, prot=0x31
+Guest memory: direct memory 0x114400000+178 MiB in GPU-visible memory (dma-buf), 4595 MiB so far
+Runtime: direct allocation offset=0x114400000, size=186646528 bytes, type=3 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1114400000, size=186646528, prot=0x32
+Guest memory: direct memory 0x34280000+0 MiB in GPU-visible memory (dma-buf), 4595 MiB so far
+Runtime: direct allocation offset=0x34280000, size=131072 bytes, type=3 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1034280000, size=131072, prot=0x32
+Guest memory: direct memory 0x11f600000+130 MiB in GPU-visible memory (dma-buf), 4725 MiB so far
+Runtime: direct allocation offset=0x11f600000, size=136314880 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x111f600000, size=136314880, prot=0x32
+Guest memory: direct memory 0x127800000+64 MiB in GPU-visible memory (dma-buf), 4789 MiB so far
+Runtime: direct allocation offset=0x127800000, size=67108864 bytes, type=3 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x1127800000, size=67108864, prot=0x32
+Memory stats after allocating memory system: 'Graphics' (3)
+Runtime: system module 0xd4 loaded (host implementation)
+STUB: s-J66ar9g50#libSceHmd = sceHmdInitialize315 returns 0 (first call from eboot+0xcbdbdf, arg0=0x80befbae0)
+STUB: kLUAkN6a1e8#libSceHmd = sceHmdReprojectionQueryOnionBuffSize returns 0 (first call from eboot+0xcbdbe4, arg0=0x7efd8cff8750)
+STUB: IWybWbR-xvA#libSceHmd = sceHmdReprojectionQueryOnionBuffAlign returns 0 (first call from eboot+0xcbdbec, arg0=0x7efd8cff8750)
+STUB: z0KtN1vqF2E#libSceHmd = sceHmdReprojectionQueryGarlicBuffSize returns 0 (first call from eboot+0xcbdbf4, arg0=0x7efd8cff8750)
+STUB: TkcANcGM0s8#libSceHmd = sceHmdReprojectionQueryGarlicBuffAlign returns 0 (first call from eboot+0xcbdbfc, arg0=0x7efd8cff8750)
+Device memory (10 s): 0 VMA blocks 0 MiB, 16 dedicated 322 MiB allocated; 0 freed 0 MiB; new mirrors 0 MiB (promoted 0, merged 0, compacted 0), new images 0 MiB
+Runtime: SystemService: language 1 asked from +0xcc3987
+Runtime: system module 0x95 loaded (host implementation)
+STUB: eaFXjfJv3xs#libSceIme = sceImeKeyboardOpen returns 0 (first call from eboot+0xcc461f, arg0=0x1)
+STUB: 6p9jvljuvsw#S#T = sceNpWordFilterCreateTitleCtxA returns 0 (first call from eboot+0xcc462b, arg0=0x1)
+Runtime: guest thread 'IME' created (stack=1048576, prio=767)
+STUB: KP+TBWGHlgs#libSceRazorCpu = sceRazorCpuJobManagerJob returns 0 (first call from libSceJobManager.prx+0x2339, arg0=0x859a)
+STUB: -4GCfYdNF1s#libSceIme = sceImeUpdate returns 0 (first call from eboot+0x150aee8, arg0=0x8015025d0)
+Runtime: guest thread 'GC' created (stack=1048576, prio=767)
+Runtime: AppContent host provider loaded; references=1
+Runtime: AppContent initialized; offline base-game profile, no mounted add-ons
+STUB: buYbeLOGWmA#c#d = sceAppContentTemporaryDataMount2 returns 0 (first call from eboot+0xce51c6, arg0=0x0)
+Runtime: guest thread 'BlobCachePread' created (stack=1048576, prio=767)
+Runtime: guest thread 'ProcessPendingWrites' created (stack=1048576, prio=767)
+Guest memory: direct memory 0x12b800000+12 MiB in GPU-visible memory (dma-buf), 4801 MiB so far
+Runtime: direct allocation offset=0x12b800000, size=12582912 bytes, type=0 (from guest 0x800115efb)
+Runtime: semaphore id=36, attr=1, initial=0, max=15
+Runtime: mapped direct memory 0x112b800000, size=12582912, prot=0x3
+Memory stats after allocating memory system: 'Imp' (7)
+Runtime: guest thread 'SaveData' created (stack=262144, prio=767)
+Runtime: semaphore id=37, attr=1, initial=0, max=15
+Runtime: guest thread 'ImpSerialiser' created (stack=1048576, prio=767)
+Runtime: guest thread 'SaveData' created (stack=262144, prio=767)
+Runtime: semaphore id=38, attr=1, initial=0, max=15
+Runtime: guest thread 'SaveData' created (stack=262144, prio=767)
+Runtime: semaphore id=39, attr=1, initial=0, max=15
+Runtime: guest thread 'SaveData' created (stack=262144, prio=767)
+Runtime: guest thread 'BlobPublish' created (stack=1048576, prio=767)
+Runtime: semaphore id=40, attr=1, initial=0, max=1
+Runtime: semaphore id=41, attr=1, initial=0, max=1
+Runtime: guest thread 'Camera' created (stack=1048576, prio=257)
+Runtime: guest thread 'PadMove' created (stack=1048576, prio=257)
+Runtime: guest thread 'AsyncModel' created (stack=1048576, prio=702)
+Runtime: guest thread 'GeneratePreview' created (stack=1048576, prio=767)
+Guest memory: direct memory 0x12c400000+160 MiB in GPU-visible memory (dma-buf), 4961 MiB so far
+Runtime: direct allocation offset=0x12c400000, size=167772160 bytes, type=0 (from guest 0x800115efb)
+Runtime: reserved virtual range 0x112c400000, size=8589934592
+Memory stats after allocating memory system: 'Audio' (4)
+Runtime: guest thread 'PCMBlockLoad' created (stack=1048576, prio=766)
+Runtime: guest thread 'AsyncEditPicker' created (stack=1048576, prio=703)
+Runtime: guest thread 'MakeOscWavetables' created (stack=1048576, prio=767)
+STUB: 1iDLkHJ4gbA#libSceAt9Enc = sceAt9EncQueryMemSize returns 0 (first call from eboot+0xce8e2b, arg0=0x8029772a0)
+STUB: gujP4afE9dQ#libSceAt9Enc = sceAt9EncCreateEncoder returns 0 (first call from eboot+0xce8e57, arg0=0x1027268000)
+Runtime: Ajm context initialized (ATRAC9 via LibAtrac9)
+Runtime: Ajm codec 2 (AAC) instance: SILENT decoder (not implemented yet)
+Runtime: guest thread 'AddGlyphs' created (stack=1048576, prio=767)
+Runtime: guest thread 'AddGlyphs' created (stack=1048576, prio=767)
+Runtime: guest thread 'ReverbUpdate' created (stack=1048576, prio=767)
+Runtime: system module 0x83 loaded (host implementation)
+Runtime: PlayGo initialized; 6 chunks, all installed locally
+Runtime: SystemService: language 1 asked from +0xce9c66
+STUB: 3OMbYZBaa50#n#o = scePlayGoGetLanguageMask returns 0 (first call from eboot+0xce9c80, arg0=0x1)
+STUB: LosLlHOpNqQ#n#o = scePlayGoSetLanguageMask returns 0 (first call from eboot+0xce9d6e, arg0=0x1)
+[PLAYGO] Have an offline video StartDreaming01BR
+[PLAYGO] Have an offline video StartDreaming01Sticks
+[PLAYGO] Have an offline video StartDreamingMoves01BR
+[PLAYGO] Have an offline video StartDreaming02BR
+[PLAYGO] Have an offline video StartDreamingMoves02BR
+[PLAYGO] Have an offline video StartDreamingMoves03
+[PLAYGO] Have an offline video StartDreaming03
+[PLAYGO] Have an offline video StartDreaming04
+[PLAYGO] Have an offline video StartDreamingMoves04
+[PLAYGO] Have an offline video Gameplay01
+[PLAYGO] Have an offline video Gameplay02
+[PLAYGO] Have an offline video Gameplay03
+[PLAYGO] Have an offline video Gameplay04
+[PLAYGO] Have an offline video Gameplay05
+[PLAYGO] Have an offline video Logic01BR
+[PLAYGO] Have an offline video Logic02
+[PLAYGO] Have an offline video Logic03
+[PLAYGO] Have an offline video Logic04
+[PLAYGO] Have an offline video Audio01
+[PLAYGO] Have an offline video Audio02
+[PLAYGO] Have an offline video Audio03
+[PLAYGO] Have an offline video Audio04
+[PLAYGO] Have an offline video Animation01
+[PLAYGO] Have an offline video Animation02
+[PLAYGO] Have an offline video Art01
+[PLAYGO] Have an offline video Art02BR
+[PLAYGO] Have an offline video ArtMoves02BR
+[PLAYGO] Have an offline video Art03
+[PLAYGO] Have an offline video Art04
+[PLAYGO] Have an offline video Characters01
+[PLAYGO] Have an offline video Characters02BR
+[PLAYGO] Have an offline video MarkMasterclass01
+[PLAYGO] Have an offline video KareemMasterclass01
+[PLAYGO] Have an offline video RichardMasterclass01
+[PLAYGO] Have an offline video MajaMasterclass01
+[PLAYGO] Have an offline video HowToWindow
+[PLAYGO] Have an offline video HowToWaterfall
+[PLAYGO] Have an offline video HowToSpinnyEye
+[PLAYGO] Have an offline video HowToSpinnyEffect
+[PLAYGO] Have an offline video HowToSculptDetail
+[PLAYGO] Have an offline video HowToMossyRock
+[PLAYGO] Have an offline video HowToBlinkyEye
+[PLAYGO] Have an offline video HowToFlappyMouth
+[PLAYGO] Have an offline video HowToFirstPerson
+[PLAYGO] Have an offline video HowToRollingBall
+[PLAYGO] Have an offline video HowToShootyCannon
+[PLAYGO] Have an offline video HowToConnectedDoors
+[PLAYGO] Have an offline video HowToTidyElements
+[PLAYGO] Have an offline video HowToCameraPointers
+[PLAYGO] Have an offline video HowToMakeItRain
+[PLAYGO] Have an offline video HowToForest
+[PLAYGO] Have an offline video HowToGrass
+[PLAYGO] Have an offline video HowToSimpleButton
+[PLAYGO] Have an offline video HowToBouncePad
+[PLAYGO] Have an offline video HowToDoor
+[PLAYGO] Have an offline video HowToMakeGame
+[PLAYGO] Have an offline video HowToChest
+[PLAYGO] Have an offline video GhostsOfTsushimaVideoHowTo
+[PLAYGO] Have an offline video VRDreamShapingMasterclass
+[PLAYGO] Have an offline video VRDreamSurfingMasterclass
+[PLAYGO] Have an offline video VRHowToHeadTrackerMasterclass
+[PLAYGO] Have an offline video VRHowToHandTrackerMasterclass
+[PLAYGO] Have an offline video VR3DSoundMasterclass
+[PLAYGO] Have an offline video VR10TopTipsMasterclass
+[PLAYGO] Have an offline video HowToLabel
+[PLAYGO] Have an offline video FashionWeekVideoHowTo
+Runtime: system module 0xed loaded (host implementation)
+STUB: K7yhYrsIBPc#libSceVrTracker = sceVrTrackerQueryMemory returns 0 (first call from eboot+0xce7d22, arg0=0x80c44f860)
+Runtime: semaphore id=42, attr=1, initial=0, max=1
+Runtime: guest thread 'VRCamera' created (stack=1048576, prio=701)
+Runtime: system module 0xa5 loaded (host implementation)
+Runtime: guest thread 'VideoPlayerAudio' created (stack=1048576, prio=256)
+Runtime: semaphore id=43, attr=1, initial=0, max=100
+Runtime: guest thread 'VideoPlayerUpdate' created (stack=1048576, prio=767)
+Runtime: system module 0x9c loaded (host implementation)
+Runtime: system module 0xc8 loaded (host implementation)
+STUB: u4bCGkqhOB4#libSceShareUtility = sceShareUtilityAdvanceInitialize returns 0 (first call from eboot+0xce827b, arg0=0x2)
+Runtime: system module 0xa6 loaded (host implementation)
+Guest memory: direct memory 0x136400000+1 MiB in GPU-visible memory (dma-buf), 4962 MiB so far
+Runtime: direct allocation offset=0x136400000, size=1048576 bytes, type=0 (from guest 0x800115efb)
+Runtime: mapped direct memory 0x132c400000, size=1048576, prot=0x3
+Memory stats after allocating memory system: 'Social' (6)
+STUB: 0GnN4QCgIfs#libSceContentExport = sceContentExportInit2 returns 0 (first call from eboot+0xce82df, arg0=0x80c44f860)
+Runtime: system module 0x85 loaded (host implementation)
+STUB: Fc8qxlKINYQ#f#g = sceVideoRecordingSetInfo returns 0 (first call from eboot+0xce8349, arg0=0xa009)
+Runtime: system module 0xc7 loaded (host implementation)
+STUB: dPj4ZtRcIWk#libSceContentSearch = sceContentSearchInit returns 0 (first call from eboot+0xce836c, arg0=0x80c44f860)
+STUB: FRT4EYtZU1Y#libSceContentSearch = sceContentSearchGetMyApplicationIndex returns 0 (first call from eboot+0xce8378, arg0=0x80630cf30)
+Runtime: system module 0x81 loaded (host implementation)
+STUB: kvYEw2lBndk#e#f = sceGameLiveStreamingInitialize returns 0 (first call from eboot+0xce8394, arg0=0x4000)
+STUB: -EHnU68gExU#e#f = sceGameLiveStreamingPermitServerSideRecording returns 0 (first call from eboot+0xce83a6, arg0=0x1)
+STUB: MLvYI86FFAo#e#f = sceGameLiveStreamingSetStandbyScreenResource returns 0 (first call from eboot+0xce83ba, arg0=0x801772e03)
+STUB: 3PSiwAzFISE#e#f = sceGameLiveStreamingSetCameraFrameSetting returns 0 (first call from eboot+0xce8462, arg0=0x80c44f860)
+STUB: Sb5bAXyUt5c#e#f = sceGameLiveStreamingSetLinkCommentPreset returns 0 (first call from eboot+0xce85fc, arg0=0x80c44f860)
+Runtime: guest thread 'GameUpdate' created (stack=2097152, prio=700)
+STUB: dnEdyY4+klQ#libSceRazorCpu = sceRazorCpuJobManagerDispatch returns 0 (first call from libSceJobManager.prx+0x23b8, arg0=0x80177b30c)
+Runtime: guest thread 'SpriteWorker' created (stack=1048576, prio=702)
+Guest memory: writes under images are trapped (BB_IMAGE_TRAPS=0: announced writes only)
+Layer memory: promoted runs in domains 0, over a neighbour 0, in none 0; in none by 64 MiB of address (MiB):
+Layer memory: 0 MiB valid in VRAM, 0 mirrors of 0 MiB (0 retired); loaded data 0 MiB; vkQueueBindSparse: 0 calls, 0 ranges; write traps hit 0
+Layer memory: mirror pool 0 MiB in 0, 0 new mirrors from it, 0 allocated
+Layer memory: valid VRAM data by last use (MiB): <2 s 0, <5 s 0, <15 s 0, <30 s 0, <60 s 0, older 0
+Layer memory: valid VRAM data by block bound (MiB): <2 s 0, <5 s 0, <15 s 0, <30 s 0, <60 s 0, older 0, never 0
+Layer memory: 0 volatile blocks, 0 MiB refreshed in 10 s (0 MiB read in place in render passes); 0 watched blocks, 0 uploaded again after CPU writes; GPU writes in VRAM barred in 0 MiB the CPU wrote
+Layer memory: write traps in 10 s: announced 0; the game's code on watched 0, on other copies 0; other code on watched 0, on other copies 0
+Layer memory: back in place (MiB): written 0, mixed 0, command 0, request 0, copy back 0, unmap 0, idle 0, unbound 0; GPU data copied back 0 MiB
+Layer memory: held in place (MiB): dynamic 0 (CPU-hot 0), watch failed 0, CPU-written 0 (GPU writes kept in place by them: 0 MiB in 10 s), write bounces 0; dynamic blocks reloaded whole 0; blocks with loaded data and no copy 0 MiB
+Buffer: StagingBufferPool:Segment 16 MiB, VRAM
+Runtime: guest thread 'SceLibc_Thr' created (stack=1048576, prio=700)
+Runtime: guest thread 'PhotoCache' created (stack=1048576, prio=767)
+Runtime: guest thread 'LocalCache' created (stack=1048576, prio=767)
+Runtime: guest thread 'Streaming' created (stack=1048576, prio=767)
+Runtime: guest thread 'SerialiseGameToMetadata' created (stack=1048576, prio=767)
+Runtime: AppContent parameter 0 = 3
+Runtime: system module 0xad loaded (host implementation)
+Runtime: guest thread 'Trophy' created (stack=1048576, prio=767)
+STUB: hw5KNqAAels#R#S = sceNpRegisterNpReachabilityStateCallback returns 0 (first call from eboot+0xcca329, arg0=0x801148e20)
+STUB: rbknaUjpqWo#R#S = sceNpGetAccountIdA returns 0 (first call from eboot+0xcf404c, arg0=0x1)
+Free Bytes 1289528 overflow 0
+Runtime: guest thread 'OSC' created (stack=1048576, prio=767)
+STUB: UmCvjSmuZIw#libSceAudio3d = sceAudio3dInitialize returns 0 (first call from eboot+0xcca515, arg0=0x0)
+STUB: XeDDK0xJWQA#libSceAudio3d = sceAudio3dPortOpen returns 0 (first call from eboot+0xcca57a, arg0=0xff)
+Runtime: audio backend pipewire
+Runtime: audio port 0 opened (type 0, 8 ch, float, 256 frames)
+Runtime: audio port 8 opened (type 1, 8 ch, float, 256 frames)
+STUB: xX4RLegarbg#G#H = sceAudioOutMasteringInit returns 0 (first call from eboot+0xcca688, arg0=0x0)
+STUB: 4055yaUg3EY#G#H = sceAudioOutMasteringSetParam returns 0 (first call from eboot+0xcca777, arg0=0x802e0d820)
+Runtime: guest thread 'AudioOut' created (stack=1048576, prio=256)
+Runtime: guest thread 'AudioIn' created (stack=1048576, prio=256)
+Runtime: guest thread 'AudioIn' created (stack=1048576, prio=256)
+Runtime: guest thread 'AudioIn' created (stack=1048576, prio=256)
+STUB: nya-R5gDYhM#Y#Z = sceAudioInHqOpen returns 0 (first call from eboot+0xa2beb, arg0=0x1)
+Runtime: audio port 17 opened (type 4, 1 ch, float, 256 frames)
+STUB: wVwPU50pS1c#G#H = sceAudioOutSetMixLevelPadSpk returns 0 (first call from eboot+0xa23d6, arg0=0x20040011)
+Runtime: guest thread 'AudioIn' created (stack=1048576, prio=256)
+Runtime: SystemService: language 1 asked from +0x150fcfa
+Runtime: SystemService: language 1 asked from +0x150fcfa
+STUB: BQ3tey0JmQM#Z#a = sceCommonDialogIsUsed returns 0 (first call from eboot+0xccdfd0, arg0=0x271e4230)
+STUB: I88KChlynSs#libSceErrorDialog = sceErrorDialogInitialize returns 0 (first call from eboot+0xa54291, arg0=0x100821f560)
+STUB: M2ZF-ClLhgY#libSceErrorDialog = sceErrorDialogOpen returns 0 (first call from eboot+0xa542ca, arg0=0x80bef8308)
+Runtime: pad opened for user 1 (SDL gamepad or keyboard)
+STUB: KLmYx9ij2h0#A#B = scePadSetAngularVelocityBiasCorrectionState returns 0 (first call from eboot+0xccdb71, arg0=0x1)
+STUB: lUoqwTQu4Go#D#E = sceUserServiceGetUserColor returns 0 (first call from eboot+0xccdc12, arg0=0x1)
+STUB: HzC60MfjJxU#libSceMove = sceMoveOpen returns 0 (first call from eboot+0xccdc30, arg0=0x1)
+STUB: p6n3Npi3YY4#libSceCamera = sceCameraIsAttached returns 0 (first call from eboot+0xccdf47, arg0=0x0)
+STUB: thDt9upZlp8#libSceHmd = sceHmdGetDeviceInformation returns 0 (first call from eboot+0xcce047, arg0=0x80bef8880)
+Runtime: gamepad connected: PS4 Controller
+Trophies: no trophy key (BB_TROPHY_KEY in the environment or .env): shown by number
+STUB: f2bcpK6kJfg#libSceMove = sceMoveReadStateRecent returns 0 (first call from eboot+0x7bdd54, arg0=0x0)
+Trophies: NPWR10796_00, 0 known, 0 unlocked here (/home/braden/Documents/Programming/Dreams-Recomp/work/user/trophy/NPWR10796_00)
+STUB: GNcF4oidY0Y#l#m = sceNpTrophyDestroyHandle returns 0 (first call from eboot+0x6262d1, arg0=0x7)
+STUB: zuxWAg3HAac#libSceMove = sceMoveResetLightSphere returns 0 (first call from eboot+0xccfbc0, arg0=0x0)
+Runtime: open(/app0/dbg_data/imp/imp_cfg_metadata.dat) -> not found
+Runtime: open(/app0/data/imp/imp_cfg_metadata.dat) -> not found
+Runtime: open(/app0/dbg_data/imp/imp_characters.dat) -> not found
+Runtime: open(/app0/dbg_data/imp/imp_anim.dat) -> not found
+Runtime: open(/app0/dbg_data/imp/imp_sound_anim.dat) -> not found
+Runtime: open(/app0/data/imp/imp_sound_anim.dat) -> not found
+Runtime: open(/app0/dbg_data/imp/chars/000_alpha.dat) -> not found
+Runtime: guest thread 'SceLibc_Thr' created (stack=1048576, prio=700)
+STUB: IFQwtT2CeY0#libSceMove = sceMoveSetVibration returns 0 (first call from eboot+0xf18c60, arg0=0x0)
+gpu warning (Lib.GnmDriver): Func_4774D83BB4DDBF9A is not implemented (returns 0) [gnm_driver.cpp:826]
+Runtime: SystemService: splash screen hidden
+STUB: WWiGuh9XfgQ#libSceErrorDialog = sceErrorDialogUpdateStatus returns 0 (first call from eboot+0xa54309, arg0=0x100821f560)
+STUB: 9XAxK2PMwk8#libSceErrorDialog = sceErrorDialogTerminate returns 0 (first call from eboot+0xa5425e, arg0=0x100821f560)
+Runtime: save data 'SYSTEM' mounted at /savedata0 (created)
+GPU: the GPU clock (100 MHz) from Vulkan timestamps: 10.000 ns a tick, 64 valid bits, tied to the host clock within 1790 us
+Runtime: open(/app0/dbg_data/imp/chars/000_blue.dat) -> not found
+GPU: end-of-pipe labels are written by the GPU (AMD buffer markers; BB_GPU_LABELS=0: by a CPU thread after the GPU)
+Guest memory: blocks the CPU writes unannounced get VRAM copies too, uploaded again after its next write (BB_LAYER_WATCH=1)
+STUB: 65VH0Qaaz6s#O#P = sceSaveDataGetMountInfo returns 0 (first call from eboot+0x524f7a, arg0=0x10283bca08)
+gpu error (Render.Recompiler): Unknown opcode DS_ORDERED_COUNT (1681, category = DataShare) [translate.cpp:934]
+gpu error (Render.Recompiler): Unknown opcode DS_ORDERED_COUNT (1681, category = DataShare) [translate.cpp:934]
+gpu critical (Debug): Assertion Failed!
+Shader translation has failed [recompiler.cpp:46]
+Assertion call stack:
+/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(+0xf6e9e) [0x7efd8d4f6e9e]
+/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(+0xf6f4d) [0x7efd8d4f6f4d]
+/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN6Shader16TranslateProgramERKSt4spanIKjLm18446744073709551615EERNS_5PoolsERNS_4InfoERNS_11RuntimeInfoERKNS_7ProfileE+0x1210) [0x7efd8d4f4160]
+/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN6Vulkan13PipelineCache13CompileModuleERN6Shader4InfoERNS1_11RuntimeInfoESt4spanIKjLm18446744073709551615EEmRNS1_7Backend8BindingsE+0x273) [0x7efd8d6f4133]
+/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN6Vulkan13PipelineCache10GetProgramERNS_17PipelineSelectionEN6Shader7HwStageENS3_7SwStageERKNS3_12ShaderParamsERNS3_7Backend8BindingsE+0xcf5) [0x7efd8d706e45]
+/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN6Vulkan13PipelineCache17RefreshComputeKeyEv+0x1ae) [0x7efd8d7008ce]
+/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN6Vulkan13PipelineCache18GetComputePipelineEv+0x17) [0x7efd8d6f1157]
+/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN6Vulkan10Rasterizer14DispatchDirectEv+0x4d) [0x7efd8d73b5ed]
+/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN4BbCp16CommandProcessor8GraphicsERNS0_4WorkERNS0_5LevelEPKjj+0x18a0) [0x7efd8d632540]
+/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN4BbCp16CommandProcessor11RunGraphicsERNS0_4WorkE+0x16d) [0x7efd8d63277d]
+/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN4BbCp16CommandProcessor3RunESt10stop_token+0x4aa) [0x7efd8d6230ea]
+/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(+0x223431) [0x7efd8d623431]
+/lib64/libstdc++.so.6(+0x51436) [0x7efd8a851436]
+/lib64/libc.so.6(+0x72c42) [0x7efd8ce79c42]
+/lib64/libc.so.6(+0xf65ac) [0x7efd8cefd5ac]
+STOP: GPU library assertion failed (see GPU log above)

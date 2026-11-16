@@ -265,6 +265,8 @@ uintptr_t runtime_resolve(const char *name, int is_data) {
     if (save) return save;
     uintptr_t file = runtime_file_resolve(name);
     if (file) return file;
+    uintptr_t dreams = runtime_dreams_resolve(name); /* Dreams port additions (runtime_dreams.c) */
+    if (dreams) return dreams;
     uintptr_t compat = runtime_compat_resolve(name);
     if (compat) return compat;
     return bbgpu_resolve(name);
@@ -272,6 +274,7 @@ uintptr_t runtime_resolve(const char *name, int is_data) {
 static const struct { const char *nid, *symbol; } import_names[]={
 #include "import_names.inc"
 #include "import_names_extra.inc"
+#include "import_names_dreams.inc" /* Dreams: every eboot/prx import (tools/gen_import_names.py) */
 };
 /* Symbol name for an import (NID, with or without its library/module suffix), or NULL when it is
  * not known. The NID alone decides: it is the hash of the symbol's name, whatever library a game

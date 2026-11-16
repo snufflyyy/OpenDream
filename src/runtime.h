@@ -139,4 +139,6 @@ void runtime_thread_attach_host(const char *name);
 extern uintptr_t runtime_libc_base;
 /* Calls that need no work here (runtime_compat.c). */
 uintptr_t runtime_compat_resolve(const char *name);
+/* Dreams port: PS4 functions Dreams needs beyond bbport's runtime (runtime_dreams.c). */
+uintptr_t runtime_dreams_resolve(const char *name);
 #endif

@@ -164,8 +164,35 @@ static void protect(void *p, size_t size, unsigned flags) {
     runtime_low_protect((uintptr_t)p, size, mode);
 #endif
 }
-static ABI __attribute__((noreturn)) void unresolved(uint32_t id, uintptr_t argument) {
+/* Dreams port: shadPS4 parity for imports nothing implements. shadPS4 binds every unknown import
+ * to a stub that logs and returns 0 (ref/shadps4/src/core/aerolib/stubs.cpp CommonStub), and
+ * Dreams reaches in-game that way on the Dreams fork. We do the same by default so booting is not
+ * blocked on functions whose result the game ignores; each one is logged once ("STUB:") and listed
+ * in docs/dreams/STUBS.md work. DREAMS_STRICT_IMPORTS=1 restores bbport's stop-at-first-missing. */
+static unsigned char *stub_seen;
+static uint64_t stub_calls, stub_distinct;
+static ABI uint64_t unresolved(uint32_t id, uintptr_t argument) {
     if (id >= import_count) fail("bad import trap index");
+    static int strict = -1;
+    if (strict < 0) strict = bb_env_on("DREAMS_STRICT_IMPORTS");
+    if (!strict && stub_seen) {
+        __atomic_add_fetch(&stub_calls, 1, __ATOMIC_RELAXED);
+        if (!__atomic_exchange_n(&stub_seen[id], 1, __ATOMIC_RELAXED)) {
+            __atomic_add_fetch(&stub_distinct, 1, __ATOMIC_RELAXED);
+            uintptr_t caller=(uintptr_t)__builtin_return_address(0)-(uintptr_t)image;
+            const char *where="eboot";
+            uintptr_t off=caller;
+            for (uint64_t m=0;m<module_count;++m)
+                if (caller>=modules[m].base && caller-modules[m].base<modules[m].size) {
+                    where=m==0 ? "libc.prx" : m==1 ? "libSceFios2.prx" : m==2 ? "libSceJobManager.prx" : "module";
+                    off=caller-modules[m].base;
+                }
+            printf("STUB: %s = %s returns 0 (first call from %s+0x%" PRIxPTR ", arg0=0x%" PRIxPTR ")\n",
+                   names[id], runtime_import_name(names[id]), where, off, argument);
+            fflush(stdout);
+        }
+        return 0;
+    }
     printf("STOP: first unsupported PS4 import: %s (index %u)\n", names[id], id);
     printf("API: %s\n", runtime_import_name(names[id]));
     printf("Caller return offset: 0x%" PRIxPTR "; first argument: 0x%" PRIxPTR "\n",
@@ -709,6 +736,7 @@ int main(int argc, char **argv) {
         if (bbgpu_init(&gpu)) fail("GPU initialization failed");
         printf("GPU: window and Vulkan presenter ready; SDK 0x%08x, %u HLE symbols\n",(unsigned)sdk,bbgpu_symbol_count());
     }
+    stub_seen = calloc(import_count + 1, 1); /* Dreams: log-once table for the return-0 fallback */
     unsigned char *traps = allocate(round_page((import_count + 1) * 32));
     unsigned char *data_traps = allocate((import_count + 1) * page_size);
     protect(data_traps, (import_count + 1) * page_size, 0);

@@ -288,6 +288,22 @@ static void run_job(Context *ctx, uint32_t id, Job *job) {
     if ((id & MAX_INSTANCES)==0 || !in->used) { if (result) result->result=(int32_t)(RESULT_FATAL|RESULT_INVALID_PARAMETER); return; }
     uint64_t f=job->flags;
     uint32_t flags_result=0;
+    if (in->codec!=1) { /* Dreams port: MP3/AAC silent decoder (see ajm_instance_create) */
+        uint64_t in_size=0;
+        for (int i=0;i<job->input_count;++i) in_size+=job->inputs[i].size;
+        if (side && SIDEBAND_STREAM(f) && side+16<=side_end) {
+            SidebandStream s={(int32_t)in_size,0,in->total_samples};
+            memcpy(side,&s,16); side+=16;
+        }
+        if (side && SIDEBAND_FORMAT(f) && side+24<=side_end) {
+            uint32_t ch=in->channels_hint ? (uint32_t)in->channels_hint : 2;
+            SidebandFormat s={ch,channel_mask((int)ch),48000,(uint32_t)in->format,0,0};
+            memcpy(side,&s,24); side+=24;
+        }
+        if (side && SIDEBAND_GAPLESS(f) && side+8<=side_end) { memcpy(side,&in->gapless,8); side+=8; }
+        if (side && RUN_MULTIPLE_FRAMES(f) && side+8<=side_end) { uint32_t m[2]={0,0}; memcpy(side,m,8); side+=8; }
+        return;
+    }
     const unsigned char *control=job->input_control.size ? job->input_control.address : NULL;
     const unsigned char *control_end=control ? control+job->input_control.size : NULL;
     if (CONTROL_RESET(f)) { in->total_samples=0; gapless_reset(in); if (in->initialized) at9_reset(in); }
@@ -410,7 +426,15 @@ static ABI int32_t ajm_module_unregister(uint32_t id, uint32_t codec) {
 static ABI int32_t ajm_instance_create(uint32_t id, uint32_t codec, uint64_t flags, uint32_t *out) {
     if (!out || codec>=24) return ERR_INVALID_PARAMETER;
     if (!(flags & 7)) return ERR_WRONG_REVISION;
-    if (codec!=1) { fprintf(stderr,"STOP: Ajm codec %u (0=MP3, 2=AAC) is not implemented\n",codec); exit(21); }
+    /* Dreams port: Dreams creates AAC (codec 2) instances during audio init. Until a real decoder
+     * is ported (shadPS4 ajm_aac.cpp uses fdk-aac; TODO in docs/dreams/STATUS.md), MP3/AAC instances
+     * are "silent": jobs consume all input and produce no samples (run_job). Logged once. */
+    if (codec>2) { fprintf(stderr,"STOP: Ajm codec %u is not implemented\n",codec); exit(21); }
+    if (codec!=1) {
+        static int warned[3];
+        if (!__atomic_exchange_n(&warned[codec],1,__ATOMIC_RELAXED))
+            printf("Runtime: Ajm codec %u (%s) instance: SILENT decoder (not implemented yet)\n",codec,codec ? "AAC" : "MP3");
+    }
     if (ajm_trace()) printf("Audio trace: Ajm instance create codec %u flags %#llx\n",codec,(unsigned long long)flags);
     pthread_mutex_lock(&lock);
     Context *c=context(id);

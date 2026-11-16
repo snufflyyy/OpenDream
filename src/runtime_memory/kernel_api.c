@@ -405,7 +405,18 @@ static ABI int32_t batch_map2(BatchEntry *entries, int count, int *processed, in
 static ABI int32_t batch_map(BatchEntry *entries, int count, int *processed) {
     return batch_map2(entries,count,processed,MAP_FIXED_FLAG);
 }
+/* Dreams port: sceKernelAvailableFlexibleMemorySize (aNz11fnnzi4). Dreams queries it at startup
+ * (eboot+0xcb81ef) to size its flexible-memory pools; a return-0 stub left *out uninitialised.
+ * Budget = FLEXIBLE_SIZE minus what is mapped (ref: shadPS4 kernel/memory.cpp). */
+static ABI int32_t available_flexible(uint64_t *out) {
+    if (!out) return INVALID;
+    write_lock();
+    *out=flexible_bytes<FLEXIBLE_SIZE ? FLEXIBLE_SIZE-flexible_bytes : 0;
+    write_unlock();
+    return 0;
+}
 static const RuntimeExport exports[]={
+    {"sceKernelAvailableFlexibleMemorySize",available_flexible},
     {"sceKernelGetDirectMemorySize",direct_size}, {"sceKernelAllocateDirectMemory",direct_allocate},
     {"sceKernelMapDirectMemory",direct_map}, {"sceKernelMapNamedDirectMemory",direct_map_named},
     {"sceKernelReleaseDirectMemory",direct_release}, {"sceKernelMunmap",direct_unmap}, {"munmap",direct_unmap},
