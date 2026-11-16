@@ -1,0 +1,213 @@
+{
+ "comment": "Fork shader routes (Dreams-ShadPS4 v2.64 hashes) and how each was identified on other versions. key = stable dd.shaders entry key (same in 2.52, 2.64, 2.65). doc = DS_ORDERED_COUNT signature (tools/dreams_shader_routes.py). shape_match = signature unique among routes, so it may be used for versions whose code differs. See docs/dreams/VERSIONS.md.",
+ "routes": [
+  {
+   "fork_hash": "b535c6c8",
+   "name": "Traversal (sculpt traversal, 4 DOC)",
+   "key": "72b79162bade5a7d",
+   "doc": "0804@142,1804@146,0c04@143,100c@144",
+   "shape_match": true,
+   "evidence": "DOC controls+counters = TraversalOrderedControls/CounterIndices; 20 fork trace PCs (0x29c SAVEEXEC, 0x82c CNDMASK->v18, 0x918 CMPX v2, 0xafc/0xb38 V_CMP_NGE, 0xe0c SAVEEXEC, 10 B3-B6 stores 0x1334-0x1548) land on the same instructions in v2.52 49d0daba"
+  },
+  {
+   "fork_hash": "2bfebd3c",
+   "name": "QueueProducer (primary)",
+   "key": "7332d0d093b1e4c9",
+   "doc": "000c@142",
+   "shape_match": true,
+   "evidence": "counter 0x142 = QueueProducerPrimaryOrderedCounterIndex / AdditionalOrderedKernelFor counter 322"
+  },
+  {
+   "fork_hash": "692f0f7f",
+   "name": "QueueProducerAlt",
+   "key": "087cd3031850f1ff",
+   "doc": "0c04@143,140c@145",
+   "shape_match": true,
+   "evidence": "controls 0x0c04/0x140c at base 0x500 = QueueProducerAltOrderedControls"
+  },
+  {
+   "fork_hash": "cbac06d2",
+   "name": "CompactClassify",
+   "key": "097df0f5cc4e7df1",
+   "doc": "0004@2e0,040c@2e1",
+   "shape_match": true,
+   "evidence": "pack key and 2308-byte code size from the fork's GAME_FILES_INSPECTION; DOC PCs 0x304/0x338 and dispatch 24x1x1 match the fork's capture"
+  },
+  {
+   "fork_hash": "d4532ff4",
+   "name": "CompactScatter (stateful radix)",
+   "key": "5ff1f30f1383a6d6",
+   "doc": "000c@1e8",
+   "shape_match": true,
+   "evidence": "counter base 0x1e8 = AdditionalOrderedKernelFor(d4532ff4)"
+  },
+  {
+   "fork_hash": "81cf58cf",
+   "name": "SelectionListCompact",
+   "key": "550dfbc11f7e95af",
+   "doc": "000c@a40",
+   "shape_match": true,
+   "evidence": "counter 0xa40 = SelectionListCompactCounterIndex"
+  },
+  {
+   "fork_hash": "3937a849",
+   "name": "SceneCompact (1024-thread, 4 DOC per wave)",
+   "key": "1a34ba90aa1aaa91",
+   "doc": "0004@900,0404@901,0804@902,0c0c@903",
+   "shape_match": true,
+   "evidence": "controls = SceneCompactOrderedControls, counter base 0x900; local 1024x1x1; fork trace PC 0x9c is S_AND_SAVEEXEC into s6 in v2.52 too"
+  },
+  {
+   "fork_hash": "90272fc4",
+   "name": "IndirectArgs (902)",
+   "key": "99c1e623dd39f300",
+   "doc": "0004@a7,000c@a6",
+   "shape_match": true,
+   "evidence": "row counters 0xa7+row and global 0xa6 = IndirectArgsOrdered*CounterDword"
+  },
+  {
+   "fork_hash": "d8b4ddb5",
+   "name": "VisibilityCandidateCompact (d8, 10-pass radix)",
+   "key": "e4e51bfb8332c684",
+   "doc": "000c@155",
+   "shape_match": true,
+   "evidence": "counter 0x155+pass = VisibilityCandidateOrderedCounterFirstDword"
+  },
+  {
+   "fork_hash": "95c28c88",
+   "name": "GatherInputCompact (95c, 37-pass radix)",
+   "key": "20a8554b512230a6",
+   "doc": "000c@5d",
+   "shape_match": true,
+   "evidence": "counter 0x5d+pass, pass from SRT word 9 (s9) = GatherInputOrderedCounterFirstDword"
+  },
+  {
+   "fork_hash": "7aa925e9",
+   "name": "VisibilityListCompact",
+   "key": "422e66e41cfa8b6c",
+   "doc": "0004@15f,040c@160",
+   "shape_match": true,
+   "evidence": "counters 0x15f/0x160 = VisibilityListOrderedCounterIndices"
+  },
+  {
+   "fork_hash": "016b9f6a",
+   "name": "VisibilityListCompactAlt",
+   "key": "efafe0c14c627cda",
+   "doc": "0004@161,040c@162",
+   "shape_match": true,
+   "evidence": "counters 0x161/0x162 = VisibilityListAltOrderedCounterIndices"
+  },
+  {
+   "fork_hash": "84aa3dc9",
+   "name": "SculptVolumeWriter (84aa)",
+   "key": "1d06b993301fe08e",
+   "doc": "000c@78",
+   "shape_match": true,
+   "evidence": "pack key and 1048-byte code size from the fork's GAME_FILES_INSPECTION; counter 0x78 = SculptOrderedCounterIndex"
+  },
+  {
+   "fork_hash": "4ebeffd2",
+   "name": "B1SeedWriter (4eb)",
+   "key": "833ba1c24f3bc611",
+   "doc": "000c@79",
+   "shape_match": true,
+   "evidence": "pack key and 364-byte code size from the fork's GAME_FILES_INSPECTION; counter 0x79 = B1SeedWriterOrderedCounterIndex; store at fork PC 0x144"
+  },
+  {
+   "fork_hash": "f030fdc4",
+   "name": "SculptSurfaceCompact (f030)",
+   "key": "b985d2efcf6a4a85",
+   "doc": "000c@100",
+   "shape_match": false,
+   "evidence": "counter 0x100, local 4x4x4; the only 0x100 DOC kernel that samples a volume image (IMAGE_GATHER4_LZ), as 'extracts surface records from the sculpt-density volume'. Signature shared with 5ac: code hash only"
+  },
+  {
+   "fork_hash": "5ac53394",
+   "name": "SculptSurfaceFinalize (5ac)",
+   "key": "83c2875bbe709d60",
+   "doc": "000c@100",
+   "shape_match": false,
+   "evidence": "counter 0x100, local 4x4x4, dispatched next to f030; three buffer descriptors before GDS (control binding 3). Signature shared with f030: code hash only"
+  },
+  {
+   "fork_hash": "252ccde6",
+   "name": "Alias-proved one-counter compaction (252)",
+   "key": "c0a99cd3b5f6674b",
+   "doc": "000c@400",
+   "shape_match": false,
+   "evidence": "counter 0x400, direct dispatch, divides by the SRT divisor (V_MUL_HI_U32) as the 252 alias proof expects; its route also requires the audited SPIR-V. Shared signature with fff20d00: code hash only"
+  },
+  {
+   "fork_hash": "fff20d00",
+   "name": "Indirect one-counter compaction (fff2)",
+   "key": "a4bd044cc56ab60b",
+   "doc": "000c@400",
+   "shape_match": false,
+   "evidence": "counter 0x400, the indirect 0x400 kernel (fff20d00 is the audited indirect one). Shared signature with 252: code hash only"
+  },
+  {
+   "fork_hash": "6f408bbc",
+   "name": "SunShadowPartitionByCascade",
+   "key": "aed0b33747440486",
+   "doc": "0004@e4,0404@e5,0804@e6,0c0c@e7",
+   "shape_match": true,
+   "evidence": "4 DOC at counter base 0xe4 = AdditionalOrderedKernelFor(6f408bbc)"
+  },
+  {
+   "fork_hash": "a25580f7",
+   "name": "SunShadowPartitionByCascadeSecondPass",
+   "key": "751d1bba35e8f7c1",
+   "doc": "0004@e8,0404@e9,0804@ea,0c0c@eb",
+   "shape_match": true,
+   "evidence": "4 DOC at counter base 0xe8 = AdditionalOrderedKernelFor(a25580f7)"
+  },
+  {
+   "fork_hash": "bce8c0fe",
+   "name": "SunShadowSortDrawKeys",
+   "key": "219c124a2a5ead2c",
+   "doc": "000c@da",
+   "shape_match": true,
+   "evidence": "radix counter base 0xda = AdditionalOrderedKernelFor(bce8c0fe)"
+  },
+  {
+   "fork_hash": "4bc902cf",
+   "name": "Stateful two-counter compaction (4bc)",
+   "key": "7a321923ef895a95",
+   "doc": "0004@200,040c@201",
+   "shape_match": true,
+   "evidence": "2 DOC at counter base 0x200 = AdditionalOrderedKernelFor(4bc902cf)"
+  },
+  {
+   "fork_hash": "7ba4de5d",
+   "name": "GatherVoxels (Bricker2GatherVoxelsChunk)",
+   "key": "246a56e32ad878a1",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "no DOC; unique v2.52 shader whose code has the fork's 15 trace PCs at the same instructions: 0x180 V_CMP_GE_U32 vs 1023, 0x229c GDS DS_ADD_RTN, B1 stores 0x2278 (v0 row, v1 value) and 0x3c44 (v5 row, v9 value)"
+  },
+  {
+   "fork_hash": "a3a9e9ef",
+   "name": "B1TransformWriter (A3 packed positions)",
+   "key": "0b43adf3d7d23b0f",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "no DOC; unique v2.52 shader with the B1 store at fork PC 0x2020 (value v0) and the predicate at 0x1f04"
+  },
+  {
+   "fork_hash": "63ddac84",
+   "name": "A3LookupProducer",
+   "key": "acebdb2fe22583a4",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "no DOC; unique v2.52 shader (<1 KiB) with the fork's pair/count publications at 0x12c / 0x1ac (BUFFER_ATOMIC_UMAX_X2 / UMAX)"
+  },
+  {
+   "fork_hash": "d049fb84",
+   "name": "ModelFinalize",
+   "key": "55f16b0ad6c08b40",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "no DOC; unique v2.52 shader with V_OR_B32 of v7|v16 at fork PC 0x4d0"
+  }
+ ]
+}

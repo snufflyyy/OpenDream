@@ -112,3 +112,9 @@ All in `tools/`, none needs the game running:
 | `DREAMS_USER_DIR=<dir>` | separate guest user dir (saves), seeded once from a copy of `work/user`; use it for test runs |
 | `DREAMS_TUTORIAL_SKIP_MY_SAVE=1` | with `DREAMS_SKIP_INTRO=1`: also edit your own save (backup first) |
 
+## Game versions (docs/dreams/VERSIONS.md)
+
+| Env | Effect |
+|---|---|
+| `DREAMS_SIGNATURE_MATCH=1` (default) | the Dreams fork's shader fixes (keyed on v2.64 shader hashes) also apply to other versions: shaders are matched by code hash / ordered-count signature (`Dreams route:` log lines). `=0` = old behaviour (on v2.52: 22 DOC kernels on the atomic fallback, blocky sculpts) |
+
