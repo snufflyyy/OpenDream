@@ -129,6 +129,11 @@ json.dump(c,open(p,"w"),indent=2)' "$VUSER/custom_configs/$SERIAL.json" "$presen
     if [[ ${DREAMS_SKIP_INTRO:-0} == 1 ]]; then
         export SHADPS4_DREAMS_SKIP_LOGO_VIDEO=1
     fi
+    # DREAMS_SIGNATURE_MATCH=1: apply the fork's v2.64 shader routes to other Dreams versions by
+    # code hash / DS_ORDERED_COUNT signature (docs/dreams/VERSIONS.md). =0 turns it off.
+    if [[ ${DREAMS_SIGNATURE_MATCH:-0} == 1 ]]; then
+        export SHADPS4_DREAMS_SIGNATURE_MATCH=1
+    fi
     export SHADPS4_DREAMS_PRIMARY_QUEUE_PROBE_DIR="$WORK/vcore-probe"
     export SHADPS4_DREAMS_PRIVATE_SHADER_CACHE="$WORK/vcore-shader-cache"
     export SHADPS4_USER_DIR="$VUSER"             # path_util.cpp vcore edit
