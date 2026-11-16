@@ -14,6 +14,8 @@
 #      own save is changed only with DREAMS_TUTORIAL_SKIP_MY_SAVE=1 (timestamped backup first).
 #      Frame rate (docs/dreams/FPS.md): DREAMS_PROSPERO=1 (PS5: 60 fps menus), DREAMS_60HZ=1,
 #      DREAMS_FPS=<60..240> (also sets the vblank frequency to that rate).
+#      DREAMS_VCORE_CONFIG=<file>: per-game vcore config template for this run (default
+#      notes/shadps4-dreams-runtime/CUSA04301.json), e.g. a copy with GPU.dump_shaders=true.
 # See docs/dreams/RUNNING.md and docs/dreams/VCORE.md.
 set -euo pipefail
 cd -- "$(dirname -- "$0")"
@@ -89,7 +91,11 @@ fi
 if [[ $(cat out/gpu-library.txt 2>/dev/null || echo vcore) == vcore ]]; then
     VUSER=$WORK/vcore-user                       # shadPS4 "user" dir of the GPU library
     mkdir -p "$VUSER/custom_configs" "$WORK/vcore-probe" "$WORK/vcore-shader-cache"
-    cp "$ROOT/notes/shadps4-dreams-runtime/CUSA04301.json" "$VUSER/custom_configs/$SERIAL.json"
+    # The per-game config copy (readbacks_mode=2 Precise, ...). DREAMS_VCORE_CONFIG=<file> replaces
+    # the template for one run (e.g. a copy with GPU.dump_shaders=true): the shared notes template
+    # is never edited by a run.
+    vcore_config=${DREAMS_VCORE_CONFIG:-$ROOT/notes/shadps4-dreams-runtime/CUSA04301.json}
+    python3 -I tools/dreams_gpu_config.py "$vcore_config" "$VUSER/custom_configs/$SERIAL.json"
     # DREAMS_FPS=<n> above 60 (vcore/shim/frame_rate.cpp): the display must flip n times a second.
     fps=${DREAMS_FPS:-0}
     if [[ $fps =~ ^[0-9]+$ ]] && (( fps > 60 && fps <= 240 )); then
