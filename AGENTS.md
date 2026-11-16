@@ -76,6 +76,10 @@ Re-create the bundle after new commits on those branches.
 
 ## Rules for agents
 
+- **Run the game only via `tools/agent-run.sh`** (headless, sandboxed, user-priority; see
+  `port/docs/dreams/AGENT_RUNS.md`). Never open windows, play audio or touch the user's devices:
+  the user works on this PC while agents test.
+
 - Don't commit game files, extracted data, or anything from `game/` / `work/`.
 - Implement PS4 functions by NID; use shadPS4 (`ref/shadps4/src/core/libraries/`) as the reference
   for semantics, cite the file in a comment, and log each one in `port/docs/dreams/IMPORTS_LOG.md`.
