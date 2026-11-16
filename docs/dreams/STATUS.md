@@ -126,3 +126,17 @@ A native run hung the GPU once (gfx ring timeout in `shadPS4:Present`; amdgpu fe
 reset that kills the desktop). Cause not yet known (see WORKLOG incident entry). Until it is
 understood: only one Dreams instance at a time (enforced by run-dreams.sh), every run is logged to
 `work/logs/` and captured to `work/captures/`, and agents should save their work before long GPU runs.
+
+## Open issues (2026-11-15, after merging `input` and `fps`)
+
+- **OSC thread busy-loops:** Dreams' remote-signals listener thread (`OSC`) uses ~99% of a CPU core at
+  any frame rate. Probably a socket poll in our net code that returns immediately instead of
+  blocking/timing out. Found by the fps agent; not investigated yet.
+- **High fps ceiling ~90–100 fps:** limited by the shadPS4 GPU command thread (78% of a core at
+  98 fps) while the GPU is ~44% busy. See FPS.md.
+- **Patchy object rendering on 2.52:** the fork's DOC fixes are keyed to 2.64 shader hashes; waiting
+  for the user's 2.64 dump.
+- **Untested by a human:** mouse capture on Hyprland, the key layout, DREAMS_PROSPERO=1, whether
+  moving objects look smooth at 60/120 or step at 30 Hz gameplay rate.
+- New worktrees don't get the `third_party/LibAtrac9` submodule: run
+  `git submodule update --init third_party/LibAtrac9` in the worktree before building.
