@@ -38,14 +38,24 @@ trap cleanup EXIT
 
 # Common sandbox: whole filesystem as usual (the project lives in $HOME), but a fresh /dev with
 # only the GPU, private /run/user runtime dir, no network.
-SANDBOX=(bwrap --bind / / --dev /dev --dev-bind /dev/dri /dev/dri --tmpfs /run/user
+# DREAMS_SOFTWARE_GPU=1: no GPU at all (no /dev/dri in the sandbox, weston's pixman renderer, the
+# game on Mesa lavapipe = software Vulkan). Slow, but a GPU hang can't happen: use it for risky
+# repros (e.g. the 2026-11-15 GPU hangs). Default: the real GPU via /dev/dri.
+SOFTWARE_GPU=${DREAMS_SOFTWARE_GPU:-0}
+GPU_DEV=(--dev-bind /dev/dri /dev/dri); RENDERER=gl; GPU_ENV=()
+if [[ $SOFTWARE_GPU == 1 ]]; then
+    GPU_DEV=(); RENDERER=pixman
+    GPU_ENV=(VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json LIBGL_ALWAYS_SOFTWARE=1)
+    echo "agent-run.sh: software GPU (lavapipe), no /dev/dri: slow, GPU-hang safe" >&2
+fi
+SANDBOX=(bwrap --bind / / --dev /dev "${GPU_DEV[@]}" --tmpfs /run/user
          --bind "$RUN_DIR" "$RUN_DIR" --unshare-net --die-with-parent)
 SCOPE=(systemd-run --user --scope --quiet --collect -p CPUWeight=20 -p IOWeight=20 -p MemoryMax=20G
        -p MemorySwapMax=0)
 
 # 1. Invisible compositor.
 env -i HOME="$HOME" PATH="$PATH" XDG_RUNTIME_DIR="$RUN_DIR" \
-    "${SANDBOX[@]}" weston --backend=headless --renderer=gl --width=1920 --height=1080 \
+    "${SANDBOX[@]}" weston --backend=headless --renderer="$RENDERER" --width=1920 --height=1080 \
     --socket="$SOCKET" --idle-time=0 --no-config --log="$RUN_DIR/weston.log" &
 WESTON_PID=$!
 for _ in $(seq 1 100); do [[ -S $RUN_DIR/$SOCKET ]] && break; sleep 0.1; done
@@ -60,7 +70,7 @@ fi
 set +e
 timeout -s KILL "$SECONDS_MAX" "${SCOPE[@]}" \
     env -u DISPLAY -u WAYLAND_DISPLAY -u PULSE_SERVER -u PIPEWIRE_REMOTE -u DBUS_SESSION_BUS_ADDRESS \
-    XDG_RUNTIME_DIR="$RUN_DIR" WAYLAND_DISPLAY="$SOCKET" SDL_VIDEO_DRIVER=wayland \
+    XDG_RUNTIME_DIR="$RUN_DIR" WAYLAND_DISPLAY="$SOCKET" SDL_VIDEO_DRIVER=wayland "${GPU_ENV[@]}" \
     SDL_AUDIO_DRIVER=dummy BB_AUDIO=none DREAMS_RUN_ROLE=agent BB_GAME_PROFILE=none \
     DREAMS_CAPTURE="${DREAMS_CAPTURE:-500}" DREAMS_TIMEOUT="${DREAMS_TIMEOUT:-0}" \
     DREAMS_USER_DIR="${DREAMS_USER_DIR:-$WORK/agent-user}" DREAMS_SKIP_INTRO="${DREAMS_SKIP_INTRO:-1}" \
