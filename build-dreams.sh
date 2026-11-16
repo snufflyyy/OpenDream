@@ -26,6 +26,35 @@ vcore)
     fi
     ninja -C "$VCORE_BUILD_DIR" -j"${VCORE_JOBS:-15}" vcore
     GPU_DIR=$VCORE_BUILD_DIR GPU_LIB=vcore
+    # AUDIT A7: provenance of the GPU renderer a build linked, so a test result can be traced to
+    # exact vcore sources (the fault manager is called out because the audit's hang fix lives there).
+    shadps4_dir=${SHADPS4_DIR:-$ROOT/ref/shadps4}
+    gpu_branch=$(git -C "$shadps4_dir" branch --show-current)
+    gpu_head=$(git -C "$shadps4_dir" rev-parse HEAD)
+    # Tracked modifications only: the reference tree has a required untracked marker file
+    # (i-didnt-check-my-work.md); an untracked file must not make every build look dirty.
+    if [[ -n $(git -C "$shadps4_dir" status --porcelain --untracked-files=no) ]]; then gpu_dirty=yes; else gpu_dirty=no; fi
+    gpu_fault_manager_blob=$(git -C "$shadps4_dir" hash-object src/video_core/buffer_cache/fault_manager.cpp)
+    gpu_built=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    revision=("branch=$gpu_branch" "head=$gpu_head" "dirty=$gpu_dirty"
+              "fault_manager_blob=$gpu_fault_manager_blob" "built=$gpu_built")
+    printf '%s\n' "${revision[@]}" > out/gpu-revision.txt
+    # AUDIT A2: libvcore.so must expose the bbgpu C API, not shadPS4's emulator/front-end classes
+    # (that would mean a shim pulled in the wrong layer). Advisory: prints the symbols and warns.
+    # Frontend::WindowSDL and Core::Emulator::FillElfInfo are vcore's own shim implementations
+    # (port/vcore/shim/window.cpp, shim/bbgpu.cpp), so lines naming them are expected and excluded.
+    if command -v nm >/dev/null; then
+        leaks=$({ nm -CD --defined-only "$GPU_DIR/lib$GPU_LIB.so"
+                  nm -CD --undefined-only "$GPU_DIR/lib$GPU_LIB.so"; } 2>/dev/null |
+                grep -E 'Emulator::|Frontend::WindowSDL' |
+                grep -vE 'Frontend::WindowSDL|Core::Emulator::FillElfInfo' | sort -u || true)
+        if [[ -n $leaks ]]; then
+            echo "WARNING: libvcore.so exposes shadPS4 emulator/front-end symbols (the vcore seam should be the bbgpu C API only):" >&2
+            printf '  %s\n' "$leaks" >&2
+        fi
+    else
+        echo "skip vcore seam symbol check: nm not found"
+    fi
     ;;
 bbport)
     GPU_DIR=${BBGPU_DIR:-$ROOT/ref/bbport/out/gpu} GPU_LIB=bbgpu
@@ -54,3 +83,14 @@ fi
     -L"$GPU_DIR" -l"$GPU_LIB" -Wl,-rpath,"$GPU_DIR" -rdynamic "${libraries[@]}" -o out/dreams-probe
 echo "$GPU" > out/gpu-library.txt
 echo "Built $PWD/out/dreams-probe (GPU library: $GPU, $GPU_DIR/lib$GPU_LIB.so)"
+if [[ $GPU == vcore ]]; then
+    echo "GPU revision ($shadps4_dir, copied to out/gpu-revision.txt):"
+    printf '  %s\n' "${revision[@]}"
+    if [[ $gpu_branch != vcore || $gpu_dirty == yes ]]; then
+        echo "WARNING: vcore sources in $shadps4_dir are not a clean 'vcore' branch (branch=$gpu_branch dirty=$gpu_dirty); this build is not reproducible from a commit alone." >&2
+        if [[ ${DREAMS_REQUIRE_CLEAN_GPU:-0} == 1 ]]; then
+            echo "DREAMS_REQUIRE_CLEAN_GPU=1: refusing a build of dirty/non-vcore GPU sources." >&2
+            exit 1
+        fi
+    fi
+fi
