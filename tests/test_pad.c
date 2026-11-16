@@ -11,7 +11,9 @@ void bbgpu_mouse_take(double *dx, double *dy, int *up, int *down) { *dx=*dy=0; *
 int bbgpu_mouse_captured(void) { return 0; }
 void bbgpu_mouse_look_enable(int enabled) { (void)enabled; }
 void bbgpu_mouse_capture(void) {}
-int bbgpu_camera_look(float yaw, float pitch) { (void)yaw; (void)pitch; return 0; }
+static int camera_calls; static float camera_yaw, camera_pitch;
+int bbgpu_camera_look(float yaw, float pitch) { ++camera_calls; camera_yaw=yaw; camera_pitch=pitch; return 0; }
+static PadData read_pad(void) { PadData d; usleep(2000); assert(pad_read(PAD_HANDLE,&d,1)==1); return d; }
 void bbgpu_filter_pad(uint32_t *buttons, const uint8_t *sticks) { (void)buttons; (void)sticks; }
 int bbgpu_pointer_wanted(void) { return 0; }
 /* The game's image is not mapped here: the mouse's auto-rotation hold leaves its code alone. */
@@ -39,9 +41,20 @@ static void inject(const char *path, const char *tokens) {
     fclose(f);
     usleep(25000);
 }
+/* BB_PAD_FILE is polled (20 ms) and re-read on mtime change: wait for the effect, don't assume it. */
+static void inject_until(const char *path, const char *tokens, int *seen, int want) {
+    inject(path,tokens);
+    for (int i=0;i<100 && *seen<want;++i) read_pad();
+    assert(*seen>=want);
+}
 
 int main(void) {
     setenv("DREAMS_INPUT_PROFILE","bbport",1); /* this test checks bbport's Bloodborne layout */
+    /* The mouse must reach the camera here: an inherited mouse mode would take the mdx/mdy
+     * deltas to the imp instead (bindings.c load_profile). */
+    setenv("DREAMS_MOUSE_MODE","camera",1);
+    unsetenv("BB_PAD_TAP_TEST"); unsetenv("BB_PAD_RECORD"); unsetenv("BB_PAD_REPLAY");
+    unsetenv("BB_TEST_VPAD");
     char path[]="/tmp/bbport-pad-test-XXXXXX";
     int fd=mkstemp(path);
     assert(fd>=0);
@@ -85,10 +98,50 @@ int main(void) {
     assert((data.buttons & (BTN_CROSS|BTN_L3|BTN_TOUCHPAD))==(BTN_CROSS|BTN_L3|BTN_TOUCHPAD));
     /* A new touch gets a new id (1..127), as from a DualShock 4: the game ignores id 0. */
     assert(data.touch_count==1 && data.touches[0].x==480 && data.touches[0].y==471 && data.touches[0].id==1);
+    /* Held: the buttons stay while the file still lists them. */
+    assert(pad_read_state(1,&data)==0 &&
+           (data.buttons & (BTN_CROSS|BTN_L3|BTN_TOUCHPAD))==(BTN_CROSS|BTN_L3|BTN_TOUCHPAD) &&
+           data.touch_count==1);
     inject(path,"touchpad_right");
     assert(pad_read_state(1,&data)==0 && data.touch_count==1 && data.touches[0].x==1440);
     inject(path,"");
     assert(pad_read_state(1,&data)==0 && data.buttons==0 && data.touch_count==0);
+
+    /* Stick override bytes, on every read while the file says so. */
+    inject(path,"lx=0 ly=255 rx=64 ry=200");
+    assert(pad_read_state(1,&data)==0);
+    assert(data.left_x==0 && data.left_y==255 && data.right_x==64 && data.right_y==200);
+    assert(pad_read_state(1,&data)==0);
+    assert(data.left_x==0 && data.left_y==255 && data.right_x==64 && data.right_y==200);
+    /* Out-of-range stick bytes are clamped to 0..255. */
+    inject(path,"lx=-5 ly=300 rx=999 ry=-1");
+    assert(pad_read_state(1,&data)==0);
+    assert(data.left_x==0 && data.left_y==255 && data.right_x==255 && data.right_y==0);
+    /* Full-analog button triggers from the file (the format has no partial-trigger token). */
+    inject(path,"l2 r2");
+    assert(pad_read_state(1,&data)==0);
+    assert((data.buttons & (BTN_L2|BTN_R2))==(BTN_L2|BTN_R2) && data.l2==255 && data.r2==255);
+    inject(path,"");
+    assert(pad_read_state(1,&data)==0 && data.l2==0 && data.r2==0 &&
+           !(data.buttons & (BTN_L2|BTN_R2)));
+    /* The empty file releases the stick overrides too (no gamepad: neutral). */
+    assert(data.left_x==128 && data.left_y==128 && data.right_x==128 && data.right_y==128);
+    /* mdx=/mdy= are a displacement applied at EVERY pad read while set, not once. */
+    camera_calls=0;
+    inject_until(path,"mdx=10", &camera_calls, 1);
+    assert(camera_calls==1);
+    const float k=MOUSE_RAD_PER_PIXEL*mouse_sensitivity;
+    assert(fabsf(camera_yaw-10.0f*k)<1e-5f && fabsf(camera_pitch)<1e-6f);
+    read_pad();
+    assert(camera_calls==2);   /* still set: the second read moves the mouse again */
+    assert(fabsf(camera_yaw-10.0f*k)<1e-5f);
+    inject_until(path,"mdx=10 mdy=-5", &camera_calls, 3);
+    assert(camera_calls==3);
+    assert(fabsf(camera_yaw-10.0f*k)<1e-5f && fabsf(camera_pitch+5.0f*k)<1e-5f);
+    inject(path,"");
+    read_pad(); read_pad();
+    assert(camera_calls==3);   /* empty file releases mdx/mdy too */
+    assert(injected.mouse[0]==0 && injected.mouse[1]==0);
 
     SDL_VirtualJoystickTouchpadDesc touch={.nfingers=2};
     SDL_VirtualJoystickDesc desc;
@@ -128,10 +181,13 @@ int main(void) {
     assert(SDL_SetJoystickVirtualButton(joystick,SDL_GAMEPAD_BUTTON_EAST,true));
     assert(SDL_SetJoystickVirtualButton(joystick,SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER,true));
     assert(SDL_SetJoystickVirtualAxis(joystick,SDL_GAMEPAD_AXIS_RIGHT_TRIGGER,32767));
+    assert(SDL_SetJoystickVirtualAxis(joystick,SDL_GAMEPAD_AXIS_LEFT_TRIGGER,16384));
     SDL_UpdateJoysticks();
     SDL_UpdateGamepads();
     assert(pad_read_state(1,&data)==0);
-    assert(data.buttons==(BTN_CROSS|BTN_R2|BTN_R1) && data.r2==255);
+    /* Analog L2: assert a partial analog value rather than a fixed one (the exact byte depends
+     * on how SDL's virtual axis is read back). */
+    assert(data.buttons==(BTN_CROSS|BTN_L2|BTN_R2|BTN_R1) && data.l2>30 && data.l2<255 && data.r2==255);
     assert(bindings[IN_CROSS].key_count==2 && bindings[IN_CROSS].keys[0]==SDL_SCANCODE_X &&
            bindings[IN_CROSS].keys[1]==SDL_SCANCODE_SPACE);
     SDL_CloseJoystick(joystick);
