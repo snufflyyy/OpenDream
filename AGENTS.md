@@ -20,7 +20,7 @@ Tools (`tools/`, run with `python3 -I`): `pkg_extract.py` (fpkg → folder), `ps
 `find_import_calls.py` (call sites of an import in the eboot), `run-shadps4-reference.sh` (runs the
 rebased shadPS4 *emulator* on the game with the Dreams fork's config: the GPU reference),
 `capture_sheet.py` (review a `DREAMS_CAPTURE=1` run: timeline + contact sheets, see
-`port/docs/dreams/CAPTURE.md`). **To see what a native run shows, use DREAMS_CAPTURE.**
+`port/docs/dreams/CAPTURE.md`). `install_game.sh` (pkg → verified game folder), `collect_crash.sh` (GPU-hang evidence → `work/crash/`), `clean_work.py` (prune `work/`, dry run by default). **To see what a native run shows, use DREAMS_CAPTURE.**
 
 ## Goal and user requirements (do not drift from these)
 
