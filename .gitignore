@@ -10,3 +10,6 @@
 /tools/thirdparty/
 __pycache__/
 *.pyc
+
+# pi harness/task artifacts (never commit)
+/.pi/

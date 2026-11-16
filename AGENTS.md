@@ -7,11 +7,18 @@ the GPU side. No CPU emulation, no JIT, no static recompilation.
 
 Read in this order:
 1. This file (layout, rules, current state in one paragraph).
-2. `port/docs/dreams/STATUS.md` — milestone checklist, what works, the exact current blocker.
-3. `port/docs/dreams/ARCHITECTURE.md` — how the pieces fit and *why* each decision was made.
-4. `port/docs/dreams/BUILD.md` and `port/docs/dreams/RUNNING.md` — reproducible commands.
-5. `port/docs/dreams/WORKLOG.md` — dated log of what was done and learned (append to it).
-6. `port/docs/dreams/IMPORTS_LOG.md` (what we implemented) and `STUBS.md` (what still returns 0).
+2. `port/docs/dreams/INDEX.md` — the full doc map (what to read, normative vs historical).
+3. `port/docs/dreams/CONVENTIONS.md` — agent rules for docs, ownership, tests and commits.
+4. `port/docs/dreams/HANDOFF.md` — latest session changes, test evidence, unfinished scene harness, exact resume point.
+5. `port/docs/dreams/STATUS.md` — milestone checklist, what works, the exact current blocker.
+6. `port/docs/dreams/ARCHITECTURE.md` — how the pieces fit and *why* each decision was made.
+7. `port/docs/dreams/BUILD.md` and `port/docs/dreams/RUNNING.md` — reproducible commands.
+8. `port/docs/dreams/WORKLOG.md` — dated log of what was done and learned (append to it).
+9. `port/docs/dreams/IMPORTS_LOG.md` (what we implemented) and `STUBS.md` (what still returns 0).
+
+The normative docs are host-independent. The current test machine is recorded only in
+`port/docs/dreams/TEST_HARDWARE.md`; it is a reference, not a requirement. `port/tools/doc_lint.py`
+enforces this (no absolute home paths, no host hardware claims outside `TEST_HARDWARE.md`).
 
 Tools (`tools/`, run with `python3 -I`): `pkg_extract.py` (fpkg → folder), `ps4_imports.py` +
 `imports_report.py` (static import/coverage analysis → `notes/dreams-imports.*`),
@@ -25,16 +32,35 @@ table for new game versions, VERSIONS.md), `spirv_val.c`/`loop_guard_test.cpp`/`
 
 ## Goal and user requirements (do not drift from these)
 
-- Primary goal: **Dreams boots natively on the user's PC** (Fedora 44, x86-64, AMD RX 7800 XT RADV,
-  16 cores, 31 GB RAM).
+- Primary goal: **Dreams boots natively on a Linux x86-64 PC with a Vulkan GPU**. The machine used
+  for current measurements is recorded in `port/docs/dreams/TEST_HARDWARE.md`; do not treat it as a
+  requirement or hard-code its hardware.
 - Priority feature: the **Dreams editor / creation tools**. **Offline only** — no PSN/server work.
+- **Accuracy is a hard requirement** (user, 2026-11-16): Dreams is an engine, so gameplay,
+  physics, logic, sculpts, saves and creation tools must behave as on an original PS4.
+  Performance changes must preserve those semantics. High render FPS is not permission to
+  change simulation speed. Treat hang guards as safety nets, not accuracy fixes.
+- **Regression coverage:** test real scenes in every locally available built-in Mm game **and the
+  editor**, with profiling, behavioral checks, fixes, and reruns. First gameplay target:
+  **Please Hug Me** (user reports interaction/progression and movement/physics problems).
+  Keep the harness easy for future agents: one documented command, private save setup, stable
+  machine-readable reports, and separate pass/fail/blocked/unverified outcomes. See `SCENE_TESTS.md`.
 - GPU base must be **latest official shadPS4** + **all patches from the Dreams fork**
   (https://github.com/JesusDaBest/Dreams-ShadPS4). Not bbport's older diverged renderer copy.
 - The user's copy today: **CUSA08010 v2.52** (US, CONTENT_ID UP9000-CUSA08010; fpkg). The user plans to move to **v2.64** soon —
   that is the version the Dreams fork targets (its fixes are gated on CUSA04301 + 2.64 shader
   hashes). Avoid hard-coding anything specific to the 2.52 executable.
-- Keep docs detailed and current for future agents (this file + `port/docs/dreams/`).
-- Subagent budget set by the user: at most 2 in parallel.
+- **Current work priority:** improve rendering speed and visual accuracy. Preserve engine semantics,
+  Precise readbacks, shader routes, and GPU guards. The Please Hug Me cloud-screen blocker remains
+  unresolved and deferred, not fixed. Read the current `HANDOFF.md` before new work.
+- Keep docs detailed and current for future agents (this file + `port/docs/dreams/`). New/changed
+  normative docs must pass `python3 -I port/tools/doc_lint.py` and must not hard-code a host, user,
+  distro or GPU model. Put machine facts in `TEST_HARDWARE.md` and historical facts in `WORKLOG.md`.
+- Subagent budget set by the user: at most 3 DeepSeek agents in parallel. **DeepSeek does most implementation,
+  debugging, tests, and tooling to reduce cost.** The main GPT Pi assistant supervises, advises,
+  assigns new tasks, reviews evidence, and accepts patches. It does not reserve difficult fixes
+  for itself by default. Read `port/docs/dreams/AI_DEVELOPMENT.md` before delegation for routes,
+  ownership, review gates, and the exclusive GPU run lease.
 
 ## Directory layout
 
@@ -48,8 +74,8 @@ table for new game versions, VERSIONS.md), `spirv_val.c`/`loop_guard_test.cpp`/`
 | `ref/bbport/` | Pristine-ish clone of deadinside28/bloodborne_pc (one local build fix, see BUILD.md); its `out/gpu/libbbgpu.so` is linked by the port for now | upstream clone |
 | `ref/shadps4/` | Official shadPS4 clone; branch `dreams` = latest upstream + Dreams fork patches (see `notes/shadps4-dreams-rebase.md`) | upstream clone |
 | `ref/dreams-fork/` | Blobless clone of the Dreams fork (patch files + builds; do NOT full-checkout, it is GBs of .exe) | upstream clone |
-| `ref/vulkan-headers/` | Latest Khronos Vulkan-Headers (Fedora's 1.4.341 is too old for bbport) | upstream clone |
-| `cmake/` | Build-environment shims for Fedora (FindZydis.cmake, magic_enum include compat) | — |
+| `ref/vulkan-headers/` | Latest Khronos Vulkan-Headers (distro packages can be too old for bbport) | upstream clone |
+| `cmake/` | Build-environment shims (FindZydis.cmake, magic_enum include compat); distro-independent | — |
 | `tools/` | Our scripts: `pkg_extract.py` (fpkg extractor), `ps4_imports.py` (import/coverage analysis), ... | — |
 | `notes/` | Research reports: `dreams-imports.md/.json`, `bbport-reuse-plan.md`, `shadps4-dreams-rebase.md`, tutorial-skip save | — |
 
@@ -62,7 +88,9 @@ offline NP/sign-in/sockets, intro skip and 60 Hz/high-fps switches (FPS.md), Mai
 **fork shader routes matched by code on any game version** (VERSIONS.md: fixes the holes/blocks in
 objects on 2.52), **GPU hang guard** (loop guard + indirect clamps, GPU_HANG.md: the intro hang scene
 now survives; root cause lead = indirect draws with 1,949,696 instances), frame stats in every run
-(PERF.md). Next: find the writer of that bad instance count; performance (readback stalls, submit
+(PERF.md). **2026-11-16 working tree:** clear the uninitialized GPU fault bitmap (fixes progressive
+5 → <1 FPS slowdown), shared-backing texture hashing, ~94 FPS menu with gameplay still 30 Hz.
+Accuracy requirements and unverified engine behavior: ACCURACY.md. Next: find the writer of that bad instance count; performance (readback stalls, submit
 batching, allocation churn: PERF.md); editor testing; v2.64 when the user has it.
 
 **GPU hang risk:** a native run once hung the GPU and amdgpu's full reset killed the desktop
@@ -74,7 +102,8 @@ start a run while the user may be playing (the lock will refuse it anyway).
 this clone. Don't delete/re-clone `ref/shadps4`. Backup: `backups/shadps4-dreams-vcore.bundle`
 (commits `main..dreams` + `main..vcore`, prerequisite upstream `f3687cc4`; restore with
 `git fetch backups/shadps4-dreams-vcore.bundle dreams:dreams vcore:vcore` in a shadPS4 clone).
-Re-create the bundle after new commits on those branches.
+Re-create the bundle after new commits on those branches. The uncommitted fault-bitmap fix also
+has a patch backup: `backups/shadps4-vcore-fault-bitmap-init.patch`.
 
 ## Rules for agents
 
@@ -87,5 +116,5 @@ Re-create the bundle after new commits on those branches.
   for semantics, cite the file in a comment, and log each one in `port/docs/dreams/IMPORTS_LOG.md`.
 - Peripherals Dreams can live without offline (PS VR/Hmd, Move, Camera, PSN/Np, sharing) should
   report "not connected / not signed in" with the documented PS4 error codes, never crash.
-- `/tmp` is a 16 GB RAM tmpfs and `/home` has limited free space (~29 GB at last check): keep big
-  data under the project and check `df -h /home` before large operations.
+- Disk/temp space is limited and host-dependent. Keep large data under the project tree, check
+  free space before builds/extractions, and do not assume `/tmp` is large (it may be a RAM tmpfs).
