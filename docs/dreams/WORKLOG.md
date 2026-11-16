@@ -317,3 +317,9 @@
 - run-dreams.sh: `DREAMS_SIGNATURE_MATCH` default 1 (=0 for the old behaviour).
 - Open: 66 non-DOC fork hashes (glass/shadow mip coordinates, linear-write ranges, sculpt/fleck
   diagnostics) need a v2.64 pack (`check`/`emit` with both packs; add keys) or per-shader work.
+- Merged `docmatch` (shadPS4 4c19e203, port 85c1502): fork shader routes matched by code hash on any
+  version. Lead verification: route count 26, DOC fallbacks 22 -> 1, homespace/main-menu A/B sheets
+  show solid sculpts and painterly clouds instead of white blocks. Caveat: the first run after the
+  merge (run-20261115-220815) asserted `Dreams 84aa checkpoint value 7 is not a phi` compiling the
+  SculptVolumeWriter route; two later runs were clean. Sent back to the agent (branch docmatch2) to
+  find the cause and make route emission fall back instead of asserting.
