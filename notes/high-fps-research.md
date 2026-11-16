@@ -339,3 +339,19 @@ with open(out, 'w') as f:
   https://www.thevrgrid.com/dreams
 - PS4 fps-patch list (no Dreams entry): https://florinsdistortedvision.github.io/orbisunjailed/fps-patches-mods
 - lsfg-vk: https://github.com/PancakeTAS/lsfg-vk , https://www.gamingonlinux.com/2026/09/lossless-scalings-frame-generation-for-linux-lsfg-vk-2-0-is-out-now/
+
+## Addendum (same day): implemented and measured (branch `fps`, `port/docs/dreams/FPS.md`)
+
+- E2 works on v2.52. `DREAMS_60HZ=1` applies the fork's pair by signature, giving **60.0 render frames/s**
+  with the render dt = 1/60 and the gameplay update counter (v2.52 `0x6f738e8`, the equivalent of the fork's
+  v2.64 `+0x4558688`) at 30/s.
+- E3: `DREAMS_FPS=120` gives 90.4 fps in the menu (105.8 fps on the boot screens); `DREAMS_FPS=240` gives
+  97.8 fps. Render dt tracks the real frame time, so motion speed is right; gameplay stays at 30/s.
+- Limit at ~100 fps: the shadPS4 GPU command thread (29% of a core at 30 fps, 78% at 98 fps). The GPU
+  is 44% busy at ~1.8 GHz.
+- E1 correction: the flip-rate code consults `sceKernelIsProspero` only in UI mode *and* while
+  `[0x79c92ec]` is set (`+0xede364`, a positive UI value: moving around the Dreamiverse). A static
+  menu stays at 30 even with `DREAMS_PROSPERO=1`. Not yet observed headless.
+- Render frame counter: `0x5845980`, incremented next to the render clock (`+0xe72e47`).
+- The guest thread `OSC` uses 99% of a core at every frame rate (separate issue).
+- MangoHud does not load inside the agent-run sandbox, so the numbers above come from the game's own counters.

@@ -258,3 +258,12 @@ Planned verification (once `tools/agent-run.sh` exists; it must run the worktree
 * Run B: the same plus `DREAMS_PAD_TS_LEGACY=1`. The imp should be static (identity fallback).
 * A vs B confirms §1.3 end to end. The `Pad read` trace shows the timestamps next to the process
   time.
+
+## 6. Outcome (2026-11-15, branch `input` in `port-diag`)
+
+Confirmed in headless agent runs: with the process-clock timestamps the imp follows synthetic
+motion (`work/captures/20261115-201803`), with the old boot-monotonic stamps it stays still
+(`work/captures/20261115-202118`). `DREAMS_PAD_TS_LEGACY` was removed after this A/B;
+`DREAMS_PAD_SYNTH_MOTION` and `DREAMS_PAD_READ_TRACE` stay as documented diagnostics. Keyboard and
+mouse were implemented as designed in §3.4 (`port/docs/dreams/INPUT.md` on that branch). The mouse
+default is 0.0004 rad/px, calibrated from the synthetic run.
