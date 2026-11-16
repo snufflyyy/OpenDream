@@ -32,8 +32,6 @@ read -r -a sdl_libs <<< "$(pkg-config --libs sdl3)"
 "$CC" "${flags[@]}" "${sdl_cflags[@]}" tests/test_pad_input.c "${sdl_libs[@]}" -lm -o out/tests/pad-input-test
 out/tests/pad-input-test
 out/tests/pad-motion-test
-"$CC" "${flags[@]}" "${sdl_cflags[@]}" tests/test_pad_input.c "${sdl_libs[@]}" -lm -o out/tests/pad-input-test
-out/tests/pad-input-test
 "$CC" "${flags[@]}" "${sdl_cflags[@]}" tests/test_ime.c "${sdl_libs[@]}" -o out/tests/ime-test
 out/tests/ime-test
 # AvPlayer decoder library (./build-deps.sh, FFmpeg) + a 2 s 200x120 red H.264/AAC MP4 (needs ffmpeg).
