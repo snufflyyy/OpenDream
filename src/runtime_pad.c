@@ -3,7 +3,11 @@
 /* libScePad on SDL3 gamepads and the keyboard. SDL events are pumped by the window thread
  * (gpu/shim/window.cpp); here state is only sampled.
  *
- * Keyboard layout (Dark Souls III's on PC, with the player's changes; also with a gamepad
+ * Dreams port: the default input profile is Dreams' (runtime_pad/bindings.c dreams_defaults,
+ * docs/dreams/INPUT.md: Space/Enter Cross, Backspace Circle, mouse = the imp, ...); the layout
+ * below is bbport's "bbport" profile (DREAMS_INPUT_PROFILE=bbport).
+ *
+ * bbport keyboard layout (Dark Souls III's on PC, with the player's changes; also with a gamepad
  * connected: both drive the game):
  *   WASD left stick, IJKL right stick (the camera), Space the dodge (a short Circle press: never a
  *   run), Left Shift the run (Circle held), Shift + Space the jump (Circle let go and pressed again
@@ -118,6 +122,7 @@ static ABI int32_t pad_open(int32_t user, int32_t type, int32_t index, const voi
     puts("Runtime: pad opened for user 1 (SDL gamepad or keyboard)");
     pthread_mutex_lock(&lock);
     sensors_reset_orientation(); /* PS4: orientation starts at the open */
+    sensors_mouse_reset();
     sensors_attach(current_gamepad()); /* logs the gamepad used and its sensors */
     if (!gamepad) puts("Runtime: pad motion: no gamepad connected yet (keyboard/mouse: the controller reads as lying still)");
     sensors_start();
@@ -164,6 +169,15 @@ static ABI int32_t pad_read_state(int32_t handle, PadData *data) {
      * the copy the game reads, so the game's motion processing (timed against its own process
      * clock) doesn't see samples from hours in the future. */
     data->timestamp=runtime_monotonic_to_process_us(data->timestamp);
+    /* DREAMS_PAD_READ_TRACE=1 (diagnostics, docs/dreams/INPUT.md): every 600th read, what the game
+     * gets: the timestamp (must be on the process clock, see notes/input-research.md), the
+     * orientation and the angular velocity. */
+    static int read_trace=-1;
+    if (read_trace<0) { const char *e=bb_env("DREAMS_PAD_READ_TRACE"); read_trace=e && e[0]=='1'; }
+    if (read_trace && reads%600==1)
+        printf("Pad read %zu: ts %llu us, orientation %+.3f %+.3f %+.3f %+.3f, angular velocity %+.3f %+.3f %+.3f\n",reads,
+               (unsigned long long)data->timestamp,data->orientation[0],data->orientation[1],data->orientation[2],
+               data->orientation[3],data->angular_velocity[0],data->angular_velocity[1],data->angular_velocity[2]);
     return 0;
 }
 /* Buffered read: the port samples once per call, so one entry is returned. */
@@ -200,7 +214,7 @@ static ABI int32_t pad_ok_handle_flag(int32_t handle, uint8_t flag) { (void)flag
 /* Motion settings (runtime_pad/sensors.c; ref pad.cpp: shadPS4 only logs them). */
 static ABI int32_t pad_reset_orientation(int32_t handle) {
     if (pad_ok_handle(handle)) return ERR_INVALID_HANDLE;
-    pthread_mutex_lock(&lock); sensors_reset_orientation(); pthread_mutex_unlock(&lock);
+    pthread_mutex_lock(&lock); sensors_reset_orientation(); sensors_mouse_reset(); pthread_mutex_unlock(&lock);
     return 0;
 }
 static int32_t pad_motion_flag(int32_t handle, int *flag, uint8_t value, const char *what) {

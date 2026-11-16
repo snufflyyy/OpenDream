@@ -72,7 +72,9 @@ be under `work/user/` once savedata works (milestone 8); details in `notes/tutor
 | `DREAMS_AV_LIB=<path>` | AvPlayer decoder library (default `out/libdreams-av.so` next to dreams-probe) |
 | `DREAMS_PAD_SENSOR_TRACE=1` | raw SDL gyro/accel samples and what the game reads (first 20, then every 2 s) |
 | `DREAMS_PAD_SENSORS=0` | ignore the controller's motion sensors |
-| `DREAMS_PAD_MOUSE_GYRO=1` | without a gyro, mouse motion (while the window holds the mouse) is the gyro |
+| `DREAMS_PAD_READ_TRACE=1` | every 600th scePadRead: game-facing timestamp, orientation, angular velocity |
+| `DREAMS_PAD_SYNTH_MOTION=<deg>[,<s>[,<s>]]` | test aid: synthetic figure-eight controller motion (agent runs, no controller) |
+| `DREAMS_INPUT_PROFILE`, `DREAMS_MOUSE_MODE`, `DREAMS_MOUSE_IMP_SENS` | keyboard/mouse layout and where the mouse goes: see `INPUT.md` |
 | `DREAMS_IME_TEXT=<utf-8>` | sceImeOpen enters this text and confirms at once |
 | `DREAMS_IME_KEYBOARD=0` | no USB keyboard events to the game |
 

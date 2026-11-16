@@ -126,6 +126,13 @@ static struct {
     int head, count;
 } keyboard;
 static int typing_now(void) { return ime.open && ime.input_window && !ime.finished; }
+/* runtime_pad: the keyboard is the text box's now (its key bindings pause). */
+int runtime_ime_typing(void) {
+    pthread_mutex_lock(&lock);
+    const int typing=typing_now();
+    pthread_mutex_unlock(&lock);
+    return typing;
+}
 static uint64_t rtc_tick(void);
 static bool key_watch(void *userdata, SDL_Event *e) {
     (void)userdata;

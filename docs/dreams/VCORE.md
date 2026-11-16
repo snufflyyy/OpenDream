@@ -85,12 +85,12 @@ Dreams-ShadPS4 fork patches, `notes/shadps4-dreams-rebase.md`) + 1 commit of `//
 ## 3. bbgpu.h API: implemented vs stubbed
 
 Implemented: `bbgpu_init`, `bbgpu_register_kernel`, `bbgpu_resolve`, `bbgpu_symbol_count`,
-`bbgpu_handle_fault`, `bbgpu_text_input_begin/poll`, `bbgpu_video_active/skip` (bbport AvPlayer;
+`bbgpu_handle_fault`, `bbgpu_text_input_begin/poll/end`, `bbgpu_mouse_take/captured/capture/look_enable` (window.cpp: relative mouse on click, F1, INPUT.md), `bbgpu_video_active/skip` (bbport AvPlayer;
 stubs returning 0 when `VCORE_BBPORT_AVPLAYER=OFF`),
 `bbgpu_frame_aspect` (16:9), `bbgpu_overlay_banner` (prints).
 
 Stubs (Bloodborne/bbport product features or diagnostics): `bbgpu_dump_guest_writes`,
-`overlay_captures_input` (0), `mouse_take/captured/capture/look_enable`, `add_event_filter`,
+`overlay_captures_input` (0), `add_event_filter`,
 `world_active/world_us` (0), `add_pointer_query`, `pointer_wanted` (0), `add_pad_filter`,
 `filter_pad`, `trophy_setup`, `trophy_unlock` (-1), `camera_look/free_camera/camera_state` (0),
 `patch_image`, `rebuild_shader_caches` (0), shader-recipe/cache tools (`rebuild_shader_cache`,
