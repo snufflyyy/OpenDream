@@ -289,3 +289,29 @@
   abort/close) then EAGAIN (non-blocking SO_NBIO/MSG_DONTWAIT: EAGAIN at once); sceNetEpollWait waits
   for its timeout; Abort/Close wake waiters (EINTR); send/sendto/connect stay ENETUNREACH; NetCtl/Np
   still offline. Measured in a sandbox run: OSC 103.8% -> 0.4% of a core.
+
+## 2026-11-15 (docmatch agent): fork shader routes on any Dreams version (docs/dreams/VERSIONS.md)
+
+- Cause of the blocky/holey sculpts on v2.52: the fork keys its fixes on v2.64 embedded shader
+  hashes, so all 22 DOC kernels used the atomic fallback (wrong prefix order -> broken sculpt
+  compaction lists).
+- `game/CUSA08010/shaders/dd.shaders` is a 604-entry pack whose entry keys are stable across builds:
+  the three keys the fork published for v2.64 (cbac06d2, 84aa3dc9, 4ebeffd2) exist in v2.52 with the
+  same code sizes. Wrote `tools/dreams_shader_routes.py` (pack parser, GCN walker validated on all 604
+  shaders, XXH64 code hash, DOC signature, census/check/emit) and `tools/dreams_routes.json`.
+- Mapped 22 DOC routes by DS_ORDERED_COUNT control + GDS counter (all equal the fork's constants)
+  and 4 non-DOC sculpt shaders (GatherVoxels, B1 transform, A3 lookup, ModelFinalize) by the fork's
+  trace PCs; b535/GatherVoxels/etc. anchors land on the documented instructions in v2.52, so the
+  code is the same as v2.64. f030/5ac and 252/fff2 share signatures: assigned by resources/dispatch
+  shape; the emitter's exact-control asserts (GDS binding) pass for f030/5ac.
+- shadPS4 branch `docmatch` (4c19e203): `Shader::DreamsRoute::Resolve` in `Info`'s constructor
+  (SHADPS4_DREAMS_SIGNATURE_MATCH=1) sets pgm_hash to the route's v2.64 hash (code hash, else unique
+  DOC signature), logs `Dreams route:` once per shader; route-matched programs are not cached and
+  preloads of match candidates are skipped.
+- A/B (same script, offline notice -> main menu): on `run-20261115-215358`: 26 routes via code,
+  1 fallback (252: its audited-SPIR-V guard; same on v2.64 after the rebase); off
+  `run-20261115-215739`: 22 fallbacks. The homespace behind the main menu loses its white blocky
+  patches (`work/captures/20261115-215358/sheets/compare-20261115-215739.png`). No assertion/STOP.
+- run-dreams.sh: `DREAMS_SIGNATURE_MATCH` default 1 (=0 for the old behaviour).
+- Open: 66 non-DOC fork hashes (glass/shadow mip coordinates, linear-write ranges, sculpt/fleck
+  diagnostics) need a v2.64 pack (`check`/`emit` with both packs; add keys) or per-shader work.

@@ -12,7 +12,7 @@ Last updated: 2026-11-15. Game under test: CUSA08010 v2.52 (user moving to v2.64
 | 4 | CPU-only boot: module inits return, game entry runs, reaches GPU/VideoOut init | **done** — `main()` runs, ~40 guest threads start, `GameUpdate` main loop thread created |
 | 5 | Null GPU backend | **skipped for now**: bbport's libbbgpu already works as a real GPU backend for Dreams up to the first unsupported shader op (see below) |
 | 6 | "vcore": GPU library from latest upstream shadPS4 video_core + shader_recompiler + gnmdriver + videoout behind bbport's runtime↔GPU seam | **done** (2026-11-15): `port/vcore` → `libvcore.so`, default in `build-dreams.sh`. See `VCORE.md` |
-| 7 | Apply Dreams fork patches (ref/shadps4 branch `dreams`); extend `CUSA04301` gates to our title ID; shader-hash census | **mostly done**: vcore compiles branch `vcore` (= `dreams` + 2 native edits); `GameSerial()=CUSA08010` turns the fork's gates on; readbacks Precise + `SHADPS4_DREAMS_*` applied by `run-dreams.sh`. Open: v2.52 shader-hash census (15 DOC routes fall back to the atomic path), eboot byte patches not ported |
+| 7 | Apply Dreams fork patches (ref/shadps4 branch `dreams`); extend `CUSA04301` gates to our title ID; shader-hash census | **mostly done**: vcore compiles branch `vcore` (= `dreams` + 2 native edits); `GameSerial()=CUSA08010` turns the fork's gates on; readbacks Precise + `SHADPS4_DREAMS_*` applied by `run-dreams.sh`. Fork shader routes now matched on any version by code hash / DOC signature (`VERSIONS.md`, 26 routes on v2.52, DOC fallbacks 22 -> 1). Open: 66 non-DOC fork hashes unmapped until a v2.64 `dd.shaders` is available; eboot byte patches not ported |
 | 8 | First frame of main menu / homespace; then audio, pad (motion), saves (tutorial-skip save), intro video | todo |
 | 9 | Optional: bbport memory model / performance work | **started**: opt-in 60 fps (`DREAMS_60HZ=1`) and 61-240 fps (`DREAMS_FPS=n`, ~90-100 fps measured in the menu) with correct motion speed, gameplay at 30 Hz; limit above ~90 is vcore's GPU command thread. `FPS.md` |
 
@@ -107,8 +107,10 @@ via `out/libdreams-av.so`); it wins over vcore's interim copy and was verified w
 
 ## Known risks
 
-- Dreams fork fixes are gated on serial `CUSA04301` and ~135 shader hashes from v2.64 content.
-  On v2.52 they may silently not apply. Moving to v2.64 (user's plan) mostly removes this.
+- Dreams fork fixes are keyed on v2.64 shader hashes. `DREAMS_SIGNATURE_MATCH` (default on,
+  VERSIONS.md) maps the 22 DOC kernels and 4 sculpt-pipeline shaders of any version that has the
+  same code or ordered-count signature; 66 other fork hashes (glass/shadow mip fixes, linear-write
+  ranges, diagnostics) still only apply on v2.64 until mapped.
 - Async compute + GDS ordered-count correctness is still being worked on in the Dreams fork itself.
 - 40-bit pointer packing: all host allocations visible to the guest must stay below 1 TiB.
 - Stubs returning 0 can hide bugs: when something odd happens, check `STUBS.md` first, or run with
@@ -134,8 +136,8 @@ understood: only one Dreams instance at a time (enforced by run-dreams.sh), ever
   blocking/timing out. Found by the fps agent; not investigated yet.
 - **High fps ceiling ~90–100 fps:** limited by the shadPS4 GPU command thread (78% of a core at
   98 fps) while the GPU is ~44% busy. See FPS.md.
-- **Patchy object rendering on 2.52:** the fork's DOC fixes are keyed to 2.64 shader hashes; waiting
-  for the user's 2.64 dump.
+- **Patchy object rendering on 2.52:** fixed for the homespace behind the main menu by matching the
+  fork's DOC routes on v2.52 (VERSIONS.md, A/B captures). Not yet checked in creation/editor scenes.
 - **Untested by a human:** mouse capture on Hyprland, the key layout, DREAMS_PROSPERO=1, whether
   moving objects look smooth at 60/120 or step at 30 Hz gameplay rate.
 - New worktrees don't get the `third_party/LibAtrac9` submodule: run
