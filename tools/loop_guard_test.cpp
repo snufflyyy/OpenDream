@@ -265,6 +265,7 @@ GuardRun RunGuarded(Ctx& c, VkShaderModule module, uint64_t pgm_hash, uint32_t b
 struct ClampPush {
     uint64_t src, dst, report;
     uint32_t count, stride, mode, max_x, max_yz, max_total, max_elements, max_instances;
+    uint32_t tag_lo, tag_hi;
 };
 
 void TestClamp(Ctx& c) {
@@ -291,7 +292,7 @@ void TestClamp(Ctx& c) {
     auto* r = static_cast<uint32_t*>(report.map);
     const auto run = [&](uint32_t count, uint32_t stride, uint32_t mode, uint32_t max_total) {
         ClampPush push{src.address, dst.address, report.address, count, stride, mode,
-                       0xffffffffu, 65535, max_total, 1u << 26, 1u << 24};
+                       0xffffffffu, 65535, max_total, 1u << 26, 1u << 24, 0x1234, 0x5678};
         Submit(c, [&](VkCommandBuffer cb) {
             vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, pipe);
             vkCmdPushConstants(cb, pl, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push), &push);
@@ -310,8 +311,9 @@ void TestClamp(Ctx& c) {
                 (unsigned long long)total);
     Expect(total <= (1u << 22) && d[1] <= 65535 && d[0] >= 1 && d[1] >= 1 && d[2] >= 1,
            "garbage dispatch clamped to <= 1<<22 groups, y/z <= 65535");
-    Expect(r[0] == 1 && r[1] == 0xffffffffu && r[2] == 0x3f800000u && r[3] == 7,
-           "dispatch clamp reported with the original dims");
+    Expect(r[0] == 1 && r[1] == 0xffffffffu && r[2] == 0x3f800000u && r[3] == 7 &&
+               r[8] == 0x1234 && r[9] == 0x5678,
+           "dispatch clamp reported with the original dims and the caller tag");
     // Zero-sized dispatch stays zero.
     s[0] = 0; s[1] = 0xffffffffu; s[2] = 0xffffffffu;
     run(1, 12, 0, 1u << 22);
@@ -328,8 +330,9 @@ void TestClamp(Ctx& c) {
     Expect(d[8] == (1u << 26) && uint64_t(d[8]) * d[9] <= (1u << 28) && d[9] >= 1 &&
                d[10] == 5 && d[11] == 6 && d[12] == 7,
            "garbage indexed draw clamped (count <= 1<<26, product <= 1<<28), other words kept");
-    Expect(r[4] == 1 && r[5] == 0xffffffffu && r[6] == 0xffffffffu && r[7] == 2,
-           "draw clamp reported");
+    Expect(r[4] == 1 && r[5] == 0xffffffffu && r[6] == 0xffffffffu && r[7] == 2 &&
+               r[10] == 0x1234 && r[11] == 0x5678,
+           "draw clamp reported with the caller tag");
 }
 
 } // namespace
