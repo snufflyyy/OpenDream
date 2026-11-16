@@ -80,3 +80,20 @@ At pad open the log says which gamepad is used and whether its gyro/acceleromete
 `Runtime: pad motion: using "PS4 Controller" (/dev/hidraw11, SDL id 5): gyro enabled (250 Hz), ...`.
 `tools/sdl_pads.c` (build line in its header) lists SDL's gamepads with their sensors outside the game.
 
+
+## Helper tools
+
+All in `tools/`, none needs the game running:
+- `tools/install_game.sh [--dry-run] [--delete-inputs] [--margin-gb N] PKG OUTDIR`: extract a `.pkg`
+  (fpkg only; extract archives yourself first) into `OUTDIR` (e.g. `game/CUSA08010-v264`) with a
+  disk-space preflight (pkg size + 5 GB margin), PFS digest check, SHA-256 re-verification against
+  `OUTDIR.extract.json`, and a TITLE_ID/APP_VER/VERSION printout. `--delete-inputs` removes the pkg
+  only after success. Then run with `DREAMS_GAME=<OUTDIR>`.
+- `tools/collect_crash.sh [--minutes N] [--previous-boot]`: after a GPU hang or crash, copy the
+  amdgpu devcoredump, kernel journal (full + amdgpu slice), newest run log tail, newest capture
+  (index + last 20 PNGs), run owner, uname, vulkaninfo into `work/crash/<timestamp>/` with a
+  README.txt of hang signatures. Run it first thing, before rebooting if possible.
+- `python3 -I tools/clean_work.py [--apply] [--keep N] [--older-than DAYS]`: prune captures, run
+  logs, mangohud output, scratch `work/*.log|*.out` and unused `work/agent-rt.*` dirs. Dry run
+  unless `--apply`. Never touches `work/out`, `user`, `vcore-user`, `vcore-shader-cache`,
+  `shadps4-ref`, `crash`.
