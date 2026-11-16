@@ -28,7 +28,8 @@ changed. Outputs go to `work/out/`; the guest's user dir (saves) is `work/user/`
 GPU (vcore, the default build), see `VCORE.md` §5:
 ```
 BB_GAME_PROFILE=none DREAMS_TIMEOUT=0 timeout -s KILL 150 ./run-dreams.sh > ../work/run.log 2>&1
-VCORE_SCREENSHOT_EVERY=10 ...    # PNG of the presented frame every 10 s -> work/vcore-user/screenshots/
+DREAMS_CAPTURE=1 ...              # small PNG of changed frames every 500 ms -> work/captures/<run>/ (CAPTURE.md)
+VCORE_SCREENSHOT_EVERY=10 ...    # full-size PNG every 10 s -> work/vcore-user/screenshots/ (slow)
 VCORE_LOG_FILTER="*:info Render.Vulkan:debug" ...   # GPU log filter (shadPS4 syntax; default *:warning)
 ```
 `run-dreams.sh` sets up the Dreams fork's emulator configuration for vcore: per-game config

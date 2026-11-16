@@ -51,6 +51,12 @@ i=d.find(b"CUSA"); print(d[i:i+9].decode())' "$GAME/sce_sys/param.sfo")
     export SHADPS4_DREAMS_PRIVATE_SHADER_CACHE="$WORK/vcore-shader-cache"
     export SHADPS4_USER_DIR="$VUSER"             # path_util.cpp vcore edit
     export VCORE_GAME_DIR="$GAME"                # param.sfo APP_VER/SYSTEM_VER for ElfInfo
+    # Test capture (docs/dreams/CAPTURE.md): DREAMS_CAPTURE=1 (every 500 ms) or =<ms>. Small PNGs of
+    # changed frames + index.csv in work/captures/<run>; review with tools/capture_sheet.py.
+    if [[ -n ${DREAMS_CAPTURE:-} && ${DREAMS_CAPTURE} != 0 ]]; then
+        export VCORE_CAPTURE_MS=$([[ $DREAMS_CAPTURE == 1 ]] && echo 500 || echo "$DREAMS_CAPTURE")
+        export VCORE_CAPTURE_DIR=${VCORE_CAPTURE_DIR:-$WORK/captures/$(date +%Y%m%d-%H%M%S)}
+    fi
 fi
 exec out/dreams-probe "$OUT/boot-linked.bin" --content-profile "$OUT/content.bin" \
     --app0 "$GAME" --user "$WORK/user" --timeout "${DREAMS_TIMEOUT:-0}" "$@"

@@ -131,7 +131,12 @@ namespace {
 std::atomic<u32> screenshot_game_only_count{0};
 std::atomic<u32> screenshot_with_overlays_count{0};
 u32 TimedScreenshot() {
+    // VCORE_CAPTURE_MS (test capture mode, shim/capture.cpp: small async PNGs) takes precedence
+    // over VCORE_SCREENSHOT_EVERY (full-size shadPS4 screenshots).
     static const double every = [] {
+        if (const char* ms = std::getenv("VCORE_CAPTURE_MS"); ms && std::atof(ms) > 0.0) {
+            return std::atof(ms) / 1000.0;
+        }
         const char* env = std::getenv("VCORE_SCREENSHOT_EVERY");
         return env ? std::atof(env) : 0.0;
     }();

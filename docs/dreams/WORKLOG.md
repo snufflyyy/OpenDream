@@ -156,3 +156,10 @@
     `--cpu-only` run: `work/cpu-avp-ime-motion.log` (17 STUB lines, all GnmDriver/VideoOut).
   - Non-GPU STUBs seen in GPU runs now: sceNpHasSignedUp, sceKernelSync, sceSigninDialog{Initialize,
     Open,UpdateStatus,Terminate} (next audit).
+- Test frame capture for agents (CAPTURE.md): `DREAMS_CAPTURE=1 ./run-dreams.sh` saves 480 px PNGs
+  of changed frames every 500 ms via a weak `VideoCore::CaptureSink` hook (ref/shadps4 `vcore`
+  75c80f94) and `vcore/shim/capture.cpp` (background thread, never blocks the presenter), plus
+  `index.csv` and `CAPTURE #n` markers in the run log. `tools/capture_sheet.py` gives a text
+  timeline and 4×4 contact sheets. First use: a 70 s boot gave 122 captures, 66 saved (3.2 MB),
+  0 dropped, and one sheet showing Sony card → Media Molecule logo video (runtime AvPlayer) →
+  indreams.me card → preferences screen.
