@@ -9,6 +9,13 @@ A capture dir (work/captures/<run>/) holds small PNGs of frames that changed + i
         --from S --to S     time window in seconds
         --every K           take every K-th saved frame (overview of a long run)
         --cols C --rows R   grid (default 4x4); --width W tile width (default 480)
+  python3 -I tools/capture_sheet.py compare <dirA> <dirB> [--times 10,20,30 | --every S] [--width 480]
+                                                            run A left, run B right, one row per time;
+                                                            each side is the nearest saved frame at or
+                                                            before that time, labelled "name  t=  #seq"
+                                                            -> <dirA>/sheets/compare-<B name>.png
+                                                            (default --every 5; --rows N pairs per page,
+                                                            default 6, extra pages get a -2, -3 suffix)
   python3 -I tools/capture_sheet.py latest                  print the newest work/captures/<run>
 
 For agents: read the timeline first (cheap text), then open only the sheets around interesting
@@ -86,6 +93,63 @@ def sheet(dirpath, start, end, every, cols, rows_n, width):
         print(w)
 
 
+def compare(dir_a, dir_b, times, every, width, per_page):
+    from PIL import Image, ImageDraw, ImageFont
+    runs = []
+    for d in (dir_a, dir_b):
+        d = Path(d)
+        runs.append((d, d.resolve().name, [r for r in load(d) if r['saved'] == 1]))
+    if not times:
+        end = max(r['t'] for _, _, rs in runs for r in rs) if any(rs for _, _, rs in runs) else 0
+        step = every or 5.0
+        times = [i * step for i in range(int(end / step) + 1)]
+    try:
+        font = ImageFont.truetype('/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf', 16)
+    except OSError:
+        font = ImageFont.load_default()
+
+    def pick(rs, t):  # nearest saved frame at or before t
+        best = None
+        for r in rs:
+            if r['t'] <= t:
+                best = r
+        return best
+
+    th = None
+    for d, _, rs in runs:
+        if rs:
+            im = Image.open(d / rs[0]['file'])
+            th = round(im.height * width / im.width)
+            break
+    if th is None:
+        print('no saved frames in either run'); return
+    out = Path(dir_a) / 'sheets'
+    out.mkdir(exist_ok=True)
+    base = f'compare-{runs[1][1]}'
+    for n, page in enumerate(range(0, len(times), per_page)):
+        chunk = times[page:page + per_page]
+        canvas = Image.new('RGB', (2 * width, len(chunk) * th), (40, 0, 40))
+        draw = ImageDraw.Draw(canvas)
+        for i, t in enumerate(chunk):
+            for side, (d, name, rs) in enumerate(runs):
+                x, y = side * width, i * th
+                r = pick(rs, t)
+                if r:
+                    img = Image.open(d / r['file']).convert('RGB')
+                    if img.size != (width, th):
+                        img = img.resize((width, th))
+                    canvas.paste(img, (x, y))
+                    label = f'{name}  t={t:g}s  #{r["seq"]} ({r["t"]:.1f}s)'
+                else:
+                    label = f'{name}  t={t:g}s  (no frame yet)'
+                draw.rectangle([x, y, x + 8 + 10 * len(label), y + 22], fill=(0, 0, 0))
+                draw.text((x + 4, y + 2), label, fill=(255, 255, 0), font=font)
+                draw.rectangle([x, y, x + width - 1, y + th - 1], outline=(90, 90, 90))
+        path = out / (base + ('' if n == 0 else f'-{n + 1}') + '.png')
+        canvas.save(path)
+        print(path)
+
+
 def latest():
     runs = sorted((ROOT / 'work/captures').glob('*/index.csv'), key=lambda p: p.stat().st_mtime)
     print(runs[-1].parent if runs else 'no captures')
@@ -99,12 +163,19 @@ def main():
     s.add_argument('--from', dest='start', type=float); s.add_argument('--to', dest='end', type=float)
     s.add_argument('--every', type=int, default=1); s.add_argument('--cols', type=int, default=4)
     s.add_argument('--rows', type=int, default=4); s.add_argument('--width', type=int, default=480)
+    c = sub.add_parser('compare'); c.add_argument('dir_a'); c.add_argument('dir_b')
+    c.add_argument('--times', help='comma-separated seconds, e.g. 10,20,30')
+    c.add_argument('--every', type=float, help='one row per S seconds from 0 (default 5)')
+    c.add_argument('--width', type=int, default=480); c.add_argument('--rows', type=int, default=6)
     sub.add_parser('latest')
     a = ap.parse_args()
     if a.cmd == 'timeline':
         timeline(a.dir)
     elif a.cmd == 'sheet':
         sheet(a.dir, a.start, a.end, a.every, a.cols, a.rows, a.width)
+    elif a.cmd == 'compare':
+        times = [float(x) for x in a.times.split(',')] if a.times else None
+        compare(a.dir_a, a.dir_b, times, a.every, a.width, a.rows)
     else:
         latest()
 

@@ -29,7 +29,7 @@ rebased shadPS4 *emulator* on the game with the Dreams fork's config: the GPU re
 - Priority feature: the **Dreams editor / creation tools**. **Offline only** — no PSN/server work.
 - GPU base must be **latest official shadPS4** + **all patches from the Dreams fork**
   (https://github.com/JesusDaBest/Dreams-ShadPS4). Not bbport's older diverged renderer copy.
-- The user's copy today: **CUSA08010 v2.52** (EU, fpkg). The user plans to move to **v2.64** soon —
+- The user's copy today: **CUSA08010 v2.52** (US, CONTENT_ID UP9000-CUSA08010; fpkg). The user plans to move to **v2.64** soon —
   that is the version the Dreams fork targets (its fixes are gated on CUSA04301 + 2.64 shader
   hashes). Avoid hard-coding anything specific to the 2.52 executable.
 - Keep docs detailed and current for future agents (this file + `port/docs/dreams/`).
