@@ -141,4 +141,41 @@ extern uintptr_t runtime_libc_base;
 uintptr_t runtime_compat_resolve(const char *name);
 /* Dreams port: PS4 functions Dreams needs beyond bbport's runtime (runtime_dreams.c). */
 uintptr_t runtime_dreams_resolve(const char *name);
+/* Dreams port: system services audit (runtime_dreams_services.c), event flags
+ * (runtime_eventflag.c), Audio3d (runtime_audio3d.c). */
+uintptr_t runtime_dreams_services_resolve(const char *name);
+uintptr_t runtime_eventflag_resolve(const char *name);
+void runtime_eventflag_report(void);
+uintptr_t runtime_audio3d_resolve(const char *name);
+void runtime_audio3d_report(void);
+/* AudioOut entry points for other runtime modules (runtime_audio.c). */
+int32_t runtime_audio_out_init(void);
+int32_t runtime_audio_out_open(int32_t user, int32_t type, int32_t index, uint32_t length, uint32_t freq, uint32_t param);
+int32_t runtime_audio_out_output(int32_t handle, const void *data);
+int32_t runtime_audio_out_close(int32_t handle);
+/* Dreams port: optional codec library out/libdreams-codecs.so (build-deps.sh), loaded with dlopen
+ * by runtime_codecs.c: fdk-aac (AAC decoding for Ajm) and the artswap ATRAC9 encoder (At9Enc).
+ * The glue is src/runtime_codecs/codecs_glue.c; this struct is the ABI between them. */
+typedef struct {
+    int32_t sample_rate, channels, frame_size, samples_per_frame, bitrate, heaac;
+    uint32_t bytes_used; /* input bytes the frame consumed */
+    int32_t error;       /* fdk AAC_DECODER_ERROR on failure */
+} RuntimeAacFrame;
+typedef struct {
+    /* AAC: raw=1 -> raw access units configured from (freq_index, channels) like shadPS4's RAW
+     * mode; raw=0 -> ADTS. decode: 0 ok, 1 needs more input, -1 error (frame->error). */
+    void *(*aac_open)(int raw, unsigned freq_index, unsigned channels);
+    void (*aac_close)(void *decoder);
+    int (*aac_decode)(void *decoder, const uint8_t *input, uint32_t size, int16_t *pcm, uint32_t pcm_capacity, RuntimeAacFrame *frame);
+    int (*aac_info)(void *decoder, RuntimeAacFrame *frame);
+    /* ATRAC9 encoder (ref/shadps4/externals/artswap_at9/at9_stream.h). */
+    size_t (*at9_stream_work_size)(void);
+    size_t (*at9_context_size)(void);
+    int (*at9_context_create)(void *context, size_t bytes, int channels, int bitrate);
+    int (*at9_context_reset)(void *context);
+    int (*at9_context_encode)(void *context, void *scratch, size_t scratch_bytes, const int16_t *input, int input_bytes,
+                              unsigned char *output, int output_capacity, int *output_bytes, int *consumed_bytes);
+} RuntimeCodecs;
+/* The loaded codec library, or NULL (then AAC is silent and At9Enc can't encode). */
+const RuntimeCodecs *runtime_codecs_get(void);
 #endif

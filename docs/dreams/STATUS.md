@@ -27,7 +27,7 @@ Last updated: 2026-11-15. Game under test: CUSA08010 v2.52 (user moving to v2.64
    (~1.3 GB of direct memory).
 5. GPU: Vulkan presenter on RX 7800 XT (RADV, Mesa 26.2.6), GPU clock calibrated, end-of-pipe
    labels written by the GPU.
-6. Video out opened; Hmd/VR, Ime keyboard, AppContent, Ajm (AAC = silent), PlayGo (all 6
+6. Video out opened; Hmd/VR, Ime keyboard, AppContent, Ajm (AAC via fdk-aac when `./build-deps.sh` has built `out/libdreams-codecs.so`, else silent), PlayGo (all 6
    chunks local), all offline tutorial videos found, SaveData/Camera/Move/VideoPlayer/GameUpdate
    threads created.
 7. First compute dispatch: the shader recompiler hits **`DS_ORDERED_COUNT`** (unknown opcode) →
@@ -50,7 +50,11 @@ upstream layout); this isn't the chosen direction (decision D2) but could be a q
 | What | Where | Why it's there | Proper fix |
 |---|---|---|---|
 | Unimplemented imports return 0 (logged once as `STUB:`) | `src/probe.c` `unresolved()` | shadPS4 parity; unblocks boot | Implement each entry in `STUBS.md` that matters; `DREAMS_STRICT_IMPORTS=1` shows the old stop |
-| Ajm MP3/AAC instances are silent | `src/runtime_ajm.c` | Dreams creates AAC decoders at audio init | Port shadPS4 `ajm_aac.cpp` (fdk-aac; Fedora `fdk-aac-free-devel`) |
+| Ajm AAC needs the optional codec library; MP3 is always silent | `src/runtime_ajm.c`, `src/runtime_codecs.c` | AAC is decoded by fdk-aac from `out/libdreams-codecs.so` (`./build-deps.sh`, dlopen at first use). Without the library AAC is silent (logged: "SILENT decoder"). Dreams creates no MP3 instances so far | Have `build-dreams.sh` run `./build-deps.sh` (incremental, ~6 s clean) before linking; MP3 via minimp3 if Dreams ever needs it. Licence note: fdk-aac (Fraunhofer FDK licence, which the FSF considers GPL-incompatible) and artswap (GPL-3.0-or-later) stay in this separate, locally built library; shadPS4 bundles the same sources |
+| RAW AAC = one access unit per Ajm run | `src/runtime_ajm.c` `aac_frame` | fdk's RAW transport can't split concatenated AUs; shadPS4 has the same limit | Only if Dreams submits several raw AUs in one job (check `BB_AUDIO_TRACE=1` for AAC results `0xc0000000`) |
+| Audio3d mixes to stereo without spatialisation | `src/runtime_audio3d.c` | port of shadPS4's software Audio3d (object position/spread ignored, objects with no GAIN are silent) | shadPS4's OpenAL variant (`audio3d_openal.cpp`) if positional audio matters |
+| Ime keyboard: open succeeds, no key events | `src/runtime_dreams_services.c` | USB keyboard text entry isn't wired | SDL keyboard -> OrbisImeEvent (editor work) |
+| Audit no-ops (`ok`) | `src/runtime_dreams_services.c` | 0 is right offline (profiler hooks, streaming/sharing, sanitizers, Neo mode off) | Revisit if a feature needs one (e.g. Neo mode for PS4 Pro resolution) |
 | `BB_SKIP_GAME_CHECK=1` | `run-dreams.sh` | bbport's check pins Bloodborne's image hash | Title-based Dreams check (decision D7) |
 | GPU library = bbport's libbbgpu | `build-dreams.sh` | unblocked CPU-side work | vcore (milestone 6) |
 
@@ -58,7 +62,9 @@ upstream layout); this isn't the chosen direction (decision D2) but could be a q
 
 | Metric | Value | Source |
 |---|---|---|
-| Distinct imports served by the return-0 fallback before the GPU stop | 67 | `STUBS.md` |
+| Distinct imports served by the return-0 fallback before the GPU stop | 67 (GPU run, before the CPU audit) | `logs-gpu-run1.txt` |
+| Same, `--cpu-only` (2026-11-15 audit) | 54 -> **17** (all 17 GnmDriver/VideoOut) | `STUBS.md`, `work/cpu-audit-base.log` -> `work/cpu-audit-2.log` |
+| Non-GPU imports nothing resolves at load (`BB_LIST_UNRESOLVED=1`, `--cpu-only`) | 258 -> **154** (Np online, VR, camera, dialogs, Http...) | `tools/unresolved_report.py` on the logs above |
 | Unresolved imports at load (`BB_LIST_UNRESOLVED=1`, `--cpu-only`) | 402 (incl. 120 GnmDriver/VideoOut that the GPU library provides when not `--cpu-only`) | `work/cpu-only-run4.log` |
 | eboot imports | 812 across 63 libraries | `notes/dreams-imports.md` |
 
@@ -70,3 +76,8 @@ upstream layout); this isn't the chosen direction (decision D2) but could be a q
 - 40-bit pointer packing: all host allocations visible to the guest must stay below 1 TiB.
 - Stubs returning 0 can hide bugs: when something odd happens, check `STUBS.md` first, or run with
   `DREAMS_STRICT_IMPORTS=1`.
+- The CPU audit (2026-11-15) could only exercise boot up to the point `--cpu-only` reaches (the main
+  loop waits on GPU fences). Audio3d, AudioOut mastering, the error dialog etc. are first called
+  later; they are unit-tested (`tests/run-dreams-tests.sh`) but not yet seen in a real run.
+- With the vcore build, the 18 `libSceAvPlayer` imports are unresolved (bbport's libbbgpu used to
+  provide them): the intro/tutorial videos need them (GPU-library side).

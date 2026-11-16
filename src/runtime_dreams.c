@@ -77,7 +77,7 @@ typedef struct { uint32_t status; int32_t user_id; uint8_t reserve0[4]; uint32_t
                  uint16_t latency_90hz, latency_120hz; uint8_t hmu_mount, reserve1[7]; } HmdDeviceInformation;
 _Static_assert(sizeof(HmdDeviceInformation)==32, "OrbisHmdDeviceInformation layout");
 static ABI int32_t hmd_device_information(HmdDeviceInformation *info) {
-    if (!info) return (int32_t)0x81110001; /* ORBIS_HMD_ERROR_PARAMETER_NULL */
+    if (!info) return (int32_t)0x81110008; /* ORBIS_HMD_ERROR_PARAMETER_NULL (hmd/hmd_error.h) */
     memset(info,0,sizeof(*info));
     info->status=2;
     info->user_id=1;

@@ -1,71 +1,35 @@
-# Imports served by the return-0 fallback (67, from gpu-run1.log, in first-call order)
+# Imports served by the return-0 fallback (17, from cpu-audit-2.log, in first-call order)
+
+**Run type: `--cpu-only`** (2026-11-15, `work/cpu-audit-2.log`, GPU library = vcore build, no GPU
+work executes). All 17 remaining entries are GnmDriver/VideoOut: the GPU library's job. A
+`--cpu-only` run stops early (the main loop waits for GPU fences), so imports first called later
+in boot (with the GPU on) don't appear here; regenerate from a GPU run to see those:
+`python3 -I tools/stub_report.py <log> --md port/docs/dreams/STUBS.md`.
+
+Audit of 2026-11-15 (CPU side): every non-GPU entry of the previous list (cpu-only run: 54
+entries, GPU run `gpu-run1.log`: 67) now has an explicit implementation; see `IMPORTS_LOG.md`.
+Entries where returning 0 was already right are explicit no-ops (`ok` in
+`src/runtime_dreams_services.c`) so they no longer show up here. Non-GPU imports that nothing
+resolves at load (`BB_LIST_UNRESOLVED=1`): 258 -> 154; the rest are mostly features Dreams only
+reaches online, with PS VR/Move/camera, or in dialogs (Np*, Hmd/VrTracker, Camera, *Dialog, Http)
+and are listed per library by `python3 -I tools/unresolved_report.py <log>`.
 
 | # | NID | name | first caller | arg0 |
 |---|---|---|---|---|
-| 1 | `pB-yGZ2nQ9o` | _sceKernelSetThreadAtexitCount | libc.prx+0x79c | 0x80b0623e0 |
-| 2 | `WhCc1w3EhSI` | _sceKernelSetThreadAtexitReport | libc.prx+0x7a8 | 0x80b062610 |
-| 3 | `bnZxYgAFeA0` | sceKernelGetSanitizerNewReplaceExternal | libc.prx+0xa33c4 | 0x801a00168 |
-| 4 | `NWtTN10cJzE` | sceLibcHeapGetTraceInfo | libc.prx+0x52c91 | 0x7ffe5085ce10 |
-| 5 | `WslcK1FQcGI` | sceKernelIsNeoMode | eboot+0x115737 | 0x80452a280 |
-| 6 | `jh+8XiK4LeE` | sceKernelIsAddressSanitizerEnabled | libc.prx+0x5432e | 0x801795756 |
-| 7 | `DLORcroUqbc` | sceKernelGetOpenPsId | eboot+0x12f25b | 0x80bf0bf20 |
-| 8 | `8zLSfEfW5AU` | sceCoredumpRegisterCoredumpHandler | eboot+0xcb7b0d | 0x8015006e0 |
-| 9 | `0NTHN1NKONI` | sceKernelConvertLocaltimeToUtc | libc.prx+0x326b7 | 0x637baefc |
-| 10 | `-o5uEDpN+oY` | sceKernelConvertUtcToLocaltime | libc.prx+0x326d2 | 0x80b158e30 |
-| 11 | `BG26hBGiNlw` | _sceUlobjmgrRegisterObject | libSceJobManager.prx+0x1b23 | 0x1000010d00 |
-| 12 | `EI-5-jlq2dE` | scePthreadGetthreadid | eboot+0xce4ee9 | 0x0 |
-| 13 | `How7B8Oet6k` | scePthreadGetname | eboot+0x3ad2a7 | 0x80b6c8300 |
-| 14 | `9FowWFMEIM8` | sceRazorCpuJobManagerSequence | libSceJobManager.prx+0x63b8 | 0x80175b567 |
-| 15 | `aNz11fnnzi4` | sceKernelAvailableFlexibleMemorySize | eboot+0xcb81ef | 0x80bef8878 |
-| 16 | `hvoLYhc4cq0` | sceSystemServiceGetPlatformPrivacySetting | eboot+0x134f40 | 0x80bef808c |
-| 17 | `j1ITE-EoJmE` | sceMoveInit | eboot+0xcbcecf | 0x80bef8130 |
-| 18 | `PI7jIZj4pcE` | sceRandomGetRandomNumber | eboot+0xcbcef7 | 0x80befbae0 |
-| 19 | `s-J66ar9g50` | sceHmdInitialize315 | eboot+0xcbdbdf | 0x80befbae0 |
-| 20 | `kLUAkN6a1e8` | sceHmdReprojectionQueryOnionBuffSize | eboot+0xcbdbe4 | 0x7efd8cff8750 |
-| 21 | `IWybWbR-xvA` | sceHmdReprojectionQueryOnionBuffAlign | eboot+0xcbdbec | 0x7efd8cff8750 |
-| 22 | `z0KtN1vqF2E` | sceHmdReprojectionQueryGarlicBuffSize | eboot+0xcbdbf4 | 0x7efd8cff8750 |
-| 23 | `TkcANcGM0s8` | sceHmdReprojectionQueryGarlicBuffAlign | eboot+0xcbdbfc | 0x7efd8cff8750 |
-| 24 | `eaFXjfJv3xs` | sceImeKeyboardOpen | eboot+0xcc461f | 0x1 |
-| 25 | `6p9jvljuvsw` | sceNpWordFilterCreateTitleCtxA | eboot+0xcc462b | 0x1 |
-| 26 | `KP+TBWGHlgs` | sceRazorCpuJobManagerJob | libSceJobManager.prx+0x2339 | 0x859a |
-| 27 | `-4GCfYdNF1s` | sceImeUpdate | eboot+0x150aee8 | 0x8015025d0 |
-| 28 | `buYbeLOGWmA` | sceAppContentTemporaryDataMount2 | eboot+0xce51c6 | 0x0 |
-| 29 | `1iDLkHJ4gbA` | sceAt9EncQueryMemSize | eboot+0xce8e2b | 0x8029772a0 |
-| 30 | `gujP4afE9dQ` | sceAt9EncCreateEncoder | eboot+0xce8e57 | 0x1027268000 |
-| 31 | `3OMbYZBaa50` | scePlayGoGetLanguageMask | eboot+0xce9c80 | 0x1 |
-| 32 | `LosLlHOpNqQ` | scePlayGoSetLanguageMask | eboot+0xce9d6e | 0x1 |
-| 33 | `K7yhYrsIBPc` | sceVrTrackerQueryMemory | eboot+0xce7d22 | 0x80c44f860 |
-| 34 | `u4bCGkqhOB4` | sceShareUtilityAdvanceInitialize | eboot+0xce827b | 0x2 |
-| 35 | `0GnN4QCgIfs` | sceContentExportInit2 | eboot+0xce82df | 0x80c44f860 |
-| 36 | `Fc8qxlKINYQ` | sceVideoRecordingSetInfo | eboot+0xce8349 | 0xa009 |
-| 37 | `dPj4ZtRcIWk` | sceContentSearchInit | eboot+0xce836c | 0x80c44f860 |
-| 38 | `FRT4EYtZU1Y` | sceContentSearchGetMyApplicationIndex | eboot+0xce8378 | 0x80630cf30 |
-| 39 | `kvYEw2lBndk` | sceGameLiveStreamingInitialize | eboot+0xce8394 | 0x4000 |
-| 40 | `-EHnU68gExU` | sceGameLiveStreamingPermitServerSideRecording | eboot+0xce83a6 | 0x1 |
-| 41 | `MLvYI86FFAo` | sceGameLiveStreamingSetStandbyScreenResource | eboot+0xce83ba | 0x801772e03 |
-| 42 | `3PSiwAzFISE` | sceGameLiveStreamingSetCameraFrameSetting | eboot+0xce8462 | 0x80c44f860 |
-| 43 | `Sb5bAXyUt5c` | sceGameLiveStreamingSetLinkCommentPreset | eboot+0xce85fc | 0x80c44f860 |
-| 44 | `dnEdyY4+klQ` | sceRazorCpuJobManagerDispatch | libSceJobManager.prx+0x23b8 | 0x80177b30c |
-| 45 | `hw5KNqAAels` | sceNpRegisterNpReachabilityStateCallback | eboot+0xcca329 | 0x801148e20 |
-| 46 | `rbknaUjpqWo` | sceNpGetAccountIdA | eboot+0xcf404c | 0x1 |
-| 47 | `UmCvjSmuZIw` | sceAudio3dInitialize | eboot+0xcca515 | 0x0 |
-| 48 | `XeDDK0xJWQA` | sceAudio3dPortOpen | eboot+0xcca57a | 0xff |
-| 49 | `xX4RLegarbg` | sceAudioOutMasteringInit | eboot+0xcca688 | 0x0 |
-| 50 | `4055yaUg3EY` | sceAudioOutMasteringSetParam | eboot+0xcca777 | 0x802e0d820 |
-| 51 | `nya-R5gDYhM` | sceAudioInHqOpen | eboot+0xa2beb | 0x1 |
-| 52 | `wVwPU50pS1c` | sceAudioOutSetMixLevelPadSpk | eboot+0xa23d6 | 0x20040011 |
-| 53 | `BQ3tey0JmQM` | sceCommonDialogIsUsed | eboot+0xccdfd0 | 0x271e4230 |
-| 54 | `I88KChlynSs` | sceErrorDialogInitialize | eboot+0xa54291 | 0x100821f560 |
-| 55 | `M2ZF-ClLhgY` | sceErrorDialogOpen | eboot+0xa542ca | 0x80bef8308 |
-| 56 | `KLmYx9ij2h0` | scePadSetAngularVelocityBiasCorrectionState | eboot+0xccdb71 | 0x1 |
-| 57 | `lUoqwTQu4Go` | sceUserServiceGetUserColor | eboot+0xccdc12 | 0x1 |
-| 58 | `HzC60MfjJxU` | sceMoveOpen | eboot+0xccdc30 | 0x1 |
-| 59 | `p6n3Npi3YY4` | sceCameraIsAttached | eboot+0xccdf47 | 0x0 |
-| 60 | `thDt9upZlp8` | sceHmdGetDeviceInformation | eboot+0xcce047 | 0x80bef8880 |
-| 61 | `f2bcpK6kJfg` | sceMoveReadStateRecent | eboot+0x7bdd54 | 0x0 |
-| 62 | `GNcF4oidY0Y` | sceNpTrophyDestroyHandle | eboot+0x6262d1 | 0x7 |
-| 63 | `zuxWAg3HAac` | sceMoveResetLightSphere | eboot+0xccfbc0 | 0x0 |
-| 64 | `IFQwtT2CeY0` | sceMoveSetVibration | eboot+0xf18c60 | 0x0 |
-| 65 | `WWiGuh9XfgQ` | sceErrorDialogUpdateStatus | eboot+0xa54309 | 0x100821f560 |
-| 66 | `9XAxK2PMwk8` | sceErrorDialogTerminate | eboot+0xa5425e | 0x100821f560 |
-| 67 | `65VH0Qaaz6s` | sceSaveDataGetMountInfo | eboot+0x524f7a | 0x10283bca08 |
+| 1 | `yvZ73uQUqrk` | sceGnmSubmitDone | eboot+0xce4f0b | 0x443b7c |
+| 2 | `ln33zjBrfjk` | sceGnmGetTheTessellationFactorRingBufferBaseAddress | eboot+0xcbd054 | 0x316ec2f0 |
+| 3 | `ZFqKFl23aMc` | sceGnmRegisterOwner | eboot+0x144ed10 | 0x808e3a2c8 |
+| 4 | `b0xyllnVY-I` | sceGnmAddEqEvent | eboot+0xcbd218 | 0x40000 |
+| 5 | `A+uGq+3KFtQ` | sceGnmMapComputeQueueWithPriority | eboot+0x2a1b8 | 0x2 |
+| 6 | `5udAm+6boVg` | sceGnmCreateWorkloadStream | eboot+0xcbd416 | 0x80179eb2c |
+| 7 | `Up36PTk687E` | sceVideoOutOpen | eboot+0xcbdcaf | 0xff |
+| 8 | `kGVLc3htQE8` | sceVideoOutGetDeviceCapabilityInfo_ | eboot+0xcbe1db | 0x0 |
+| 9 | `nvEwfYAImTs` | sceGnmRegisterResource | eboot+0x1457bd6 | 0x80bef81fc |
+| 10 | `fhKwCVVj9nk` | sceGnmUnregisterOwnerAndResources | eboot+0x1434978 | 0xffffffff |
+| 11 | `i6-sR91Wt-4` | sceVideoOutSetBufferAttribute | eboot+0x1452c4c | 0x80bef82a0 |
+| 12 | `w3BY+tAEiQY` | sceVideoOutRegisterBuffers | eboot+0x1452c83 | 0x0 |
+| 13 | `pjkDsgxli6c` | sceVideoOutModeSetAny_ | eboot+0x1452c98 | 0x80bef8270 |
+| 14 | `N1bEoJ4SRw4` | sceVideoOutConfigureOutputMode_ | eboot+0x1452cfe | 0x0 |
+| 15 | `nF6bFRUBRAU` | sceGnmDispatchInitDefaultHardwareState | eboot+0x2a6f9 | 0x103c24cc00 |
+| 16 | `ffrNQOshows` | sceGnmComputeWaitOnAddress | eboot+0x2c0ee | 0x103c24cc2c |
+| 17 | `byXlqupd8cE` | sceGnmDingDongForWorkload | eboot+0x33c | 0x0 |

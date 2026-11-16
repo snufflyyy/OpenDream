@@ -144,7 +144,26 @@ static ABI int32_t rw_destroy(Rwlock **handle) {
     }
     pthread_mutex_unlock(&registry_lock); return error(e);
 }
+/* Dreams port: libc.prx imports the POSIX names (pthread_rwlock_rdlock/wrlock/unlock) from
+ * libkernel. Same objects; POSIX calls return the plain errno instead of 0x8002xxxx
+ * (ref shadPS4 kernel/threads/rwlock.cpp, ORBIS_KERNEL_ERROR -> POSIX by the libkernel wrapper). */
+static int32_t posix_result(int32_t r) { return r ? (int32_t)((uint32_t)r & 0xffff) : 0; }
+static ABI int32_t posix_rw_init(Rwlock **out, void *const *attr) { return posix_result(rw_init(out,attr,NULL)); }
+static ABI int32_t posix_rw_destroy(Rwlock **h) { return posix_result(rw_destroy(h)); }
+static ABI int32_t posix_rw_read(Rwlock **h) { return posix_result(rw_read(h)); }
+static ABI int32_t posix_rw_write(Rwlock **h) { return posix_result(rw_write(h)); }
+static ABI int32_t posix_rw_tryread(Rwlock **h) { return posix_result(rw_tryread(h)); }
+static ABI int32_t posix_rw_trywrite(Rwlock **h) { return posix_result(rw_trywrite(h)); }
+static ABI int32_t posix_rw_unlock(Rwlock **h) { return posix_result(rw_unlock(h)); }
+static const RuntimeExport posix_exports[]={
+    {"pthread_rwlock_init",posix_rw_init}, {"pthread_rwlock_destroy",posix_rw_destroy},
+    {"pthread_rwlock_rdlock",posix_rw_read}, {"pthread_rwlock_wrlock",posix_rw_write},
+    {"pthread_rwlock_tryrdlock",posix_rw_tryread}, {"pthread_rwlock_trywrlock",posix_rw_trywrite},
+    {"pthread_rwlock_unlock",posix_rw_unlock},
+};
 uintptr_t runtime_rwlock_resolve(const char *name) {
+    uintptr_t posix=RUNTIME_LOOKUP(posix_exports,name);
+    if (posix) return posix;
     if (runtime_nid_is(name, "6ULAa0fq4jA")) return (uintptr_t)rw_init;
     if (runtime_nid_is(name, "BB+kb08Tl9A")) return (uintptr_t)rw_destroy;
     if (runtime_nid_is(name, "Ox9i0c7L5w0")) return (uintptr_t)rw_read;

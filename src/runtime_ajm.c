@@ -4,7 +4,10 @@
  * builder functions are imports, but games may also build chunks inline), and
  * run synchronously at submission: decoding a batch takes well under a
  * millisecond, so waiting always finds it complete. ATRAC9 is decoded by
- * LibAtrac9 (MIT, third_party/LibAtrac9). MP3/AAC instances stop explicitly. */
+ * LibAtrac9 (MIT, third_party/LibAtrac9). AAC (Dreams port) is decoded by fdk-aac from the
+ * optional codec library (runtime_codecs.c, ./build-deps.sh), following shadPS4's
+ * ajm/ajm_aac.cpp + ajm_instance.cpp; without that library, and for MP3, instances are silent:
+ * jobs consume their input and produce no samples. */
 #define _GNU_SOURCE
 #include "runtime.h"
 #include "../gpu/shim/bb_env.h"
@@ -68,6 +71,12 @@ typedef struct {
     uint32_t superframe_remain, frames;
     SidebandGapless gapless_init, gapless;
     uint64_t total_samples;
+    /* AAC (codec 2): init parameters {config_type 1=ADTS 2=RAW, sampling_freq_type}, decoder,
+     * frames still to drop (the decoder delay; 0 with AjmAacCodecFlags EnableNondelayOutput). */
+    void *aac;
+    uint32_t aac_config_type, aac_freq_type;
+    int aac_skip_frames;
+    RuntimeAacFrame aac_info;
 } Instance;
 typedef struct { int used, registered[24]; Instance instances[MAX_INSTANCES+1]; } Context;
 typedef struct { int used, context, canceled; } Batch;
@@ -251,6 +260,68 @@ static void parse_riff(Instance *in, const unsigned char **input, uint64_t *size
     *size-=(uint64_t)(p-*input); *input=p;
 }
 
+/* ---- AAC (Dreams port; ref shadPS4 ajm/ajm_aac.cpp) ---- */
+static size_t aac_frames_decoded;
+static void aac_reset(Instance *in) {
+    const RuntimeCodecs *c=runtime_codecs_get();
+    if (!c || !in->initialized) return;
+    if (in->aac) c->aac_close(in->aac);
+    in->aac=c->aac_open(in->aac_config_type==2,in->aac_freq_type,(unsigned)in->channels_hint);
+    memset(&in->aac_info,0,sizeof(in->aac_info));
+    in->aac_skip_frames=(in->codec_flags & 2) ? 0 : 2;
+    if (!in->aac) printf("Runtime: Ajm AAC decoder open failed (config %u, freq index %u, %d ch)\n",
+                        in->aac_config_type,in->aac_freq_type,in->channels_hint);
+    if (ajm_trace())
+        printf("Audio trace: AAC init %s config %u freq index %u channels %d flags %#x\n",in->aac ? "ok" : "FAILED",
+               in->aac_config_type,in->aac_freq_type,in->channels_hint,in->codec_flags);
+}
+static uint32_t aac_next_frame_bytes(const Instance *in) {
+    const RuntimeAacFrame *i=&in->aac_info;
+    if (i->samples_per_frame<=0) return 0;
+    uint32_t frame=(uint32_t)i->frame_size;
+    uint32_t skip=in->gapless.skip_samples<frame ? in->gapless.skip_samples : frame;
+    uint32_t samples=frame-skip;
+    if (in->gapless_init.total_samples && in->gapless.total_samples<samples) samples=in->gapless.total_samples;
+    return samples*(uint32_t)i->channels*(uint32_t)pcm_size(in->format);
+}
+/* One frame (ProcessData); returns result flags. */
+static uint32_t aac_frame(Instance *in, const unsigned char **input, uint64_t *input_size, Output *out,
+                          uint32_t *samples_written, uint32_t *frames, int32_t *internal) {
+    const RuntimeCodecs *c=runtime_codecs_get();
+    static int16_t pcm[2048*8]; /* HE-AAC: 2048 samples x 8 channels; Ajm runs under `lock` */
+    RuntimeAacFrame f;
+    int r=c->aac_decode(in->aac,*input,(uint32_t)*input_size,pcm,sizeof(pcm)/sizeof(*pcm),&f);
+    if (r==1) return RESULT_PARTIAL_INPUT;
+    if (r<0) { *internal=f.error; return RESULT_CODEC_ERROR|RESULT_FATAL; }
+    in->aac_info=f;
+    uint64_t used=f.bytes_used<*input_size ? f.bytes_used : *input_size;
+    *input+=used; *input_size-=used;
+    ++*frames; ++aac_frames_decoded;
+    if (in->aac_skip_frames>0) { --in->aac_skip_frames; return 0; }
+    uint32_t channels=(uint32_t)(f.channels>0 ? f.channels : 1), skip=0;
+    if (in->gapless.skip_samples) {
+        skip=in->gapless.skip_samples<(uint32_t)f.frame_size ? in->gapless.skip_samples : (uint32_t)f.frame_size;
+        in->gapless.skip_samples-=(uint16_t)skip;
+    }
+    uint32_t samples=(uint32_t)f.frame_size-skip;
+    uint32_t limit=in->gapless_init.total_samples ? in->gapless.total_samples : (uint32_t)f.samples_per_frame;
+    if (samples>limit) samples=limit;
+    uint64_t room=output_room(out)/((uint64_t)channels*(uint64_t)pcm_size(in->format));
+    if (samples>room) samples=(uint32_t)room;
+    static unsigned char converted[2048*8*4];
+    for (uint32_t i=0;i<samples*channels;++i) {
+        int16_t v=pcm[skip*channels+i];
+        if (in->format==FORMAT_S16) memcpy(converted+i*2,&v,2);
+        else if (in->format==FORMAT_S32) { int32_t w=(int32_t)v<<16; memcpy(converted+i*4,&w,4); }
+        else { float x=(float)v/32767.0f; memcpy(converted+i*4,&x,4); }
+    }
+    output_write(out,converted,(uint64_t)samples*channels*(uint64_t)pcm_size(in->format));
+    *samples_written=samples;
+    in->gapless.skipped_samples+=(uint16_t)((uint32_t)f.frame_size-samples);
+    if (in->gapless_init.total_samples) in->gapless.total_samples-=samples;
+    return 0;
+}
+
 /* ---- job execution ---- */
 typedef struct {
     uint64_t flags; int have_flags;
@@ -277,6 +348,87 @@ static int parse_job(const unsigned char *p, uint32_t size, Job *job) {
     }
     return job->have_flags ? 0 : -1;
 }
+/* AAC job: shadPS4 AjmInstance::ExecuteJob with the AAC codec. */
+static void apply_gapless_control(Instance *in, const unsigned char *control, uint32_t *flags_result) {
+    SidebandGapless g; memcpy(&g,control,8);
+    uint32_t processed=in->gapless_init.total_samples-in->gapless.total_samples;
+    if (g.total_samples || !g.skip_samples) {
+        if (g.total_samples>=processed) {
+            int64_t diff=(int64_t)in->gapless_init.total_samples-g.total_samples;
+            in->gapless_init.total_samples=g.total_samples; in->gapless.total_samples=(uint32_t)(in->gapless.total_samples-diff);
+        } else *flags_result|=RESULT_INVALID_PARAMETER;
+    }
+    uint32_t skipped=(uint32_t)in->gapless_init.skip_samples-in->gapless.skip_samples;
+    if (g.skip_samples || !g.total_samples) {
+        if (g.skip_samples>=skipped) {
+            int32_t diff=(int32_t)in->gapless_init.skip_samples-g.skip_samples;
+            in->gapless_init.skip_samples=g.skip_samples; in->gapless.skip_samples=(uint16_t)(in->gapless.skip_samples-diff);
+        } else *flags_result|=RESULT_INVALID_PARAMETER;
+    }
+}
+static void run_aac_job(Instance *in, Job *job, unsigned char *side, unsigned char *side_end, SidebandResult *result) {
+    uint64_t f=job->flags;
+    uint32_t flags_result=0;
+    const unsigned char *control=job->input_control.size ? job->input_control.address : NULL;
+    const unsigned char *control_end=control ? control+job->input_control.size : NULL;
+    if (CONTROL_RESET(f)) { in->total_samples=0; gapless_reset(in); aac_reset(in); }
+    if (control && SIDEBAND_FORMAT(f) && control+24<=control_end) control+=24;
+    if (control && SIDEBAND_GAPLESS(f) && control+8<=control_end) { apply_gapless_control(in,control,&flags_result); control+=8; }
+    if (control && CONTROL_RESAMPLE(f) && control+8<=control_end) control+=8;
+    if (control && CONTROL_INITIALIZE(f) && control+8<=control_end) {
+        memcpy(&in->aac_config_type,control,4); memcpy(&in->aac_freq_type,control+4,4);
+        in->initialized=1;
+        if (in->aac_freq_type>11 || in->aac_config_type<1 || in->aac_config_type>2) in->initialized=0;
+        aac_reset(in);
+    }
+    uint64_t in_size=0;
+    for (int i=0;i<job->input_count;++i) in_size+=job->inputs[i].size;
+    unsigned char *joined=NULL;
+    const unsigned char *input=NULL;
+    if (job->input_count==1) input=job->inputs[0].address;
+    else if (job->input_count>1) {
+        joined=malloc(in_size ? in_size : 1);
+        uint64_t at=0;
+        for (int i=0;i<job->input_count;++i) { memcpy(joined+at,job->inputs[i].address,job->inputs[i].size); at+=job->inputs[i].size; }
+        input=joined;
+    }
+    Output out={job->outputs,job->output_count,0,0};
+    uint64_t in_start=in_size, out_start=output_room(&out);
+    uint32_t frames=0;
+    int32_t internal=0;
+    if (in_size) for (;;) {
+        if (in->gapless_loop && gapless_end(in)) { gapless_reset(in); in->total_samples=0; }
+        if (!in->initialized || !in->aac) { flags_result|=RESULT_NOT_INITIALIZED; break; }
+        if (!gapless_end(in) && output_room(&out)<aac_next_frame_bytes(in)) flags_result|=RESULT_NOT_ENOUGH_ROOM;
+        if (flags_result) break;
+        uint32_t written=0;
+        uint32_t r=aac_frame(in,&input,&in_size,&out,&written,&frames,&internal);
+        in->total_samples+=written;
+        if (r) { flags_result|=r; break; }
+        if (!RUN_MULTIPLE_FRAMES(f)) break;
+    }
+    free(joined);
+    if (flags_result && ajm_trace())
+        printf("Audio trace: Ajm AAC job flags %#llx -> result %#x internal %d; input %llu/%llu used, output %llu/%llu written, frames %u\n",
+               (unsigned long long)f,flags_result,internal,(unsigned long long)(in_start-in_size),(unsigned long long)in_start,
+               (unsigned long long)(out_start-output_room(&out)),(unsigned long long)out_start,frames);
+    if (result) { result->result=(int32_t)flags_result; result->internal_result=internal; }
+    if (side && SIDEBAND_STREAM(f) && side+16<=side_end) {
+        SidebandStream s={(int32_t)(in_start-in_size),(int32_t)(out_start-output_room(&out)),in->total_samples};
+        memcpy(side,&s,16); side+=16;
+    }
+    if (side && SIDEBAND_FORMAT(f) && side+24<=side_end) {
+        SidebandFormat s={0};
+        if (in->initialized && in->aac) {
+            s.channels=(uint32_t)in->aac_info.channels; s.channel_mask=channel_mask(in->aac_info.channels);
+            s.sample_rate=(uint32_t)in->aac_info.sample_rate; s.encoding=(uint32_t)in->format; s.bitrate=(uint32_t)in->aac_info.bitrate;
+        }
+        memcpy(side,&s,24); side+=24;
+    }
+    if (side && SIDEBAND_GAPLESS(f) && side+8<=side_end) { memcpy(side,&in->gapless,8); side+=8; }
+    if (side && RUN_MULTIPLE_FRAMES(f) && side+8<=side_end) { uint32_t m[2]={frames,0}; memcpy(side,m,8); side+=8; }
+    if (side && RUN_CODEC_INFO(f) && side+8<=side_end) { uint32_t info[2]={(uint32_t)in->aac_info.heaac,0}; memcpy(side,info,8); }
+}
 static void run_job(Context *ctx, uint32_t id, Job *job) {
     ++jobs_run;
     unsigned char *side=job->output_control.size ? job->output_control.address : NULL;
@@ -288,7 +440,8 @@ static void run_job(Context *ctx, uint32_t id, Job *job) {
     if ((id & MAX_INSTANCES)==0 || !in->used) { if (result) result->result=(int32_t)(RESULT_FATAL|RESULT_INVALID_PARAMETER); return; }
     uint64_t f=job->flags;
     uint32_t flags_result=0;
-    if (in->codec!=1) { /* Dreams port: MP3/AAC silent decoder (see ajm_instance_create) */
+    if (in->codec==2 && runtime_codecs_get()) { run_aac_job(in,job,side,side_end,result); return; }
+    if (in->codec!=1) { /* Dreams port: MP3 (and AAC without the codec library) silent decoder */
         uint64_t in_size=0;
         for (int i=0;i<job->input_count;++i) in_size+=job->inputs[i].size;
         if (side && SIDEBAND_STREAM(f) && side+16<=side_end) {
@@ -401,7 +554,10 @@ static ABI int32_t ajm_finalize(uint32_t id) {
     pthread_mutex_lock(&lock);
     Context *c=context(id);
     if (!c) { pthread_mutex_unlock(&lock); return ERR_INVALID_CONTEXT; }
-    for (int i=0;i<=MAX_INSTANCES;++i) if (c->instances[i].handle) Atrac9ReleaseHandle(c->instances[i].handle);
+    for (int i=0;i<=MAX_INSTANCES;++i) {
+        if (c->instances[i].handle) Atrac9ReleaseHandle(c->instances[i].handle);
+        if (c->instances[i].aac) runtime_codecs_get()->aac_close(c->instances[i].aac);
+    }
     free(c); contexts[id]=NULL;
     pthread_mutex_unlock(&lock);
     return 0;
@@ -426,14 +582,16 @@ static ABI int32_t ajm_module_unregister(uint32_t id, uint32_t codec) {
 static ABI int32_t ajm_instance_create(uint32_t id, uint32_t codec, uint64_t flags, uint32_t *out) {
     if (!out || codec>=24) return ERR_INVALID_PARAMETER;
     if (!(flags & 7)) return ERR_WRONG_REVISION;
-    /* Dreams port: Dreams creates AAC (codec 2) instances during audio init. Until a real decoder
-     * is ported (shadPS4 ajm_aac.cpp uses fdk-aac; TODO in docs/dreams/STATUS.md), MP3/AAC instances
+    /* Dreams port: Dreams creates AAC (codec 2) instances during audio init. AAC is decoded with
+     * fdk-aac when the codec library is present (run_aac_job); otherwise, and for MP3, instances
      * are "silent": jobs consume all input and produce no samples (run_job). Logged once. */
     if (codec>2) { fprintf(stderr,"STOP: Ajm codec %u is not implemented\n",codec); exit(21); }
     if (codec!=1) {
         static int warned[3];
+        int real=codec==2 && runtime_codecs_get();
         if (!__atomic_exchange_n(&warned[codec],1,__ATOMIC_RELAXED))
-            printf("Runtime: Ajm codec %u (%s) instance: SILENT decoder (not implemented yet)\n",codec,codec ? "AAC" : "MP3");
+            printf("Runtime: Ajm codec %u (%s) instance: %s\n",codec,codec ? "AAC" : "MP3",
+                   real ? "fdk-aac decoder" : "SILENT decoder (no decoder: see build-deps.sh)");
     }
     if (ajm_trace()) printf("Audio trace: Ajm instance create codec %u flags %#llx\n",codec,(unsigned long long)flags);
     pthread_mutex_lock(&lock);
@@ -455,7 +613,11 @@ static ABI int32_t ajm_instance_destroy(uint32_t id, uint32_t instance) {
     Context *c=context(id);
     Instance *in=c ? &c->instances[instance & MAX_INSTANCES] : NULL;
     int32_t r=!c ? ERR_INVALID_CONTEXT : !(instance & MAX_INSTANCES) || !in->used ? ERR_INVALID_INSTANCE : 0;
-    if (!r) { if (in->handle) Atrac9ReleaseHandle(in->handle); memset(in,0,sizeof(*in)); }
+    if (!r) {
+        if (in->handle) Atrac9ReleaseHandle(in->handle);
+        if (in->aac) runtime_codecs_get()->aac_close(in->aac);
+        memset(in,0,sizeof(*in));
+    }
     pthread_mutex_unlock(&lock);
     return r;
 }
@@ -519,5 +681,5 @@ static const RuntimeExport exports[]={
 };
 uintptr_t runtime_ajm_resolve(const char *name) { return RUNTIME_LOOKUP(exports,name); }
 void runtime_ajm_report(void) {
-    printf("Runtime: Ajm batches=%zu, jobs=%zu, ATRAC9 frames decoded=%zu\n",batches_run,jobs_run,frames_decoded);
+    printf("Runtime: Ajm batches=%zu, jobs=%zu, ATRAC9 frames decoded=%zu, AAC frames decoded=%zu\n",batches_run,jobs_run,frames_decoded,aac_frames_decoded);
 }

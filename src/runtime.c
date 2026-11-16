@@ -93,10 +93,12 @@ void runtime_report(void) {
     runtime_mutex_report();
     runtime_rwlock_report();
     runtime_sema_report();
+    runtime_eventflag_report();
     runtime_content_report();
     runtime_memory_report();
     runtime_ajm_report();
     runtime_audio_report();
+    runtime_audio3d_report();
     runtime_pad_report();
     runtime_savedata_report();
     runtime_file_report();
@@ -251,8 +253,8 @@ uintptr_t runtime_resolve(const char *name, int is_data) {
     if (memory) return memory;
     uintptr_t kernel = runtime_kernel_resolve(name);
     if (kernel) return kernel;
-    uintptr_t services = runtime_services_resolve(name);
-    if (services) return services;
+    uintptr_t system_services = runtime_services_resolve(name);
+    if (system_services) return system_services;
     uintptr_t ajm = runtime_ajm_resolve(name);
     if (ajm) return ajm;
     uintptr_t audio = runtime_audio_resolve(name);
@@ -267,6 +269,12 @@ uintptr_t runtime_resolve(const char *name, int is_data) {
     if (file) return file;
     uintptr_t dreams = runtime_dreams_resolve(name); /* Dreams port additions (runtime_dreams.c) */
     if (dreams) return dreams;
+    uintptr_t services = runtime_dreams_services_resolve(name); /* runtime_dreams_services.c */
+    if (services) return services;
+    uintptr_t eventflag = runtime_eventflag_resolve(name);
+    if (eventflag) return eventflag;
+    uintptr_t audio3d = runtime_audio3d_resolve(name);
+    if (audio3d) return audio3d;
     uintptr_t compat = runtime_compat_resolve(name);
     if (compat) return compat;
     return bbgpu_resolve(name);

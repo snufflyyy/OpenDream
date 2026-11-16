@@ -63,3 +63,31 @@
   (error dialog, Move, Hmd info, Np account, random, time zones, AudioIn, camera, savedata mount
   info) plus flexible-memory size and thread name/id. All verified to bind in a `--cpu-only` run
   (`work/cpu-only-run6.log`). Full list: IMPORTS_LOG.md.
+- CPU-side audit of the return-0 fallback (agent "cpu-runtime"). Baseline `--cpu-only` run
+  (`work/cpu-audit-base.log`): 54 `STUB:` lines, 258 non-GPU imports unresolved at load. Decided
+  each non-GPU import of STUBS.md (cpu-only and gpu-run1 lists) and implemented them, shadPS4
+  branch `dreams` as reference (rows in IMPORTS_LOG.md):
+  - new `src/runtime_dreams_services.c`: OpenPsId (fork bytes), libc heap trace info (libc.prx
+    read uninitialised pointers before), user colour, privacy setting, TemporaryDataMount2
+    ("/temp0" + FORMAT), ContentSearch/ContentExport, NP word filter (SanitizeComment used to leave
+    its output untouched), reachability callback, coredump handler, Hmd init/open/reprojection
+    queries (Dreams sized buffers from return value 0), VrTracker memory query/init, Ime keyboard,
+    At9Enc (the fork's artswap encoder), sceKernelSleep, plus explicit `ok` no-ops for profiler,
+    streaming/sharing, sanitizer and Neo/Prospero queries;
+  - new `src/runtime_eventflag.c`: kernel event flags (libSceJobManager.prx imports them);
+  - new `src/runtime_audio3d.c`: shadPS4's software Audio3d routed to our AudioOut (port type 126);
+    AudioOut mastering + pad-speaker mix level in `runtime_audio.c`;
+  - PlayGo language mask/progress/to-do list (`runtime_services.c`), `sceKernelGetdents`
+    (`runtime_file.c`), POSIX `pthread_rwlock_*` for libc.prx (`runtime_rwlock.c`), Hmd
+    PARAMETER_NULL code fix (`runtime_dreams.c`).
+- Real AAC decoding: `./build-deps.sh` builds `out/libdreams-codecs.so` (fdk-aac decoder sources
+  and the artswap ATRAC9 encoder from `ref/shadps4/externals`, plus `src/runtime_codecs/codecs_glue.c`)
+  in ~6 s on 16 cores; `src/runtime_codecs.c` dlopens it (no change to `build-dreams.sh` needed;
+  `DREAMS_CODECS_LIB` overrides the path). `runtime_ajm.c` decodes AAC jobs like shadPS4's
+  ajm_aac.cpp. Learned: fdk's RAW transport takes exactly one access unit per fill (concatenated
+  raw AUs fail with AAC_DEC_UNKNOWN), so RAW jobs must carry one AU each, as in shadPS4.
+- Tests: `tests/run-dreams-tests.sh` (event flags, Audio3d with a fake AudioOut, services, codecs
+  incl. an Ajm AAC job over an ffmpeg-made ADTS sine). bbport's runtime/sema tests still pass.
+- After (`work/cpu-audit-2.log`): 17 `STUB:` lines, all GnmDriver/VideoOut; 154 non-GPU imports
+  unresolved at load. The codec library loads, Dreams creates its two ATRAC9 encoders and AAC
+  instances with the real decoder. The cpu-only run still ends at the GPU-fence watchdog.

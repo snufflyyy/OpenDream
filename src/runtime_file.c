@@ -780,6 +780,10 @@ static ABI int32_t sce_check_reachability(const char *p) {
     GuestStat s; return (int32_t)sce(do_stat(p,&s));
 }
 
+/* sceKernelGetdents(fd, buf, nbytes): getdirentries without the base pointer (ref shadPS4
+ * kernel/file_system.cpp). */
+static ABI int64_t sce_getdents_nobase(int fd,char *buffer,uint64_t size) { return sce_getdents(fd,buffer,size,NULL); }
+static ABI int64_t posix_getdents_nobase(int fd,char *buffer,uint64_t size) { return posix_getdents(fd,buffer,size,NULL); }
 static const RuntimeExport exports[]={
     {"sceKernelOpen",sce_open}, {"open",posix_open}, {"_open",posix_open},
     {"sceKernelClose",sce_close}, {"close",posix_close}, {"_close",posix_close},
@@ -791,6 +795,7 @@ static const RuntimeExport exports[]={
     {"sceKernelFstat",sce_fstat}, {"fstat",posix_fstat},
     {"sceKernelStat",sce_stat}, {"stat",posix_stat},
     {"sceKernelGetdirentries",sce_getdents}, {"getdirentries",posix_getdents},
+    {"sceKernelGetdents",sce_getdents_nobase}, {"getdents",posix_getdents_nobase}, /* Dreams port: libc.prx imports it */
     {"sceKernelRename",sce_rename}, {"rename",posix_rename},
     {"sceKernelFtruncate",sce_ftruncate}, {"ftruncate",posix_ftruncate},
     {"sceKernelTruncate",sce_truncate}, {"truncate",posix_truncate},

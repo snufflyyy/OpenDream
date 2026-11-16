@@ -264,7 +264,34 @@ static ABI int32_t audio_last_time(int32_t handle, uint64_t *time) {
     *time=p->last_output_us; return 0;
 }
 
+/* Dreams port: AudioOut mastering (ref shadPS4 audio/audioout.cpp: Init checks flags==0, SetParam is
+ * a no-op) and the pad-speaker mix level (stored, not applied: no pad speaker output here). */
+#define ERR_INVALID_PORT_TYPE ERR_INVALID_TYPE /* 0x8026000A */
+#define ERR_INVALID_MIXLEVEL ((int32_t)0x80260014)
+#define ERR_MASTERING_INVALID_API_PARAM ((int32_t)0x80260201)
+static ABI int32_t audio_mastering_init(uint32_t flags) { return flags ? ERR_MASTERING_INVALID_API_PARAM : 0; }
+static ABI int32_t audio_mastering_set_param(void) { return 0; }
+static ABI int32_t audio_mix_level_pad_spk(int32_t handle, int32_t level) {
+    if (!initialized) return ERR_NOT_INIT;
+    int32_t error=0;
+    pthread_mutex_lock(&table_lock);
+    Port *p=port_of(handle,&error);
+    if (p && p->type!=4) error=ERR_INVALID_PORT_TYPE;
+    else if (p && level>VOLUME_0DB) error=ERR_INVALID_MIXLEVEL;
+    pthread_mutex_unlock(&table_lock);
+    return error;
+}
+/* For other runtime modules (runtime_audio3d.c): the same entry points the guest calls. */
+int32_t runtime_audio_out_init(void) { return audio_init(); }
+int32_t runtime_audio_out_open(int32_t user, int32_t type, int32_t index, uint32_t length, uint32_t freq, uint32_t param) {
+    return audio_open(user,type,index,length,freq,param);
+}
+int32_t runtime_audio_out_output(int32_t handle, const void *data) { return audio_output(handle,data); }
+int32_t runtime_audio_out_close(int32_t handle) { return audio_close(handle); }
+
 static const RuntimeExport exports[]={
+    {"sceAudioOutMasteringInit",audio_mastering_init}, {"sceAudioOutMasteringSetParam",audio_mastering_set_param},
+    {"sceAudioOutSetMixLevelPadSpk",audio_mix_level_pad_spk},
     {"sceAudioOutInit",audio_init}, {"sceAudioOutOpen",audio_open}, {"sceAudioOutClose",audio_close},
     {"sceAudioOutOutput",audio_output}, {"sceAudioOutOutputs",audio_outputs},
     {"sceAudioOutSetVolume",audio_volume}, {"sceAudioOutGetPortState",audio_state},

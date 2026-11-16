@@ -366,6 +366,42 @@ static ABI int32_t playgo_locus(int32_t handle,const uint16_t *ids,uint32_t coun
     return 0;
 }
 static ABI int32_t playgo_speed(int32_t handle,int32_t speed) { (void)speed; return handle==playgo_handle && handle ? 0 : PLAYGO_BAD_HANDLE; }
+/* Dreams port (ref shadPS4 playgo/playgo.cpp): language mask = bit (63 - system language), set at
+ * init from the system language (BB_LANGUAGE, default 1 = English); progress reports every chunk
+ * complete (progress == total; sizes are nominal, 1 per chunk, since we don't parse chunk sizes);
+ * the to-do list is always empty. */
+#define PLAYGO_NOT_INITIALIZED ((int32_t)0x80B20005)
+static uint64_t playgo_language_mask(void) { int l=language(); return l>=0 && l<48 ? UINT64_C(1)<<(63-l) : 0; }
+static uint64_t playgo_lang_mask; static int playgo_lang_set;
+static ABI int32_t playgo_get_language_mask(int32_t handle,uint64_t *mask) {
+    if (handle!=playgo_handle || !handle) return PLAYGO_BAD_HANDLE;
+    if (!mask) return PLAYGO_BAD_POINTER;
+    if (playgo_chunks<0) return PLAYGO_NOT_INITIALIZED;
+    *mask=playgo_lang_set ? playgo_lang_mask : playgo_language_mask();
+    return 0;
+}
+static ABI int32_t playgo_set_language_mask(int32_t handle,uint64_t mask) {
+    if (handle!=playgo_handle || !handle) return PLAYGO_BAD_HANDLE;
+    if (playgo_chunks<0) return PLAYGO_NOT_INITIALIZED;
+    playgo_lang_mask=mask; playgo_lang_set=1;
+    return 0;
+}
+typedef struct { uint64_t progress_size, total_size; } PlayGoProgress;
+static ABI int32_t playgo_get_progress(int32_t handle,const uint16_t *ids,uint32_t count,PlayGoProgress *out) {
+    if (handle!=playgo_handle || !handle) return PLAYGO_BAD_HANDLE;
+    if (!ids || !out) return PLAYGO_BAD_POINTER;
+    if (!count) return PLAYGO_BAD_SIZE;
+    for (uint32_t i=0;i<count;++i) if (ids[i]>=playgo_chunks) return PLAYGO_BAD_CHUNK;
+    out->progress_size=out->total_size=count;
+    return 0;
+}
+static ABI int32_t playgo_get_todo_list(int32_t handle,void *list,uint32_t count,uint32_t *entries) {
+    if (handle!=playgo_handle || !handle) return PLAYGO_BAD_HANDLE;
+    if (!list || !entries) return PLAYGO_BAD_POINTER;
+    if (!count) return PLAYGO_BAD_SIZE;
+    *entries=0;
+    return 0;
+}
 
 /* ---- DiscMap: the game is fully installed, no disc bitmap exists ---- */
 #define DISC_MAP_NO_BITMAP ((int32_t)0x81100004)
@@ -497,7 +533,9 @@ static const RuntimeExport exports[]={
     {"sceNpTrophyRegisterContext",trophy_register}, {"sceNpTrophyUnlockTrophy",trophy_unlock},
     {"sceNpTrophyGetGameInfo",trophy_game_info}, {"sceNpTrophyGetTrophyInfo",trophy_info},
     {"scePlayGoInitialize",playgo_init}, {"scePlayGoOpen",playgo_open}, {"scePlayGoGetChunkId",playgo_chunk_ids},
-    {"scePlayGoGetLocus",playgo_locus}, {"scePlayGoSetInstallSpeed",playgo_speed},
+    {"scePlayGoGetLocus",playgo_locus}, {"scePlayGoGetLanguageMask",playgo_get_language_mask}, {"scePlayGoSetLanguageMask",playgo_set_language_mask},
+    {"scePlayGoGetProgress",playgo_get_progress}, {"scePlayGoGetToDoList",playgo_get_todo_list},
+    {"scePlayGoSetInstallSpeed",playgo_speed},
     {"sceMouseInit",ok_void}, {"sceMouseOpen",mouse_open}, {"sceMouseRead",mouse_read}, {"sceMouseClose",mouse_close},
     {"sceAudioInOpen",audio_in_open},
     {"sceDiscMapIsRequestOnHDD",discmap_on_hdd}, {"sceDiscMap_8A828CAEE7EDD5E9",discmap_8a82},
