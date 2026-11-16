@@ -9,6 +9,7 @@
  * Every function here is listed in docs/dreams/IMPORTS_LOG.md. */
 #define _GNU_SOURCE
 #include "runtime.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <sys/random.h>
 #include <sys/time.h>
@@ -33,6 +34,58 @@ static ABI int32_t error_dialog_open(const ErrorDialogParam *param) {
 static ABI int32_t error_dialog_status_get(void) { return error_dialog_status; }
 static ABI int32_t error_dialog_close(void) { if (error_dialog_status==DIALOG_RUNNING) error_dialog_status=DIALOG_FINISHED; return 0; }
 static ABI int32_t error_dialog_terminate(void) { error_dialog_status=DIALOG_NONE; return 0; }
+
+/* ---- libSceSigninDialog (ref: signin_dialog/signindialog.{h,cpp}, signindialog_error.h) ----
+ * Offline there is nobody to sign in: no UI, Open logs once and the dialog finishes at once with
+ * USER_CANCELED (shadPS4 returns OK; "canceled" is what an offline user choosing Cancel produces and
+ * keeps the game from assuming an account exists). Open's parameter (user id, in the real API) is
+ * not read. Result: {u32 type (0 OK, 1 USER_CANCELED); s32 reserved[3]}. */
+#define SIGNIN_ERR_NOT_INITIALIZED ((int32_t)0x81350001)
+#define SIGNIN_ERR_ALREADY_INITIALIZED ((int32_t)0x81350002)
+#define SIGNIN_ERR_PARAM_INVALID ((int32_t)0x81350003)
+#define SIGNIN_ERR_INVALID_STATE ((int32_t)0x81350005)
+typedef struct { uint32_t type; int32_t reserved[3]; } SigninDialogResult;
+_Static_assert(sizeof(SigninDialogResult)==16, "OrbisSigninDialogResult layout");
+static int signin_status=DIALOG_NONE;
+static ABI int32_t signin_initialize(void) {
+    if (signin_status!=DIALOG_NONE) return SIGNIN_ERR_ALREADY_INITIALIZED;
+    signin_status=DIALOG_INITIALIZED;
+    return 0;
+}
+static ABI int32_t signin_open(const void *param) {
+    (void)param;
+    if (signin_status==DIALOG_NONE) return SIGNIN_ERR_NOT_INITIALIZED;
+    if (signin_status!=DIALOG_INITIALIZED) return SIGNIN_ERR_INVALID_STATE;
+    static int logged;
+    if (!__atomic_exchange_n(&logged,1,__ATOMIC_RELAXED))
+        printf("Runtime: SigninDialog open: offline, finished immediately as USER_CANCELED (no dialog UI)\n");
+    signin_status=DIALOG_FINISHED;
+    return 0;
+}
+static ABI int32_t signin_status_get(void) { return signin_status; }
+static ABI int32_t signin_get_result(SigninDialogResult *result) {
+    if (signin_status==DIALOG_NONE) return SIGNIN_ERR_NOT_INITIALIZED;
+    if (!result) return SIGNIN_ERR_PARAM_INVALID;
+    if (signin_status!=DIALOG_FINISHED) return SIGNIN_ERR_INVALID_STATE;
+    memset(result,0,sizeof(*result));
+    result->type=1; /* USER_CANCELED */
+    return 0;
+}
+static ABI int32_t signin_close(void) {
+    if (signin_status==DIALOG_NONE) return SIGNIN_ERR_NOT_INITIALIZED;
+    if (signin_status!=DIALOG_INITIALIZED) signin_status=DIALOG_INITIALIZED;
+    return 0;
+}
+static ABI int32_t signin_terminate(void) {
+    if (signin_status==DIALOG_NONE) return SIGNIN_ERR_NOT_INITIALIZED;
+    signin_status=DIALOG_NONE;
+    return 0;
+}
+
+/* ---- libkernel sceKernelSync (ref: kernel/file_system.cpp: flushes the emulator's open-file table,
+ * returns void). Our guest files are plain host fds without userspace buffering, so there is nothing
+ * to flush; a host sync() would stall the whole machine for seconds. Deliberate no-op. */
+static ABI void kernel_sync(void) {}
 
 /* ---- libSceMove (ref: move/move.cpp) ----
  * No Move controllers. Open still returns a distinct handle (libSceVrTracker internals rely on
@@ -91,6 +144,16 @@ static ABI int32_t np_account_id(int32_t user, uint64_t *account) {
     if (!account || user==-1) return NP_ERR_INVALID_ARGUMENT;
     *account=0;
     return NP_ERR_SIGNED_OUT;
+}
+static ABI int32_t np_has_signed_up(int32_t user, bool *signed_up) {
+    /* ref: np_manager.cpp sceNpHasSignedUp (fw < 9.00: user id -1 is invalid). Offline policy: the
+     * one local user has never signed up to PSN. (The Dreams fork reports true for its offline
+     * user; Dreams reads this only to decide whether to offer sign-up.) */
+    if (!signed_up) return NP_ERR_INVALID_ARGUMENT;
+    *signed_up=false;
+    if (user==-1) return NP_ERR_INVALID_ARGUMENT;
+    if (user!=1) return (int32_t)0x80550007; /* ORBIS_NP_ERROR_USER_NOT_FOUND */
+    return 0;
 }
 
 /* ---- libSceRandom (ref: random/random.cpp): at most 64 bytes, from the host CSPRNG. */
@@ -162,6 +225,11 @@ static const RuntimeExport exports[]={
     {"sceErrorDialogInitialize",error_dialog_initialize}, {"sceErrorDialogOpen",error_dialog_open},
     {"sceErrorDialogUpdateStatus",error_dialog_status_get}, {"sceErrorDialogGetStatus",error_dialog_status_get},
     {"sceErrorDialogClose",error_dialog_close}, {"sceErrorDialogTerminate",error_dialog_terminate},
+    {"sceSigninDialogInitialize",signin_initialize}, {"sceSigninDialogOpen",signin_open},
+    {"sceSigninDialogUpdateStatus",signin_status_get}, {"sceSigninDialogGetStatus",signin_status_get},
+    {"sceSigninDialogGetResult",signin_get_result}, {"sceSigninDialogClose",signin_close},
+    {"sceSigninDialogTerminate",signin_terminate}, {"sceKernelSync",kernel_sync},
+    {"sceNpHasSignedUp",np_has_signed_up},
     {"sceMoveInit",move_init}, {"sceMoveTerm",move_term}, {"sceMoveOpen",move_open}, {"sceMoveClose",move_close},
     {"sceMoveGetDeviceInfo",move_device_info}, {"sceMoveReadStateLatest",move_read_latest},
     {"sceMoveReadStateRecent",move_read_recent}, {"sceMoveSetVibration",move_ok},

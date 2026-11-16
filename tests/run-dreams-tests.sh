@@ -14,6 +14,8 @@ out/tests/eventflag-test
 out/tests/audio3d-test
 "$CC" "${flags[@]}" tests/test_dreams_services.c -ldl -o out/tests/dreams-services-test
 out/tests/dreams-services-test
+"$CC" "${flags[@]}" tests/test_dreams_offline.c -ldl -o out/tests/dreams-offline-test
+out/tests/dreams-offline-test
 # Codec library (./build-deps.sh) + a 1 s stereo 1 kHz sine as ADTS AAC (needs ffmpeg).
 if [[ -f out/libdreams-codecs.so ]] && command -v ffmpeg >/dev/null; then
     [[ -f out/tests/sine.aac ]] || ffmpeg -hide_banner -loglevel error -y -f lavfi \

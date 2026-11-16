@@ -30,6 +30,8 @@ python3 -I tools/capture_sheet.py latest                      # newest capture d
 python3 -I tools/capture_sheet.py timeline <dir>              # text: changes over time, static stretches
 python3 -I tools/capture_sheet.py sheet <dir> --every 4       # overview: 4x4 sheet(s) of every 4th frame
 python3 -I tools/capture_sheet.py sheet <dir> --from 20 --to 30   # all frames in a window
+python3 -I tools/capture_sheet.py compare <dirA> <dirB> --times 10,20,30   # A left, B right, nearest saved frame
+#   at or before each time (or --every S, --width W, --rows N); -> <dirA>/sheets/compare-<B>.png
 ```
 Sheets go to `<dir>/sheets/` (1920×1080 for 4×4 at 480 px). Each tile is labelled
 `#seq t=… d=…`. Look at the timeline, then one overview sheet, then a window sheet or single frames
