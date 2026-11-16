@@ -1,11 +1,12 @@
 # GPU hang in the first-time intro (2026-11-15): investigation notes
 
-Status (2026-11-15, evening): **root cause not confirmed; a hang guard is implemented** (section 4,
-ref/shadps4 branch `loopguard`, port branch `loopguard`, not merged yet): bounded loops in translated
-shaders, clamped indirect dispatch/draw arguments, a copy-extent fix. Validated offline (SPIR-V
-validation, lavapipe unit test) and in two guarded boots on the real GPU. **Still open:** overhead
-numbers and the single guarded repro of the intro hang (section 6), postponed because the GPU was
-needed for other work.
+Status (2026-11-15, 23:15): **a hang guard is implemented and the guarded intro passes the hang
+scene** (section 4, ref/shadps4 branch `loopguard`, port branch `loopguard`; to be merged). In the
+guarded repro the **indirect clamp fired exactly at the hang point**: at the black transition after
+the imp swarm, 6 indexed indirect draws asked for 243 indices x **1,949,696 instances** (0x1DC000,
+~474M vertex invocations each). They were clamped to 2^28 vertex invocations, the scene went on to
+"Choose your imp!", no loop guard tripped, no device loss. This is the strongest lead to the root
+cause so far (section 6); the draw's shaders are logged from now on.
 
 ## 1. Symptom and evidence
 
@@ -150,8 +151,10 @@ Files: `src/video_core/renderer_vulkan/vk_indirect_clamp.{h,cpp}`,
   render state clears attachments on begin (restarting would clear them again); then that draw is
   not clamped. After the pass the draw's resources are re-bound (RADV keeps push constants in one
   array for all bind points). The fork's native volume draw (own command buffer) is not touched.
-- A clamp logs once: `vcore indirect clamp: dispatch arguments AxBxC clamped ...` /
-  `... draw arguments count=... instances=... clamped ...` (report area after the loop-guard slots).
+- A clamp is logged at the first occurrence and again whenever the total doubled:
+  `vcore indirect clamp: dispatch arguments AxBxC of compute shader 0x... clamped ...` /
+  `... indexed draw arguments count=... instances=... (vs 0x... fs 0x...) clamped ...` (report area
+  after the loop-guard slots; the caller's shader hashes travel as push constants).
 
 ### 4.3 Tests so far
 
@@ -172,11 +175,36 @@ Files: `src/video_core/renderer_vulkan/vk_indirect_clamp.{h,cpp}`,
   main menu as before (captures every 0.5 s to the end), startup lines present, no trip, no clamp,
   no device loss; the new cache dir `loop-guard-1048576` filled with 263 modules (79 guarded, all
   validating as described in 4.1); the old cache dir untouched.
-- `run-20261115-215208` (guarded, `DREAMS_FPS=240`, meant as overhead run A) **ended at 40 s** with
-  `ERROR: Wayland display connection closed by server (fatal)` (the headless weston went away; its
-  log is deleted by agent-run.sh). No GPU error, no trip. Unknown whether related to the guard: the
-  unguarded comparison run (B) was not made. Check this first when the GPU is free (run B, then A
-  again).
+- **Overhead** (rebased on `vcore` d03472b2; agent runs of 100 s, main menu with the offline notice,
+  own save dir `work/loopguard-user` restored before each run, "vcore frames" lines t=45-100 s):
+
+  | Mode | Guard + clamp ON | OFF (`VCORE_LOOP_GUARD=0 VCORE_INDIRECT_CLAMP=0`) |
+  |---|---|---|
+  | 30 Hz (default) | 30.0 fps, p50 33.3 ms, p99 39.2 (max 39.6) | 30.0 fps, p50 33.3, p99 35.2 (max 37.2) |
+  | 60 Hz (`DREAMS_60HZ=1`) | 60.0 fps, p50 16.7, p99 18.2 (max 18.4) | 60.0 fps, p50 16.6, p99 18.4 (max 18.6) |
+  | uncapped (`DREAMS_FPS=240`, CPU-bound) | **90.3 fps**, p50 10.5, p99 14.4 | **91.6 fps**, p50 10.2, p99 14.5 |
+
+  Paced modes: no measurable cost (the 30 Hz p99 difference is within run-to-run noise: a guarded
+  30 Hz run before gave p99 35.2). Uncapped: ~1.4% fewer frames (~0.3 ms/frame), i.e. the clamp
+  passes and re-binds on the CPU-bound command thread. Runs: `run-20261115-224925` (on30), `-225125`,
+  `-225325`, `-225526`, `-225726`, `-225926` (off240). Homespace was not measured: scripted ✕ does not
+  dismiss the offline notice headless.
+- **The 240 fps early stop** (`run-20261115-215208`, weston connection closed at 40 s) did not
+  happen again: both 240 fps runs above, guarded and unguarded, ran their full 100 s. A one-off of
+  the headless compositor, not the guard.
+- **Guarded intro repro** (`run-20261115-230538`, `work/hang-user`, `DREAMS_SKIP_INTRO=0`, 300 s; ✕
+  pressed by hand at the preferences (t=39 s) and control-scheme (t=49 s) screens; a first try
+  `-230120` only calibrated the timing: ✕ came too late to reach the scene, so the save was reset):
+  - intro from t=55 s; swarm and "The Dreamiverse teems with their energy..." at t=174 s, "Waiting
+    for you to choose your very own." at 177 s, black transition 180.9-181.9 s (same three D32
+    layer-coercion copies as in the hang log), then **the clamp at t~181 s**: `indexed draw
+    arguments count=243 instances=1949696 clamped; 6 clamped draws so far`;
+  - t=182 s onwards "Choose your imp!" renders normally to the end of the run (300 s); 30 fps
+    before the scene, 28.9 fps after (p99 55 ms: the clamped draws still cost up to 2^28 vertex
+    invocations each); no loop-guard trip, no device loss, no amdgpu reset.
+- Heads-up for other agents: runs with the shared `work/agent-user` (re-seeded at ~22:35) ran at
+  0.6-4 fps with frame times growing over time, guard on or off (`-223846`, `-224204`, also other
+  agents' `-222757`, `-223656`); the same build with a separate fresh save dir runs at 30.0 fps.
 
 ### 4.4 The layered D32 copy before the hang ("Coercing copy source layers N and destination layers N+1")
 
@@ -197,29 +225,26 @@ cache creates 4 GiB sparse arenas (`ARENA_PAGE_BITS = 32`), and lavapipe's `maxB
 on request. Lavapipe also reports `sparseAddressSpaceSize` 2 GiB and `maxStorageBufferRange` 128 MiB,
 so more failures may follow.
 
-## 6. Remaining GPU work (postponed: the GPU went to the hole-fixing work)
+## 6. Next steps
 
-1. Overhead, 4 agent runs of `port-loopguard` with the sampler (`tools/fps_sample.py OUT.csv 40 85
-   port-loopguard/out/dreams-probe` started next to `tools/agent-run.sh --seconds 90`):
-   A guard+clamp `DREAMS_FPS=240`; B `VCORE_LOOP_GUARD=0 VCORE_INDIRECT_CLAMP=0 DREAMS_FPS=240`
-   (render fps there is CPU-bound, so it shows the clamp pass / re-bind cost); C/D the same at the
-   default 30 fps (compare gpu_busy_percent). Summarise with `tools/fps_sample.py --summary`.
-   If the clamp's draw splits cost too much, `VCORE_INDIRECT_CLAMP=0` keeps the loop guard alone.
-2. The 240 fps early exit above: does B reproduce it?
-3. One guarded repro of the intro hang: `work/hang-user` is prepared (copy of `work/user` with the
-   pre-skip save `savedata.json.before-tutorial-skip-20261115-210501` restored, tutorial flags
-   false). `DREAMS_USER_DIR=$PWD/work/hang-user DREAMS_SKIP_INTRO=0 DREAMS_PORT_DIR=$PWD/port-loopguard
-   tools/agent-run.sh --seconds 240`, with ✕ via `BB_PAD_FILE` at the indreams.me card, the
-   preferences screen and the control-scheme popup (watch the captures; don't press during the
-   cutscene). Expected outcome with the guard: the scene passes, and the log names the culprit
-   (`vcore loop guard: TRIPPED in shader 0x...` or `vcore indirect clamp: ...`). If the GPU still
-   hangs: `tools/collect_crash.sh`, stop, report.
+1. Name the draw: the next guarded intro run logs `(vs 0x... fs 0x...)` with the clamp (added after
+   the repro). Then find who writes its instance count (0x1DC000 looks like a size or a stale value,
+   not a count) and why it is wrong only at this transition: an indirect-args producer that ran out
+   of order, a DOC-fallback shader, or args read before a readback/clear finished. Fixing that is the
+   real fix; the clamp only keeps the GPU alive.
+2. Check whether the clamped draw shows artifacts in the "Choose your imp!" scene (compare the
+   reference emulator), and whether its cost (p99 55 ms) needs a tighter draw cap.
+3. Merge `loopguard` (vcore + port) and keep the guard on by default.
 
 ## 7. Repro recipe (only with the guard in place)
 
-The scene is reached with a save that hasn't done the first-time intro: `cp -r work/user
-work/hang-user` (never run against work/user), then
-`DREAMS_USER_DIR=$PWD/work/hang-user DREAMS_SKIP_INTRO=0 DREAMS_PORT_DIR=$PWD/port-hang
+Timing seen on 2026-11-15 (logo video plays): preferences screen at t~36 s, control-scheme popup
+right after its ✕, intro from ~6 s after that, the transition ~125 s into the intro. The game saves
+during the run, so reset `work/hang-user` before every attempt. The scene is reached with a save
+that hasn't done the first-time intro: `cp -r work/user work/hang-user` (never run against
+work/user), restore `savedata.json.before-tutorial-skip-20261115-210501` over its SYSTEM
+`savedata.json`, then
+`DREAMS_USER_DIR=$PWD/work/hang-user DREAMS_SKIP_INTRO=0 DREAMS_PORT_DIR=<guarded port checkout>
 tools/agent-run.sh --seconds 300` (+ ✕ presses via BB_PAD_FILE if the preferences screen appears).
 The hang point is ~133-165 s in, at the black transition after "The Dreamiverse teems with their
 energy...". One attempt at a time; after a hang run tools/collect_crash.sh and stop.

@@ -369,3 +369,19 @@
   compared against an unguarded run.
 - Stopped GPU work on request (the GPU went to the hole fixes): overhead runs and the guarded intro
   repro remain (GPU_HANG.md section 6). `work/hang-user` is prepared for the repro.
+
+## 2026-11-15 23:15 (loop-guard agent): rebased, measured, guarded intro repro passes
+
+- Rebased `loopguard` onto ref/shadps4 `vcore` d03472b2 (clean) and port `dreams` 7f6ddb3 (WORKLOG
+  conflict only). Caches still separate (`loop-guard-1048576` subdir, recreated after the rebase).
+- Overhead, main menu: 30 Hz and 60 Hz unchanged (30.0/60.0 fps, p50 33.3/16.7 ms); uncapped
+  (`DREAMS_FPS=240`) 90.3 vs 91.6 fps (-1.4%). The earlier 240 fps "Wayland display connection
+  closed" stop did not recur in either mode.
+- **Guarded intro repro passed the hang scene** (`run-20261115-230538`): at the black transition after
+  the imp swarm (t~181 s) the indirect clamp caught 6 indexed draws with 243 indices x 1,949,696
+  instances (~474M vertex invocations each) and clamped them; the game went on to "Choose your
+  imp!" and ran to 300 s with no device loss. No loop guard trip. Likely root cause of the hangs:
+  a garbage/stale instance count (0x1DC000) in GPU-written draw arguments. The clamp now also logs
+  the draw's vs/fs hashes (17e99fee) to find the producer. Details: GPU_HANG.md 4.3 and 6.
+- Shared `work/agent-user` save ran at 0.6-4 fps (guard on or off, other agents too); a fresh save
+  dir runs at 30 fps.
