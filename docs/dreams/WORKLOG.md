@@ -186,3 +186,9 @@
   the process clock (sceKernelGetProcessTime). Now converted at the hand-off in pad_read_state
   (`runtime_monotonic_to_process_us`, runtime_kernel.c). Candidate fix for the imp; pending
   user test.
+- Performance baseline (MangoHud CSV `work/mangohud/dreams-probe_2026-11-15_19-13-38.csv`, 9-min user
+  session, RX 7800 XT + Ryzen 7 5700X, v2.52): fps median 30.0 (p5 15), frametime median 33.3 ms,
+  GPU load median 22% (p95 84%), CPU load median 13%. Dreams paces itself at 30 fps like a base PS4;
+  hardware mostly idle. The user wants 120 fps+ eventually, plus basic keyboard & mouse. Research first
+  (user request): notes/high-fps-research.md and notes/input-research.md (agents, read-only / diagnostic
+  worktree only).
