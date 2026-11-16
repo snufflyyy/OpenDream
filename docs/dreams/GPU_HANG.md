@@ -1,7 +1,11 @@
 # GPU hang in the first-time intro (2026-11-15): investigation notes
 
+Working directory: `$REPO/port` unless a command says otherwise (`$REPO` = your Dreams-Recomp
+checkout; `$REPO/work` and `$REPO/notes` are one level up). Timings and frame rates below are from
+the reference machine (`TEST_HARDWARE.md`).
+
 Status (2026-11-15, 23:15): **a hang guard is implemented and the guarded intro passes the hang
-scene** (section 4, ref/shadps4 branch `loopguard`, port branch `loopguard`; to be merged). In the
+scene** (section 4; merged into `ref/shadps4` branch `vcore` and port `e741924`). In the
 guarded repro the **indirect clamp fired exactly at the hang point**: at the black transition after
 the imp swarm, 6 indexed indirect draws asked for 243 indices x **1,949,696 instances** (0x1DC000,
 ~474M vertex invocations each). They were clamped to 2^28 vertex invocations, the scene went on to
@@ -12,8 +16,8 @@ cause so far (section 6); the draw's shaders are logged from now on.
 
 - Two hangs (19:07 and 20:58), same kernel signature: `ring gfx_0.0.0 timeout ... Process Main ...
   thread shadPS4:Present`, MES ring reset failed, MODE1 full reset, VRAM lost, desktop died.
-- Evidence of hang 2: `work/crash/20261115-205951/` (kernel log, captures), full run log
-  `work/logs/run-20261115-205625.log` (user's own save, DREAMS_60HZ=1).
+- Evidence of hang 2: `$REPO/work/crash/20261115-205951/` (kernel log, captures), full run log
+  `$REPO/work/logs/run-20261115-205625.log` (user's own save, DREAMS_60HZ=1).
 - No GPU VM page fault in the kernel log: a job ran > the gfx timeout without faulting. Candidates:
   a shader that never terminates, or a dispatch/draw so large it can't finish (indirect arguments
   read from garbage GPU memory).
@@ -29,10 +33,10 @@ The hang is **not in the middle of the imp swarm** but at the **scene transition
   (`Device lost during submit`, from `BufferCache::DownloadMemory` <- `Scheduler::Finish`).
 - The same sequence (SYSTEM mount + D32 layer coercion) happens at boot (~21 s) and survives there.
 
-A run that **passed** the scene (`work/logs/run-20261115-191330.log`, 30 fps) shows what runs right
+A run that **passed** the scene (`$REPO/work/logs/run-20261115-191330.log`, 30 fps) shows what runs right
 after the transition: at t=164.4 s, `Skipping lowering for null buffer sharp`
 (lower_buffer_format_to_raw.cpp:216), i.e. a pipeline compiled for the first time. The private shader
-cache file times (work/vcore-shader-cache/.../CUSA08010) match it to the second: only
+cache file times ($REPO/work/vcore-shader-cache/.../CUSA08010) match it to the second: only
 **compute shader 0x75d8db76 (permutation `_8`, local size 8x8x1)** was created at 19:16:15. In the hang
 run that pipeline came preloaded from the cache (271 pipelines), so its first dispatch is the first
 new GPU work at the hang point. Its SPIR-V has **no loops and no atomics**, so it can't spin by
@@ -45,12 +49,14 @@ at the hang, so they are not new in that scene (they may still produce bad data 
 
 ## 3. Static scan of all cached shaders for spin loops
 
-Tools (this branch): `tools/spirv_dis.c` (SPIR-V disassembler over Fedora's
-libSPIRV-Tools-shared.so; no spirv-dis on the system) and `tools/spirv_spin_scan.py` (flags loops
+Tools (this branch): `tools/spirv_dis.c` (SPIR-V disassembler over the distro's
+`libSPIRV-Tools-shared.so`; no `spirv-dis` binary needed) and `tools/spirv_spin_scan.py` (flags loops
 whose exit condition depends on a memory read made inside the loop).
 
 ```
-gcc tools/spirv_dis.c -o out/spirv-dis /usr/lib64/libSPIRV-Tools-shared.so
+# SPV_SHARED = path to libSPIRV-Tools-shared.so from your SPIRV-Tools package
+# (Fedora example: /usr/lib64/libSPIRV-Tools-shared.so; Debian: /usr/lib/x86_64-linux-gnu/...)
+gcc tools/spirv_dis.c -o out/spirv-dis "$SPV_SHARED"
 C=../work/vcore-shader-cache/build-*/CUSA08010; mkdir -p ../work/spvasm
 for f in $C/*.spv; do out/spirv-dis $f > ../work/spvasm/$(basename $f .spv).spvasm; done
 python3 -I tools/spirv_spin_scan.py ../work/spvasm/*.spvasm
@@ -126,7 +132,7 @@ turnstile loop in `emit_spirv_atomic.cpp`.
   `Offset` on a non-gather sample: need maintenance8/9), none in guard code.
 
 ```
-gcc tools/spirv_val.c -o out/spirv-val /usr/lib64/libSPIRV-Tools-shared.so
+gcc tools/spirv_val.c -o out/spirv-val "$SPV_SHARED"      # same SPV_SHARED as in section 3
 out/spirv-val ../work/vcore-shader-cache/build-*-cache-v4/loop-guard-1048576/CUSA08010/*.spv | grep -v ': OK'
 ```
 
@@ -141,7 +147,7 @@ Files: `src/video_core/renderer_vulkan/vk_indirect_clamp.{h,cpp}`,
   call reads the copy. Barriers: all prior writes -> clamp shader; clamp -> indirect read.
 - Dispatch (`DispatchIndirect`, all 13 `dispatchIndirect` sites incl. the fork's DOC
   collect/replay paths, plus the diagnostic descriptors that read the args): each dimension to the
-  device limit (RADV: x 2^32-1, y/z 65535) and the product to `VCORE_INDIRECT_MAX_GROUPS` (1<<22).
+  device limit (e.g. Mesa RADV: x 2^32-1, y/z 65535) and the product to `VCORE_INDIRECT_MAX_GROUPS` (1<<22).
   The clamp runs after the barrier flush and before `BindPipelineResources`, so the guest's compute
   bindings are untouched. CPU-read dims of the ordered traversal path (`have_ordered_dims`, a
   diagnostic mode) get the same clamp on the host.
@@ -149,8 +155,8 @@ Files: `src/video_core/renderer_vulkan/vk_indirect_clamp.{h,cpp}`,
   count per command <= 1<<26, instances <= 1<<24, count x instances <= 1<<28. The pass must run
   outside dynamic rendering: when a scope is open it is ended (a split), **except** when the draw's
   render state clears attachments on begin (restarting would clear them again); then that draw is
-  not clamped. After the pass the draw's resources are re-bound (RADV keeps push constants in one
-  array for all bind points). The fork's native volume draw (own command buffer) is not touched.
+  not clamped. After the pass the draw's resources are re-bound (Mesa RADV keeps push constants in
+  one array for all bind points; other drivers may allow re-binding the same set). The fork's native volume draw (own command buffer) is not touched.
 - A clamp is logged at the first occurrence and again whenever the total doubled:
   `vcore indirect clamp: dispatch arguments AxBxC of compute shader 0x... clamped ...` /
   `... indexed draw arguments count=... instances=... (vs 0x... fs 0x...) clamped ...` (report area
@@ -168,7 +174,9 @@ Files: `src/video_core/renderer_vulkan/vk_indirect_clamp.{h,cpp}`,
   words kept. All 11 checks pass.
   ```
   g++ -std=c++20 -O1 tools/loop_guard_test.cpp -o out/loop-guard-test -lvulkan -I vcore/build/host_shaders/include
-  VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json out/loop-guard-test \
+  # LVP_ICD = the lavapipe ICD json of your Vulkan installation
+  # (Fedora example: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json)
+  VK_ICD_FILENAMES=$LVP_ICD out/loop-guard-test \
       ../work/vcore-shader-cache/build-*-cache-v4/loop-guard-1048576/CUSA08010/0x000000005c35f8ee_0.spv
   ```
 - **Guarded boot, real GPU** (`run-20261115-214308`, agent run, 90 s, 30 fps, skip-intro save):
@@ -176,7 +184,7 @@ Files: `src/video_core/renderer_vulkan/vk_indirect_clamp.{h,cpp}`,
   no device loss; the new cache dir `loop-guard-1048576` filled with 263 modules (79 guarded, all
   validating as described in 4.1); the old cache dir untouched.
 - **Overhead** (rebased on `vcore` d03472b2; agent runs of 100 s, main menu with the offline notice,
-  own save dir `work/loopguard-user` restored before each run, "vcore frames" lines t=45-100 s):
+  own save dir `$REPO/work/loopguard-user` restored before each run, "vcore frames" lines t=45-100 s):
 
   | Mode | Guard + clamp ON | OFF (`VCORE_LOOP_GUARD=0 VCORE_INDIRECT_CLAMP=0`) |
   |---|---|---|
@@ -192,7 +200,7 @@ Files: `src/video_core/renderer_vulkan/vk_indirect_clamp.{h,cpp}`,
 - **The 240 fps early stop** (`run-20261115-215208`, weston connection closed at 40 s) did not
   happen again: both 240 fps runs above, guarded and unguarded, ran their full 100 s. A one-off of
   the headless compositor, not the guard.
-- **Guarded intro repro** (`run-20261115-230538`, `work/hang-user`, `DREAMS_SKIP_INTRO=0`, 300 s; ✕
+- **Guarded intro repro** (`run-20261115-230538`, `$REPO/work/hang-user`, `DREAMS_SKIP_INTRO=0`, 300 s; ✕
   pressed by hand at the preferences (t=39 s) and control-scheme (t=49 s) screens; a first try
   `-230120` only calibrated the timing: ✕ came too late to reach the scene, so the save was reset):
   - intro from t=55 s; swarm and "The Dreamiverse teems with their energy..." at t=174 s, "Waiting
@@ -202,7 +210,7 @@ Files: `src/video_core/renderer_vulkan/vk_indirect_clamp.{h,cpp}`,
   - t=182 s onwards "Choose your imp!" renders normally to the end of the run (300 s); 30 fps
     before the scene, 28.9 fps after (p99 55 ms: the clamped draws still cost up to 2^28 vertex
     invocations each); no loop-guard trip, no device loss, no amdgpu reset.
-- Heads-up for other agents: runs with the shared `work/agent-user` (re-seeded at ~22:35) ran at
+- Heads-up for other agents: runs with the shared `$REPO/work/agent-user` (re-seeded at ~22:35) ran at
   0.6-4 fps with frame times growing over time, guard on or off (`-223846`, `-224204`, also other
   agents' `-222757`, `-223656`); the same build with a separate fresh save dir runs at 30.0 fps.
 
@@ -234,17 +242,17 @@ so more failures may follow.
    real fix; the clamp only keeps the GPU alive.
 2. Check whether the clamped draw shows artifacts in the "Choose your imp!" scene (compare the
    reference emulator), and whether its cost (p99 55 ms) needs a tighter draw cap.
-3. Merge `loopguard` (vcore + port) and keep the guard on by default.
+3. Keep the guard on by default (done: merged in vcore + port `e741924`).
 
 ## 7. Repro recipe (only with the guard in place)
 
 Timing seen on 2026-11-15 (logo video plays): preferences screen at t~36 s, control-scheme popup
 right after its ✕, intro from ~6 s after that, the transition ~125 s into the intro. The game saves
-during the run, so reset `work/hang-user` before every attempt. The scene is reached with a save
-that hasn't done the first-time intro: `cp -r work/user work/hang-user` (never run against
-work/user), restore `savedata.json.before-tutorial-skip-20261115-210501` over its SYSTEM
+during the run, so reset `$REPO/work/hang-user` before every attempt. The scene is reached with a
+save that hasn't done the first-time intro: `cp -r $REPO/work/user $REPO/work/hang-user` (never run
+against `work/user`), restore `savedata.json.before-tutorial-skip-20261115-210501` over its SYSTEM
 `savedata.json`, then
-`DREAMS_USER_DIR=$PWD/work/hang-user DREAMS_SKIP_INTRO=0 DREAMS_PORT_DIR=<guarded port checkout>
-tools/agent-run.sh --seconds 300` (+ ✕ presses via BB_PAD_FILE if the preferences screen appears).
+`DREAMS_USER_DIR=$REPO/work/hang-user DREAMS_SKIP_INTRO=0 DREAMS_PORT_DIR=<guarded port checkout>
+$REPO/tools/agent-run.sh --seconds 300` (+ ✕ presses via BB_PAD_FILE if the preferences screen appears).
 The hang point is ~133-165 s in, at the black transition after "The Dreamiverse teems with their
-energy...". One attempt at a time; after a hang run tools/collect_crash.sh and stop.
+energy...". One attempt at a time; after a hang run `$REPO/tools/collect_crash.sh` and stop.

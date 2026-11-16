@@ -1,18 +1,29 @@
+# Build output
 out/
+vcore/build/
+
+# Python
 __pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local runtime/config state
 user/
-*.mp4
 bbport.ini
-fsr4_shaders/
-pgo/
-*.png
 last_run.log
 dist/
 packaging/runtime-paths.nix
-fsr4_411/
 vkd3d-proton.cache
 tools/fsr4cap/*.exe
 perf.data
+
+# Media and generated assets
+*.mp4
+*.png
+fsr4_shaders/
+fsr4_411/
+*.dll
+
 # Local leftovers: patch backups, generated SPIR-V, analysis outputs, test saves and routes
 *.orig
 /*.spv
@@ -23,12 +34,9 @@ perf.data
 /bloodborne_upscalers_*.md
 mods.json
 patches.json
+
 # Local: game logs, messages and archives from users, internal plans
 /logs/
 /message*.txt
 /*.zip
 /docs/ISSUE_ACTION_PLAN_*.md
-# AMD FidelityFX DLLs (FSR 4.1.1 is built from the user's own): never in the repository
-*.dll
-out/
-vcore/build/

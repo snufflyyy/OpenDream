@@ -1,6 +1,8 @@
 # Input: DualShock 4 / DualSense, keyboard and mouse
 
-How the port feeds Dreams' controls. Research behind it: `notes/input-research.md` (disassembly
+Working directory: `$REPO/port` (`$REPO` = your Dreams-Recomp checkout).
+
+How the port feeds Dreams' controls. Research behind it: `$REPO/notes/input-research.md` (disassembly
 of how Dreams reads the pad and moves the imp).
 
 ## Controls
@@ -75,7 +77,7 @@ they stay off until all keys are released (so the confirming Enter isn't also a 
 
 ## Design
 
-- **How Dreams moves the imp** (v2.52 eboot, `notes/input-research.md` §1): every `scePadRead`
+- **How Dreams moves the imp** (v2.52 eboot, `$REPO/notes/input-research.md` §1): every `scePadRead`
   sample goes into a 256-entry history ring. The imp takes the orientation at
   `sceKernelGetProcessTime() − 1.5 sample periods`, interpolated between ring samples, and moves by
   the *change* of orientation since its last update. So:
@@ -103,7 +105,7 @@ they stay off until all keys are released (so the confirming Enter isn't also a 
 
 ## Tests
 
-- `tests/test_pad_input.c`: Dreams profile keys and mouse buttons, mouse → orientation
+- `tests/test_pad_input.c` (from `$REPO/port`): Dreams profile keys and mouse buttons, mouse → orientation
   (signs, scale, pitch limit, composition with the sensors, reset), camera mode, IME pause,
   synthetic pose.
 - `tests/test_pad_motion.c`: sensor integration, tilt, bias, SDL virtual gamepad with sensors.

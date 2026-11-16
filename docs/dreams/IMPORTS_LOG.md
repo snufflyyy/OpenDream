@@ -1,5 +1,8 @@
 # PS4 imports implemented or changed for Dreams
 
+Working directory: `$REPO` (your Dreams-Recomp checkout); `port/src` below means
+`$REPO/port/src`, `tests/` means `$REPO/port/tests`.
+
 One row per NID added or changed in the runtime for Dreams. Keep this in sync with the code.
 Imports that are only served by the generic return-0 fallback are listed in `STUBS.md` instead.
 

@@ -1,3 +1,9 @@
+> **Форк Dreams-Recomp — начните отсюда.** Это дерево — база bbport для нативного порта **Dreams**.
+> Точки входа Dreams: `build-dreams.sh` и `run-dreams.sh`; документация начинается с
+> [`docs/dreams/INDEX.md`](docs/dreams/INDEX.md) и [`README.DREAMS.md`](README.DREAMS.md).
+> Текст ниже — собственный README bbport для Bloodborne, сохранён для истории. `gpu/` — старый
+> рендерер bbport; GPU-библиотека Dreams по умолчанию — `vcore/` (`libvcore.so`).
+
 ДАННЫЙ ПРОЕКТ НЕ ИМЕЕТ ОТНОШЕНИЯ К SHADPS4. ВСЕ ВОПРОСЫ, СВЯЗАННЫЕ С ЭТИМ ПРОЕКТОМ - ПИШИТЕ НА ДИСКОРД СЕРВЕР https://discord.gg/KYZRKk9CB, А НЕ НА СЕРВЕР SHADPS4
 
 # bbport — нативный порт Bloodborne для Linux и Windows

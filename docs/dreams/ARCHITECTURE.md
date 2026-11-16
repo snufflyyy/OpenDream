@@ -1,5 +1,7 @@
 # Architecture and decisions
 
+Working directory: `$REPO` (your Dreams-Recomp checkout). All paths are relative to it.
+
 ## Execution model (inherited from bbport)
 
 1. **Offline prep** (`scripts/`, Python, no game modification on disk):
@@ -17,9 +19,11 @@
 3. **Runtime** (`src/runtime_*.c`, C11): implements the PS4 OS functions the game calls: kernel
    memory (memfd pool, VMA table, write traps), threads/sync, files (app0/savedata mapping),
    Ajm (ATRAC9), audio out, pad, savedata, AppContent, net stubs.
-4. **GPU library** (`libbbgpu.so` today): PM4 command processor, GCN→SPIR-V shader recompiler,
-   buffer/texture caches, Vulkan presenter. Called through the seam in `gpu/shim/bbgpu.cpp` /
-   `gpu/bbgpu.h`.
+4. **GPU library** (`libvcore.so`, default since 2026-11-15): latest upstream shadPS4
+   `video_core` + `shader_recompiler` + Dreams fork patches, adapted to the native runtime through
+   `vcore/shim/` behind the C seam in `gpu/bbgpu.h`. bbport's older renderer (`gpu/`, `libbbgpu.so`)
+   is a legacy/reference backend, still selectable with `DREAMS_GPU=bbport` but not built for the
+   Dreams default path. See `VCORE.md`.
 
 ## Decisions (with reasons)
 
@@ -30,9 +34,10 @@
   upstream shadPS4 + Dreams fork patches. Upstream video_core needs little from the rest of
   shadPS4 (≈7 MemoryManager methods, ≈31 config getters, interrupt/VideoOut types, a few clocks),
   so an adapter (~1.5–2.5k lines) modelled on `gpu/shim/core/*.h` is the cheaper path than porting
-  every Dreams fork fix into bbport's diverged renderer. Analysis: `notes/bbport-reuse-plan.md` §4.
-- **D3. Until vcore exists, link bbport's libbbgpu.so unchanged** (built in `ref/bbport`), so the
-  CPU-side work (milestones 3–5) isn't blocked on the GPU rewrite.
+  every Dreams fork fix into bbport's diverged renderer. Analysis: `$REPO/notes/bbport-reuse-plan.md` §4.
+- **D3 (historical). bbport's libbbgpu.so was the interim GPU library** (built in `ref/bbport`) so
+  the CPU-side work was not blocked on the GPU rewrite. vcore replaced it as the default on
+  2026-11-15; `DREAMS_GPU=bbport` keeps the old path for comparison.
 - **D4. Link `libSceJobManager.prx` as a native module** like libc/Fios2. Dreams ships it in
   `sce_module/`; Bloodborne didn't.
 - **D5. Offline only.** Np/PSN/Http report "not signed in / no network". Dreams' online endpoints
@@ -72,4 +77,4 @@
 - `sceSysmoduleLoadModule` is called from 33 sites for ~30 modules; all of them are also imported
   directly, so returning success is enough.
 - `sceKernelIsNeoMode` (PS4 Pro path) is imported.
-Full tables: `notes/dreams-imports.md`.
+Full tables: `$REPO/notes/dreams-imports.md`.

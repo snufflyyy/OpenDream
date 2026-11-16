@@ -1,9 +1,12 @@
 # Dreams versions: applying the fork's shader routes to any game build
 
-Status 2026-11-15. Code: ref/shadps4 branch `docmatch`
-(`src/shader_recompiler/dreams_route_match.{h,cpp}`, generated `dreams_route_table.inc`), port
-branch `docmatch` (`tools/dreams_shader_routes.py`, `tools/dreams_routes.json`,
-`run-dreams.sh` `DREAMS_SIGNATURE_MATCH`).
+Working directory: `$REPO/port` (`$REPO` = your Dreams-Recomp checkout). `ref/` and `game/` are
+under `$REPO`.
+
+Status 2026-11-15. Code: `ref/shadps4` branch `vcore`
+(`src/shader_recompiler/dreams_route_match.{h,cpp}`, generated `dreams_route_table.inc`) and
+`$REPO/port` (`tools/dreams_shader_routes.py`, `tools/dreams_routes.json`,
+`run-dreams.sh` `DREAMS_SIGNATURE_MATCH`). The old `docmatch`/`docmatch2` branches were merged.
 
 ## 1. The problem
 
@@ -19,7 +22,7 @@ CUSA08010 v2.52, a future v2.65, ...) none of the ~100 hash-gated paths engage:
   wave-creation order; with the atomic they come in GPU arrival order, so sculpt compaction lists
   (traversal, surface extraction, visibility lists) are built in the wrong order and sculpts render
   as scattered blocks / holes (the "Wall of Doubt" and pink/teal blocks, captures
-  `work/captures/20261115-191330`);
+  `$REPO/work/captures/20261115-191330`);
 - non-DOC fixes (GatherVoxels LDS barriers, B1 writers, glass/shadow mip coordinates, ...) are off.
 
 ## 2. The fix: identify routes by what the shader *is*
@@ -75,7 +78,7 @@ table), so stages compiled earlier without the route are recompiled.
 
 ## 3. The route table (v2.52 -> v2.64)
 
-`tools/dreams_routes.json` (source of truth) + the code hashes from the packs ->
+`tools/dreams_routes.json` in `$REPO/port` (source of truth) + the code hashes from the packs ->
 `dreams_route_table.inc` (`dreams_shader_routes.py emit`). `key` is the `dd.shaders` entry key,
 which is stable across builds (all three keys the fork published map to the same shaders in v2.52).
 
@@ -129,8 +132,8 @@ the atomic path, as they would on v2.64.
 ## 5. Adding a version
 
 ```
-cd port
-python3 -I tools/dreams_shader_routes.py check 2.52=../game/CUSA08010/shaders/dd.shaders \
+cd $REPO/port
+python3 -I tools/dreams_shader_routes.py check 2.52=$REPO/game/CUSA08010/shaders/dd.shaders \
     2.64=<v2.64 game>/shaders/dd.shaders
 ```
 `check` finds each route in each pack by fork hash, else by pack key, and prints hash, key, code
@@ -178,19 +181,19 @@ With a v2.64 pack each is one `key` line in `dreams_routes.json` (section 5).
 | assertions / STOP | none | none |
 | homespace scene behind the main menu | white blocky patches | smooth (no patches) |
 
-Compare sheet: `work/captures/20261115-215358/sheets/compare-20261115-215739.png` (left on,
+Compare sheet: `$REPO/work/captures/20261115-215358/sheets/compare-20261115-215739.png` (left on,
 right off). Inside the homespace (full-width captures, ○ from the main menu; on
 `run-20261115-220022`, off `run-20261115-220312`, sheet
-`work/captures/20261115-220022/sheets/compare-20261115-220312.png`): with matching the clouds are
+`$REPO/work/captures/20261115-220022/sheets/compare-20261115-220312.png`): with matching the clouds are
 Dreams' painterly brush-stroke flecks and the sculpted puppet is solid
-(`work/captures/20261115-220022/f00023_t00075.7.png`); without, the clouds are flat white
-rectangular blocks and slabs (`work/captures/20261115-220312/f00022_t00078.5.png`). The one remaining fallback is the route's own guard: the 252 replay only runs when
+(`$REPO/work/captures/20261115-220022/f00023_t00075.7.png`); without, the clouds are flat white
+rectangular blocks and slabs (`$REPO/work/captures/20261115-220312/f00022_t00078.5.png`). The one remaining fallback is the route's own guard: the 252 replay only runs when
 the translated SPIR-V equals the fork's audited binary, and the rebased recompiler (upstream
 shadPS4 + fork) emits different SPIR-V. That affects v2.64 the same way (rebase issue, not a
 version issue); the shader keeps the atomic path as before.
 
 
-## 9. Fail-safe: a route that doesn't fit is refused, not fatal (branch docmatch2)
+## 9. Fail-safe: a route that doesn't fit is refused, not fatal (merged into `vcore`)
 
 The fork's route lowering asserts on the exact IR shape it was written for (phi layouts, DOC
 controls with GDS binding, resource counts, ...). An assertion used to stop the game (exit 23).
@@ -208,10 +211,10 @@ path (logged as an error, not seen so far); the refusal is per process (next run
 Test/diagnostic switches (pass `VCORE_KEEP_SHADPS4_ENV=1` through run-dreams.sh):
 - `SHADPS4_DREAMS_ROUTE_FORCE_REFUSE=<route hex>`: fail that route at the end of `EmitSPIRV`,
   after every route emitter ran. Verified with 84aa3dc9: refused, generic DOC fallback, game kept
-  running (`work/logs/run-20261115-221903.log`).
+  running (`$REPO/work/logs/run-20261115-221903.log`).
 - `SHADPS4_DREAMS_ROUTE_IR_DUMP=<route hex>`: IR + ASL dumps of that routed program at
   pre-res-discover / pre-res-patch / pre-lower-phi / final, as
-  `work/vcore-user/shader/dumps/cs_<route>.pid<pid>.g<guest>.<stage>.irprogram.txt`.
+  `$REPO/work/vcore-user/shader/dumps/cs_<route>.pid<pid>.g<guest>.<stage>.irprogram.txt`.
 
 ### The intermittent 84aa stop (run-20261115-220815: "Dreams 84aa checkpoint value 7 is not a phi")
 

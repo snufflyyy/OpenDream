@@ -1,5 +1,8 @@
 # Seeing a run: test frame capture
 
+Working directory: `$REPO/port` (`$REPO` = your Dreams-Recomp checkout). Project-root tools are
+`$REPO/tools/`, port tools are `$REPO/port/tools/`.
+
 Agents can't watch the game window, so a native run can record small images of what it presents.
 Use this to verify boots and fixes and to find graphical glitches.
 
@@ -12,7 +15,7 @@ BB_GAME_PROFILE=none DREAMS_TIMEOUT=0 DREAMS_CAPTURE=1 timeout -s KILL 90 ./run-
 - Capture is **on by default at 1000 ms** for every run (so user runs leave a record too);
   `DREAMS_CAPTURE=0` turns it off. `DREAMS_CAPTURE=1`: a frame every 500 ms; `DREAMS_CAPTURE=<ms>` for another interval (e.g. 100
   for a burst-like look at animation/flicker, 2000 for long soak runs).
-- Output: `work/captures/<YYYYmmdd-HHMMSS>/`: `f<seq>_t<seconds>.png` (480 px wide) + `index.csv`
+- Output: `$REPO/work/captures/<YYYYmmdd-HHMMSS>/`: `f<seq>_t<seconds>.png` (480 px wide) + `index.csv`
   (`seq,t_ms,saved,diff,file`; saved = 1 saved, 0 unchanged, -1 dropped because the writer was
   behind).
 - Only frames that changed are saved: mean absolute luma difference vs the last saved frame >
@@ -26,17 +29,17 @@ BB_GAME_PROFILE=none DREAMS_TIMEOUT=0 DREAMS_CAPTURE=1 timeout -s KILL 90 ./run-
 ## Review (cheap first, images only where needed)
 
 ```
-python3 -I tools/capture_sheet.py latest                      # newest capture dir
-python3 -I tools/capture_sheet.py timeline <dir>              # text: changes over time, static stretches
-python3 -I tools/capture_sheet.py sheet <dir> --every 4       # overview: 4x4 sheet(s) of every 4th frame
-python3 -I tools/capture_sheet.py sheet <dir> --from 20 --to 30   # all frames in a window
-python3 -I tools/capture_sheet.py compare <dirA> <dirB> --times 10,20,30   # A left, B right, nearest saved frame
+python3 -I $REPO/tools/capture_sheet.py latest                      # newest capture dir
+python3 -I $REPO/tools/capture_sheet.py timeline <dir>              # text: changes over time, static stretches
+python3 -I $REPO/tools/capture_sheet.py sheet <dir> --every 4       # overview: 4x4 sheet(s) of every 4th frame
+python3 -I $REPO/tools/capture_sheet.py sheet <dir> --from 20 --to 30   # all frames in a window
+python3 -I $REPO/tools/capture_sheet.py compare <dirA> <dirB> --times 10,20,30   # A left, B right, nearest saved frame
 #   at or before each time (or --every S, --width W, --rows N); -> <dirA>/sheets/compare-<B>.png
 ```
 Sheets go to `<dir>/sheets/` (1920×1080 for 4×4 at 480 px). Each tile is labelled
 `#seq t=… d=…`. Look at the timeline, then one overview sheet, then a window sheet or single frames
 around anything odd. For fine detail, use the full-size `VCORE_SCREENSHOT_EVERY=<s>` instead
-(shadPS4's own PNGs in `work/vcore-user/screenshots/`, slow: full-size encode on the presenter).
+(shadPS4's own PNGs in `$REPO/work/vcore-user/screenshots/`, slow: full-size encode on the presenter).
 
 ## How it works
 
@@ -54,7 +57,7 @@ around anything odd. For fine detail, use the full-size `VCORE_SCREENSHOT_EVERY=
 
 - Boot checks after a change: did it still reach the same screen at roughly the same time?
 - Glitches: capture at 100–200 ms around the problem and compare tiles. Compare with the reference
-  emulator (`tools/run-shadps4-reference.sh`, full-size screenshots) to tell port bugs from shared
+  emulator (`$REPO/tools/run-shadps4-reference.sh`, full-size screenshots) to tell port bugs from shared
   shadPS4 GPU behaviour.
 - Future: scripted input replay (planned) for reproducible paths to a scene, and a frame-time
   CSV next to `index.csv` for performance A/B.

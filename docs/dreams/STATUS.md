@@ -1,19 +1,22 @@
 # Dreams port — status
 
-Last updated: 2026-11-15. Game under test: CUSA08010 v2.52 (user moving to v2.64 later).
+Working directory: `$REPO` (your Dreams-Recomp checkout). Hardware is described generically; the
+machine behind the measured numbers is the reference machine (`TEST_HARDWARE.md`).
+
+Last updated: 2026-11-16. Game under test: CUSA08010 v2.52 (user moving to v2.64 later).
 
 ## Milestones (from `notes/bbport-reuse-plan.md`, adjusted)
 
 | # | Milestone | State |
 |---|---|---|
-| 1 | Toolchain: bbport builds unmodified on Fedora, `--vulkan-only` passes | **done** |
+| 1 | Toolchain: bbport builds unmodified on Linux x86-64 (the reference machine runs Fedora, `TEST_HARDWARE.md`), `--vulkan-only` passes | **done** |
 | 2 | Offline prep for Dreams: SELF → flat image, link libc/Fios2/JobManager prx | **done** |
 | 3 | Runtime generalisation: NID-only resolvers, Dreams NID→name table, missing libc-init hooks | **done for boot** (more real implementations needed, see STUBS.md) |
 | 4 | CPU-only boot: module inits return, game entry runs, reaches GPU/VideoOut init | **done** — `main()` runs, ~40 guest threads start, `GameUpdate` main loop thread created |
-| 5 | Null GPU backend | **skipped for now**: bbport's libbbgpu already works as a real GPU backend for Dreams up to the first unsupported shader op (see below) |
+| 5 | Null GPU backend | **not needed**: bbport's libbbgpu was the interim backend; vcore (milestone 6) is the default now, and `DREAMS_GPU=bbport` keeps the legacy path |
 | 6 | "vcore": GPU library from latest upstream shadPS4 video_core + shader_recompiler + gnmdriver + videoout behind bbport's runtime↔GPU seam | **done** (2026-11-15): `port/vcore` → `libvcore.so`, default in `build-dreams.sh`. See `VCORE.md` |
 | 7 | Apply Dreams fork patches (ref/shadps4 branch `dreams`); extend `CUSA04301` gates to our title ID; shader-hash census | **mostly done**: vcore compiles branch `vcore` (= `dreams` + 2 native edits); `GameSerial()=CUSA08010` turns the fork's gates on; readbacks Precise + `SHADPS4_DREAMS_*` applied by `run-dreams.sh`. Fork shader routes now matched on any version by code hash / DOC signature (`VERSIONS.md`, 26 routes on v2.52, DOC fallbacks 22 -> 1). Open: 66 non-DOC fork hashes unmapped until a v2.64 `dd.shaders` is available; eboot byte patches not ported |
-| 8 | First frame of main menu / homespace; then audio, pad (motion), saves (tutorial-skip save), intro video | todo |
+| 8 | First frame of main menu / homespace; then audio, pad (motion), saves (tutorial-skip save), intro video | **boot/menu/homespace done**; editor verification open |
 | 9 | Optional: bbport memory model / performance work | **started**: opt-in 60 fps (`DREAMS_60HZ=1`) and 61-240 fps (`DREAMS_FPS=n`, ~90-100 fps measured in the menu) with correct motion speed, gameplay at 30 Hz; limit above ~90 is vcore's GPU command thread. `FPS.md` |
 
 ## What works right now
@@ -26,8 +29,8 @@ bbport's libbbgpu, step 7 is vcore:
    2022-11-21, perforce 208537, FINAL build).
 4. Memory systems: GeneralPurpose, Graphics, Imp, Audio and Social pools are allocated
    (~1.3 GB of direct memory).
-5. GPU: Vulkan presenter on RX 7800 XT (RADV, Mesa 26.2.6), GPU clock calibrated, end-of-pipe
-   labels written by the GPU.
+5. GPU: Vulkan presenter on the reference machine's GPU (Mesa RADV there; `TEST_HARDWARE.md`),
+   GPU clock calibrated, end-of-pipe labels written by the GPU.
 6. Video out opened; Hmd/VR, Ime keyboard, AppContent, Ajm (AAC via fdk-aac when `./build-deps.sh` has built `out/libdreams-codecs.so`, else silent), PlayGo (all 6
    chunks local), all offline tutorial videos found, SaveData/Camera/Move/VideoPlayer/GameUpdate
    threads created.
@@ -50,12 +53,18 @@ guest thread `OSC` spins one core at 100% at any frame rate (open). Details and 
 
 ## Current blocker
 
-None hard. Next is input past the first-run preferences screen (press ✕ on the pad; the runtime
-samples SDL gamepads, the vcore window pumps their events) and following the menus toward
-homespace, compared with the reference emulator. The old blocker (`DS_ORDERED_COUNT` in bbport's
-recompiler) is gone with vcore. AvPlayer is now the runtime's own (`src/runtime_avplayer.c`, FFmpeg
-via `out/libdreams-av.so`); it wins over vcore's interim copy and was verified with
-`-DVCORE_BBPORT_AVPLAYER=OFF` (`work/avp-gpu-noavp2.log`), so that option can be turned off.
+No hard boot blocker. **Correctness is the priority** (`ACCURACY.md`, user requirement 2026-11-16).
+The malformed indirect-draw arguments remain unresolved. Guards prevent known hangs but do not
+make those draws correct. Editor, physics, logic, save/reload, and original-PS4 comparisons remain open.
+
+The progressive 5 → <1 FPS slowdown now has a concrete cause: an uninitialized GPU fault bitmap.
+Its stale bits requested phantom sparse-residency allocations. The constructor now clears the
+bitmap and orders that clear before shader access. Two pre-fix runs degraded below 2 FPS.
+A fixed sandbox run sustained ~94 FPS in the menu, and a default-timing run measured
+30.0 render FPS / 30.0 gameplay updates per second. See `PERF.md` and `WORKLOG.md`.
+
+AvPlayer is runtime-side (`src/runtime_avplayer.c`, `out/libdreams-av.so`). The unused vcore
+fallback now defaults OFF.
 
 ## Input, video, text entry (CPU runtime, 2026-11-15)
 
@@ -101,7 +110,7 @@ via `out/libdreams-av.so`); it wins over vcore's interim copy and was verified w
 |---|---|---|
 | Distinct imports served by the return-0 fallback before the GPU stop | 67 (GPU run, before the CPU audit) | `logs-gpu-run1.txt` |
 | Same, `--cpu-only` (2026-11-15 audit) | 54 -> **17** (all 17 GnmDriver/VideoOut) | `STUBS.md`, `work/cpu-audit-base.log` -> `work/cpu-audit-2.log` |
-| Non-GPU imports nothing resolves at load (`BB_LIST_UNRESOLVED=1`, `--cpu-only`) | 258 -> **154** (Np online, VR, camera, dialogs, Http...) | `tools/unresolved_report.py` on the logs above |
+| Non-GPU imports nothing resolves at load (`BB_LIST_UNRESOLVED=1`, `--cpu-only`) | 258 -> **154** (Np online, VR, camera, dialogs, Http...) | `$REPO/tools/unresolved_report.py` on the logs above |
 | Unresolved imports at load (`BB_LIST_UNRESOLVED=1`, `--cpu-only`) | 402 (incl. 120 GnmDriver/VideoOut that the GPU library provides when not `--cpu-only`) | `work/cpu-only-run4.log` |
 | eboot imports | 812 across 63 libraries | `notes/dreams-imports.md` |
 
@@ -124,21 +133,21 @@ via `out/libdreams-av.so`); it wins over vcore's interim copy and was verified w
 
 ## GPU hang risk (2026-11-15)
 
-A native run hung the GPU once (gfx ring timeout in `shadPS4:Present`; amdgpu fell back to a full
+Native runs hung the GPU twice (gfx ring timeout in `shadPS4:Present`; amdgpu fell back to a full
 reset that kills the desktop). Cause not yet known (see WORKLOG incident entry). Until it is
 understood: only one Dreams instance at a time (enforced by run-dreams.sh), every run is logged to
 `work/logs/` and captured to `work/captures/`, and agents should save their work before long GPU runs.
 
 ## Open issues (2026-11-15, after merging `input` and `fps`)
 
-- **OSC thread busy-loops:** Dreams' remote-signals listener thread (`OSC`) uses ~99% of a CPU core at
-  any frame rate. Probably a socket poll in our net code that returns immediately instead of
-  blocking/timing out. Found by the fps agent; not investigated yet.
+- **OSC busy-loop fixed:** offline receive waits reduced its CPU usage from 103.8% to 0.4%
+  of a core (`PERF.md`).
 - **High fps ceiling ~90–100 fps:** limited by the shadPS4 GPU command thread (78% of a core at
   98 fps) while the GPU is ~44% busy. See FPS.md.
 - **Patchy object rendering on 2.52:** fixed for the homespace behind the main menu by matching the
   fork's DOC routes on v2.52 (VERSIONS.md, A/B captures). Not yet checked in creation/editor scenes.
-- **Untested by a human:** mouse capture on Hyprland, the key layout, DREAMS_PROSPERO=1, whether
+- **Untested by a human:** mouse capture on the user's Wayland desktop, the key layout,
+  DREAMS_PROSPERO=1, whether
   moving objects look smooth at 60/120 or step at 30 Hz gameplay rate.
 - New worktrees don't get the `third_party/LibAtrac9` submodule: run
   `git submodule update --init third_party/LibAtrac9` in the worktree before building.

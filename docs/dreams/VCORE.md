@@ -1,5 +1,8 @@
 # vcore: the shadPS4-based GPU library of the native Dreams port
 
+Working directory: `$REPO` (your Dreams-Recomp checkout); build/run steps say when they run from
+`$REPO/port`.
+
 Status 2026-11-15: **builds and boots Dreams natively to its first-run preferences menu**
 ("Dreams comes with a host of preferences..., ✕ CONTINUE"), past the old `DS_ORDERED_COUNT`
 stop, with intro screens and the AvPlayer intro video in between. This is the same point the
@@ -9,7 +12,7 @@ vcore is `port/vcore/`: a CMake project that produces `libvcore.so`, the GPU lib
 loader (`port/src/probe.c`) and C runtime (`port/src/runtime_*.c`) link against instead of bbport's
 `libbbgpu.so`. It implements bbport 0.7's runtime<->GPU C API (`port/gpu/bbgpu.h`) using the GPU
 code of **ref/shadps4 branch `vcore`** = branch `dreams` (latest upstream shadPS4 `f3687cc4` + all
-Dreams-ShadPS4 fork patches, `notes/shadps4-dreams-rebase.md`) + 1 commit of `// vcore:` edits.
+Dreams-ShadPS4 fork patches, `$REPO/notes/shadps4-dreams-rebase.md`) + 1 commit of `// vcore:` edits.
 
 ## 1. Design
 
@@ -39,7 +42,8 @@ Dreams-ShadPS4 fork patches, `notes/shadps4-dreams-rebase.md`) + 1 commit of `//
   ext-boost, gcn, half, stb, tracy headers), i.e. the same versions as the reference emulator build.
   System: Vulkan loader, SDL3 (must be the same SDL3 the runtime links), FFmpeg (AvPlayer),
   glslang (host shaders, via shadPS4's own `src/video_core/host_shaders/CMakeLists.txt`).
-- **Compiler:** `~/.local/bin/clang++` (clang 20, as the reference build), `-march=x86-64-v3`,
+- **Compiler:** Clang 20 (as the reference build; `build-dreams.sh` uses `~/.local/bin/clang++`
+  when present, else your `clang`/`CC`), `-march=x86-64-v3`,
   `-ftls-model=initial-exec` (game threads call in; same as bbport/Lantern), C++23. The runtime
   stays GCC/C11. `-Wl,--allow-shlib-undefined`: `runtime_*` symbols resolve against `dreams-probe`
   (`-rdynamic`).
@@ -117,7 +121,7 @@ Other stubs/limitations inside the shim:
 
 Everything else is upstream/fork code byte for byte. To re-sync: rebase `vcore` onto a new `dreams`.
 
-Branch `loopguard` (on `vcore`, not merged yet) adds the GPU hang guard: loop guard in the SPIR-V
+The GPU hang guard (merged into `vcore`; port merge `e741924`) adds: loop guard in the SPIR-V
 backend, indirect-argument clamp, CopyImage extent clamp, plus small hooks in the compute/graphics
 pipeline creation, pipeline cache path, rasterizer indirect calls and `Scheduler::IsRendering()`.
 Env: `VCORE_LOOP_GUARD`, `VCORE_INDIRECT_CLAMP`, `VCORE_INDIRECT_MAX_GROUPS`. See GPU_HANG.md section 4.
@@ -125,37 +129,37 @@ Env: `VCORE_LOOP_GUARD`, `VCORE_INDIRECT_CLAMP`, `VCORE_INDIRECT_MAX_GROUPS`. Se
 ## 5. Build and run
 
 ```
-cd port
+cd $REPO/port
 ./build-dreams.sh                 # DREAMS_GPU=vcore is the default: configures vcore/build once
-                                  # (clang from ~/.local/bin), ninja libvcore.so, ./build-deps.sh
-                                  # (codec library), links dreams-probe
+                                  # (clang from ~/.local/bin when present), ninja libvcore.so,
+                                  # ./build-deps.sh (codec library), links dreams-probe
 DREAMS_GPU=bbport ./build-dreams.sh   # old path: ../ref/bbport/out/gpu/libbbgpu.so
-cd port && BB_GAME_PROFILE=none DREAMS_TIMEOUT=0 timeout -s KILL 150 ./run-dreams.sh
-VCORE_SCREENSHOT_EVERY=10 ...     # PNGs of the presented frame in work/vcore-user/screenshots/
+BB_GAME_PROFILE=none DREAMS_TIMEOUT=0 timeout -s KILL 150 ./run-dreams.sh
+VCORE_SCREENSHOT_EVERY=10 ...     # PNGs of the presented frame in $REPO/work/vcore-user/screenshots/
 VCORE_LOG_FILTER="*:info" ...     # more GPU log
 ```
-A clean vcore build is ~2,300 compile steps incl. abseil/zydis/sirit (~6 min on 16 cores);
-`vcore/build` is ~300 MB. Manual configure:
-`CC=~/.local/bin/clang CXX=~/.local/bin/clang++ cmake -S vcore -B vcore/build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo`.
+A clean vcore build is ~2,300 compile steps incl. abseil/zydis/sirit (~6 min on the reference
+machine, `TEST_HARDWARE.md`); `vcore/build` is ~300 MB. Manual configure:
+`CC=<clang> CXX=<clang++> cmake -S vcore -B vcore/build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo`.
 
 `run-dreams.sh` (when `out/gpu-library.txt` says vcore) reproduces the Dreams fork launcher's
 setup (`tools/run-shadps4-reference.sh`):
-- `work/vcore-user/custom_configs/<SERIAL>.json` = `notes/shadps4-dreams-runtime/CUSA04301.json`
+- `$REPO/work/vcore-user/custom_configs/<SERIAL>.json` = `$REPO/notes/shadps4-dreams-runtime/CUSA04301.json`
   (readbacks_mode=2 Precise, copy_gpu_buffers=false, direct_memory_access=false,
   patch_shaders=false, pipeline_cache=false, vblank 60, Immediate present, ...). The serial is read
   from param.sfo, so v2.64 / CUSA04301 copies work the same way.
 - the fork's `SHADPS4_DREAMS_*` switches (16 on, 5 off), `SHADPS4_ENABLE_IPC=false`,
-  `SHADPS4_DREAMS_PRIMARY_QUEUE_PROBE_DIR=work/vcore-probe` (mode.txt = native),
-  `SHADPS4_DREAMS_PRIVATE_SHADER_CACHE=work/vcore-shader-cache`; other `SHADPS4_*` from the caller
+  `SHADPS4_DREAMS_PRIMARY_QUEUE_PROBE_DIR=$REPO/work/vcore-probe` (mode.txt = native),
+  `SHADPS4_DREAMS_PRIVATE_SHADER_CACHE=$REPO/work/vcore-shader-cache`; other `SHADPS4_*` from the caller
   are removed unless `VCORE_KEEP_SHADPS4_ENV=1`.
-- `SHADPS4_USER_DIR=work/vcore-user`, `VCORE_GAME_DIR=<game>`.
+- `SHADPS4_USER_DIR=$REPO/work/vcore-user`, `VCORE_GAME_DIR=<game>`.
 
 The first log lines confirm it: `vcore: ... per-game config custom_configs/CUSA08010.json loaded`,
 `readbacks_mode=2 ...`, `GameSerial()=CUSA08010 (Dreams gates ON)`.
 
 ## 6. Current result (2026-11-15, CUSA08010 v2.52)
 
-Run log `work/vcore-run3.log` (150 s, killed by `timeout`). Sequence on screen (timed screenshots):
+Run log `$REPO/work/vcore-run3.log` (150 s, killed by `timeout`). Sequence on screen (timed screenshots):
 "Sony Interactive Entertainment presents" -> the indreams.me companion card -> the first-run
 **preferences screen with ✕ CONTINUE**, which then animates waiting for input (all frames correct).
 GPU log matches the reference emulator's profile: `Failed to compute offset for SRT walker`
@@ -167,7 +171,7 @@ No assertion, no STOP.
 
 Without AvPlayer (first attempt) the game sat on the SIE card forever: Dreams waits for its intro
 video. bbport's AvPlayer (interim, see §2) fixed it. Re-checked on the merged tree (runtime
-790883e + build-deps codecs): `work/vcore-run4.log`, same menu after ~60 s.
+790883e + build-deps codecs): `$REPO/work/vcore-run4.log`, same menu after ~60 s.
 
 For a runtime-side AvPlayer that writes decoded frames into guest memory: the GPU side only needs
 to hear of those CPU writes like any other. Writes made by guest-attached host threads with plain
@@ -182,7 +186,7 @@ after each frame for the same reason.
 1. Input: press ✕ with the connected pad (runtime_pad samples SDL gamepads; the window pumps their
    events) and follow the menus to homespace; compare with the reference emulator.
 2. v2.64 (CUSA04301 hashes): most `DreamsCompat` DOC routes and the eboot byte patches only engage
-   there (`notes/shadps4-dreams-rebase.md` §4). Or remap the ~60 shader hashes for v2.52.
+   there (`$REPO/notes/shadps4-dreams-rebase.md` §4). Or remap the ~60 shader hashes for v2.52.
 3. Eboot patches (`ApplyDreamsEbootPatches`, scene gate / slowdown guard) live in shadPS4's
    module loader, which vcore doesn't compile. If needed on v2.64, port them into `bbgpu_patch_image`
    (the loader already calls it before protecting the image).

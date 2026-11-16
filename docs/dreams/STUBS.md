@@ -1,5 +1,8 @@
 # Imports served by the return-0 fallback (17, from cpu-audit-2.log, in first-call order)
 
+Working directory: `$REPO` (your Dreams-Recomp checkout); `port/docs/dreams/STUBS.md`,
+`tools/stub_report.py` and `work/...` below are relative to it.
+
 **Run type: `--cpu-only`** (2026-11-15, `work/cpu-audit-2.log`, GPU library = vcore build, no GPU
 work executes). All 17 remaining entries are GnmDriver/VideoOut: the GPU library's job. A
 `--cpu-only` run stops early (the main loop waits for GPU fences), so imports first called later

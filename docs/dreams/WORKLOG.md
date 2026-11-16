@@ -397,3 +397,143 @@
   the draw's vs/fs hashes (17e99fee) to find the producer. Details: GPU_HANG.md 4.3 and 6.
 - Shared `work/agent-user` save ran at 0.6-4 fps (guard on or off, other agents too); a fresh save
   dir runs at 30 fps.
+
+## 2026-11-16: progressive slowdown fixed, accuracy constraint made explicit
+
+- Continued the interrupted work. `port-perf` and `ref/shadps4-perf` contain unfinished readback
+  experiments. `ref/shadps4-indirect` contains unfinished draw tracing. Left those worktrees intact.
+- The user emphasized original-PS4 accuracy: Dreams is an engine. Added the requirement to
+  `AGENTS.md` and the verification matrix in `ACCURACY.md`. High render FPS does not establish
+  equivalent physics, logic, sculpts, saves, or editor behavior. Correctness takes priority.
+- Reproduced the progressive slowdown with separate copied saves. Runs `20261116-100826` and
+  `-101443` fell from ~5 FPS to below 2 FPS, with the first eventually below 1 FPS.
+  The second already used the texture optimization below, so that optimization was not the fix.
+- Read-only stack samples (`work/smooth-profile-stacks.out`) found GpuComm in
+  `FaultManager::ProcessFaultBuffer -> ObtainBuffer -> EnsureResident -> radv_alloc_memory ->
+  amdgpu_vamgr_find_va`. Other samples waited on GPU readbacks. The fault bitmap had no explicit
+  initialization: Vulkan allocations have undefined contents, and stale bits request phantom
+  sparse backing. Overflow recovery preserves those requests, so allocation cost keeps growing.
+- Fixed the constructor in `ref/shadps4/src/video_core/buffer_cache/fault_manager.cpp` with a zero
+  fill and transfer-write → shader-read/write barrier. This is generic, not game/version-specific.
+  No relaxed readbacks, skipped draws, simulation changes, or new guest patches.
+  The change is uncommitted on `vcore`. Backup: `backups/shadps4-vcore-fault-bitmap-init.patch`.
+- Fixed sandbox run `-101934` (90 s): steady-state ~93.6–94.8 FPS, p50 ~10.1 ms, p99
+  ~13.7–14.2 ms, no fault overflow, guard trip, indirect clamp report, or device loss.
+  Captures show the expected purple offline-notice backdrop instead of the degraded black one.
+  This corrects the earlier attribution to transient GPU load or the copied save: undefined GPU
+  state explains at least this reproducible slowdown. It does not rule out unrelated load issues.
+- Added `tools/fault_buffer_test.cpp`: the production parser on CPU Vulkan, no game/physical GPU.
+  Negative control: poisoned memory produces phantom faults. The clear removes them. Real first/
+  last page faults remain correct. Overflowed requests drain without loss or duplicates.
+  Integrated this optional test into `tests/run-dreams-tests.sh`. The full suite passes
+  (`work/smooth-tests-integrated.out`).
+- Texture hashing: `BackingPageTable::find` now lends complete pages from the permanent shared
+  backing view, avoiding a 16 KiB copy per lookup. It never lends the protected guest view.
+  Split VMAs and private direct allocations keep the old copy path. `VCORE_BACKING_COPY=1`
+  supplies an A/B control. Added real mapping tests and adapter tests for aliases, read traps,
+  boundary/remap/hole behavior, flexible memory, invalid inputs, and private/copy fallbacks.
+- Fixed `tools/fps_sample.py`: its v2.52 signature check recognized only the unpatched code, so it
+  could not locate high-FPS runs. It now recognizes both forms, refuses unknown versions, records
+  render dt, and uses monotonic elapsed time. Two diagnostic unit tests pass.
+- Timing checks (read-only guest memory, t=35–65 s, copied saves, offline notice):
+  `-102341` default PS4 mode = **30.0 render FPS / 30.0 gameplay updates/s**, mean render dt
+  0.03349 s. High-FPS repeat `-102752` = **94.4 render FPS / 30.0 gameplay updates/s**, mean render dt
+  0.01062 s. These establish menu cadence only, not engine-wide PS4 parity.
+- All game tests use `tools/agent-run.sh`: private headless Wayland, bubblewrap, no network,
+  sound, or user input devices. A sequential test batch received exit 75 while the previous
+  sandbox released its lock. No parallel instance or lock override was used.
+- Copy-path control `-103044`: **90.5 render FPS / 30.0 gameplay updates/s** versus **94.4 / 30.0**
+  with borrowed pages (`-102752`). This is ~4.3% in one menu comparison, not a general benchmark.
+  Captures preserve the same text, imp and animated backdrop. No new visible defect was found
+  in this scene. The indirect-argument producer and editor/physics/logic accuracy remain open.
+- The inherited runtime and semaphore contract tests also pass, rebuilt against the current C
+  runtime and vcore (`work/smooth-runtime-contracts.out`, `work/smooth-sema-contracts.out`).
+  Shell syntax, Python compilation, and `git diff --check` pass. No PS4 import implementation
+  changed in this session.
+- 60 FPS run `-103421` (100 s): **60.0 render FPS / 30.0 gameplay updates/s**, steady-state
+  p50/p99 ~16.7 ms, no guard or fault-overflow report. A Cross press at 35–36 s did not dismiss
+  the offline notice. This is still menu coverage, not a homespace/editor test.
+- User requirement: automate tests inside every locally available built-in Media Molecule game
+  **and the editor**. Each needs repeatable scenes, real input, behavioral checkpoints, profiling,
+  bug fixes, and reruns of prior scenarios. Editor tests must cover creation operations and saved
+  results, not just booting the editor. First inventory installed/offline content and establish
+  reliable scene entry before expanding the harness. These requirements are not yet implemented.
+- The user identified **Please Hug Me** as the first failing game: suspected interaction/
+  progression and movement/physics defects. This remains an unconfirmed behavior report.
+  The future harness must be easy for other agents: named scenarios, one-command runs,
+  automatic sandbox/private-save setup, stable JSON reports, clear exit codes, and no false
+  passes when a requested scene is never reached. See `SCENE_TESTS.md`.
+- Began static content inventory with ordinary Python ZIP/JSON tools (no REA tools/CLI were
+  available). The two dev-level packs contain 7,542 and 67,384 members. Their registry contains
+  1,111 entries, not all games. Added `tools/dreams_content_inventory.py` and four unit tests.
+  Output: `work/content-inventory.json`. It records catalog/version/child-scene relationships
+  and direct asset presence. Every runtime status is `not_run`; it makes no gameplay claims.
+- Please Hug Me is explicitly registered as `MmContentPleaseHugMe`, map `m326284ee5d6145`, version
+  `vd6c7c0f6c4ad37`, pinning scene `dbe74bfb376195e` / `v1627df79cf02a2`. All 9 directly declared
+  scene blobs and 204 audio blobs are installed. Recursive dependency closure and actual runtime
+  entry remain unverified.
+- **Correction:** earlier notes treated `m326284ee5d6145` in saved progress as the homespace.
+  The shipped catalog identifies it as Please Hug Me. `DefaultHomespace` is `d683140ca95a287`.
+  A map ID in save history is not proof of the scene currently on screen.
+- Scene entry: Cross and R2 did not dismiss the offline notice. **Circle at 35–36 s works**
+  (`-104813`, default PS4 timing). Captures show the main hub with Dream Surfing/Dream Shaping.
+  Pad traces confirm the injected Circle bit and process-clock timestamps reached the game.
+- Located a public PS4-labeled Please Hug Me gameplay video (`youtube.com/watch?v=n3af8AZ63Nc`)
+  and sampled six frames at 15–75 s. They show the populated platform, fewer NPCs near the edge,
+  an empty-platform camera pullback, a post-game replay card, and another populated run.
+  A contemporary GameSpew article describes NPCs fleeing on approach, falling off the platform,
+  and completion when none remain. These supply candidate behavioral checkpoints, not exact
+  speed/physics thresholds. Version and hardware provenance are not verified. References and
+  limitations are in `SCENE_TESTS.md`.
+- DreamSurfing entry verified (`-105342`, default PS4 timing): Circle at 35–36 s, `mdx=-3 mdy=-1`
+  at 42–43 s, Cross at 46–46.3 s. Captures show DreamSurfing with featured Ancient Dangers and
+  the Mm games row. This is navigation evidence, not a Please Hug Me gameplay pass.
+  Mouse injection is per pad read, so this calibration is not FPS-independent.
+- The shipped Mm Arcade collection (`c2504f84b356f35`) references 12 nonempty games and two empty
+  placeholders. Art's Dream and Ancient Dangers are separate registry roots. This gives an initial
+  14-game suite inventory, with showcases/tutorials/templates requiring separate classification.
+  Catalog presence still does not establish playable runtime coverage.
+- Latest navigation run `-105830`: the same hub route plus `ly=255` at 55–55.5 s scrolls to the
+  Mm games row. Capture `work/captures/20261116-105830/f00131_t00074.5.png` shows Ancient Dangers,
+  Dreams VR – Inside The Box, Art's Dream, Welcome Garden Adventure, and further cards to the
+  right. Please Hug Me has not been entered. The VR title is an additional coverage candidate;
+  the initial 14-game list is not exhaustive. Full runtime/inventory test integration passes
+  (`work/scene-inventory-tests.out`).
+- Wrapped up at the user's request after connection loss/usage exhaustion. No background task,
+  game, runner, or input script remained active. Changes are uncommitted. Exact resume point,
+  navigation scripts, evidence, remaining requirements and repository cautions are recorded in
+  `HANDOFF.md`. Do not claim the game/editor scenario harness or Please Hug Me fix is complete.
+
+## 2026-11-16 — DeepSeek scripted-input coverage integrated
+
+- DeepSeek extended `tests/test_pad.c` with held/released buttons, exact/clamped stick bytes,
+  full and partial analog triggers, and per-read `mdx`/`mdy` deltas plus release.
+- `tests/run-dreams-tests.sh` now compiles and runs this test. Previously, only `build.sh --test` ran it.
+- Independent review found an inherited `DREAMS_MOUSE_MODE=imp` failure in the new camera assertions.
+  The author reproduced it against a passing baseline, explicitly selected camera mode, and cleared `BB_TEST_VPAD`.
+  The reviewer approved the correction. Per-read injection semantics remain unchanged.
+- GPT integrated only the reviewed test files. The full main-checkout suite passed, including codecs and AvPlayer.
+  Separate hostile mouse-mode and virtual-pad runs passed. Evidence: `work/ai-pad-worker/integrated-suite.log`.
+  Author/control evidence: `work/ai-pad-worker/review/`. No runtime behavior changed. Nothing was committed.
+- Runtime reproduction logged the correct Please Hug Me launch request in `-115546`, `-120157`, and `-120811`.
+  The display reached the title card/cloud backdrop, not verified gameplay. Run `-120517` is void.
+  The `/proc` sampler missed the renamed process. Loading-versus-wait remains unresolved.
+  DeepSeek is validating a corrected CPU-only sampler before another GPU lease.
+
+## 2026-11-16 — diagnostic wrap and performance/visual phase
+
+- Integrated DeepSeek's metadata-visible closure CLI, 17 regression tests, and the primary-suite invocation.
+  Independent review required malformed-reference and dream-level hash fixes before acceptance.
+- Complete main-checkout verification passed without skips, including fault-buffer, codecs, and AvPlayer tests.
+  Two real Please Hug Me reports were byte-identical: 2 dreams, 2 versions, 217 unique assets, no explicit missing assets.
+  Opaque binary references remain unknown. Evidence: `work/content-closure-worker/integrated-suite.log`.
+- The corrected process sampler passed 21 CPU tests and selected the live renamed game in run `-122339`.
+  Profiling run `-124209` completed its bounded lease and still displayed only the title/cloud backdrop.
+  Compute work and one expensive indirect draw continued. No root cause or gameplay fix is established.
+  Evidence: `work/deepseek-hug/probe5-report.md`. Please Hug Me gameplay/physics/progression remains blocked/unverified.
+- Connection recovery briefly duplicated assignments. The duplicate runtime worker launched no processes or shared writes.
+  The isolated test-file collision was preserved, restored by its original author, and independently reviewed.
+  The interrupted parent workflow was not rerun. No original checkout work was discarded.
+- Stopped a source-only scout after unauthorized scratch binary-tool experiments. Their output is not accepted evidence.
+- User redirected work to rendering speed and visual accuracy. DeepSeek implements, GPT supervises, at most three workers.
+  Keep simulation semantics, Precise readbacks, shader routes, and GPU guards. All changes remain uncommitted.

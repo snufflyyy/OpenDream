@@ -1,9 +1,12 @@
 # Frame rate (60 / 120 fps) and faster test boots
 
-Status 2026-11-15, CUSA08010 v2.52, RX 7800 XT + Ryzen 7 5700X, sandboxed agent runs
-(`tools/agent-run.sh`: headless weston 1920x1080, low CPU weight). Research and sources:
-`notes/high-fps-research.md`. Code: `vcore/shim/frame_rate.cpp`, `run-dreams.sh`,
-`scripts/dreams_seed_save.py`, `src/runtime_dreams_services.c` (`kernel_is_prospero`).
+Working directory: `$REPO/port` (`$REPO` = your Dreams-Recomp checkout). Every measurement below
+was taken on the reference machine (`TEST_HARDWARE.md`).
+
+Status 2026-11-15, CUSA08010 v2.52, sandboxed agent runs (`$REPO/tools/agent-run.sh`: headless
+weston 1920x1080, low CPU weight). Research and sources: `$REPO/notes/high-fps-research.md`.
+Code: `vcore/shim/frame_rate.cpp`, `run-dreams.sh`, `scripts/dreams_seed_save.py`,
+`src/runtime_dreams_services.c` (`kernel_is_prospero`).
 
 ## Switches (all off by default)
 
@@ -48,22 +51,21 @@ Read from the running game (`/proc/<pid>/mem`, read-only, every 0.5 s; t=35-78 s
 | `DREAMS_FPS=120` (`-203155`) | **90.4** (boot screens 105.8) | 30.0 | 0.01105 | 0 | – | – |
 | `DREAMS_FPS=240` (`-204425`) | **97.8** | 30.0 | 0.01010 | 0 | 44% at ~1.8 GHz | OSC 99%, shadPS4 GPU thread 78%, Main 21% |
 
-- **Motion speed is right at every rate.** The render dt the game uses matches the real frame
-  interval (1/60.0 = 0.01667, 1/90.4 = 0.01106, 1/97.8 = 0.01022) because the floor is at or below it.
-  The captures show the same menu, the same notice animation and no visual faults at 60 and 120.
+- **The render clock matches measured menu cadence.** The render dt matches the real frame
+  interval (1/60.0 = 0.01667, 1/90.4 = 0.01106, 1/97.8 = 0.01022).
+  The captures show the same menu and notice animation at 60 and 120.
+  This does not establish correct animation speed or simulation behavior in every creation.
 - **Gameplay stays at 30 Hz** (updates/s unchanged). Whether objects driven by gameplay *interpolate*
   between updates at 60/120 or step at 30 can't be judged on a static menu. That needs a scene with
   moving objects (user test).
 - **Above ~90-100 fps the limit is the CPU side of vcore, not the GPU.**
   - The shadPS4 GPU command thread goes from 29% of a core at 30 fps to 78% at 98 fps (≈8-10 ms of
     CPU per frame on one thread). The GPU stays under half busy.
-  - The sandbox's `CPUWeight=20` and other load on the PC lower these numbers somewhat.
+  - The sandbox's `CPUWeight=20` and other load on the host lower these numbers somewhat.
   - Next steps: Lantern's parallel draw pipeline (`ref/lantern/engine/docs/parallel_gpu.md`) and
     presenting off the vblank thread.
-- **Found on the way: the guest thread `OSC` burns a whole core at any frame rate.** It is Dreams'
-  Open Sound Control "remote signals" listener (save setting `enable_remote_signals: false`), so
-  probably a non-blocking socket poll that never sleeps under our net layer. Not investigated. It is
-  owned by the runtime's net code, not by this work.
+- **OSC busy-loop fixed:** the runtime now waits on offline receives instead of failing instantly.
+  Its CPU usage fell from 103.8% to 0.4% of a core (`PERF.md`).
 - `DREAMS_PROSPERO=1` is plumbed, but no headless run reached the code that asks. The flip-rate
   decision only consults `sceKernelIsProspero` in UI mode while `[0x79c92ec]` is set
   (`+0xede364`: a positive UI value, "moving around the Dreamiverse"). Scripted sticks could not
@@ -81,7 +83,7 @@ Research:
   ini setting (`/app0/unicorn.ini` holds only CurrentSKU/DefaultLanguage/AgeRestriction; others are
   "not settable in final"). They **are** gated by the save's tutorial progress: with
   `played_tutorial_vo`/`played_tutorial_cutscene`/`progress_unlocked` set (the community
-  tutorial-skip edit, `notes/tutorial-skip.md`), Dreams goes from the indreams.me card straight to
+  tutorial-skip edit, `$REPO/notes/tutorial-skip.md`), Dreams goes from the indreams.me card straight to
   the main menu. The same flags also skip the first-time intro sequence ("The idea could be
   anything... Light... color...", ~40 s), which otherwise plays after the boot screens.
 
@@ -99,21 +101,29 @@ The player's own `work/user` is never changed unless `DREAMS_TUTORIAL_SKIP_MY_SA
 backup is taken first. Timed ✕ injection through `BB_PAD_FILE` (tried in `20261115-195936`: ✕ at
 the card, the preferences and the control scheme) works but was dropped in favour of the save flags.
 
+## Accuracy constraint (2026-11-16)
+
+Original-PS4 behavior takes priority over FPS (`ACCURACY.md`). High-FPS rendering remains opt-in.
+The menu counters below establish update cadence, not full physics, logic, animation, or editor parity.
+Do not describe 60/120 FPS as fully accurate until representative creations pass those checks.
+
 ## Recommended use
 
 - Agents: `DREAMS_USER_DIR=$WORK/agent-user DREAMS_SKIP_INTRO=1` for every test run, so they
   never write the player's saves. Before this, agent runs and the user shared `work/user`, and the game
   writes its SYSTEM save during a run.
-- Player: `DREAMS_60HZ=1` is the safe step (the fork's own mode, 60 fps, correct speed).
-  `DREAMS_FPS=120` works and reaches ~90-100 fps in the menu on this PC. It needs a ≥120 Hz display;
-  `present_mode` is Immediate, so it tears without VRR.
+- Player: use default timing as the PS4 control. `DREAMS_60HZ=1` uses the fork's 60 FPS mode.
+  `DREAMS_FPS=120` previously reached ~90–100 FPS in the menu on the reference machine
+  (`TEST_HARDWARE.md`).
+  Both modes need behavior checks in representative creations. A static menu is insufficient.
+  Presentation now defaults to Mailbox (`PERF.md`), not Immediate.
 
 ## Next steps
 
 1. User test of `DREAMS_60HZ=1` / `DREAMS_FPS=120` in homespace, edit mode and a creation with moving
    objects: do gameplay-driven objects step at 30 Hz? Do the camera, imp and UI feel right? Is audio in sync?
 2. User test of `DREAMS_PROSPERO=1` while browsing the Dreamiverse.
-3. Find out why the `OSC` thread spins (runtime net layer).
+3. Trace malformed indirect-draw arguments. A clamp prevents hangs but does not restore correct rendering.
 4. vcore CPU cost per frame (GPU command thread), so heavy scenes and 120 fps get headroom. See the
    research notes, §6 stage B.
 5. v2.64: the signatures already match the fork's offsets. Re-check the startup log line.
