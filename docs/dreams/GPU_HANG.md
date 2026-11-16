@@ -65,27 +65,98 @@ Result on the 300 cached SPIR-V modules: 79 loops flagged in ~30 shaders. Two ki
   No shader was found with the classic "wait for another workgroup's flag" (decoupled look-back)
   pattern with a loop-invariant address.
 
-## 4. Proposed fix (not implemented yet)
+## 4. The hang guard (implemented 2026-11-15, ref/shadps4 branch `loopguard`)
 
-A bounded-iteration loop guard in the SPIR-V backend
-(`ref/shadps4/src/shader_recompiler/backend/spirv/emit_spirv.cpp`, `Traverse`):
-- At the `Repeat` node (back edge: `OpBranchConditional(cond, loop_header, merge)`), replace `cond`
-  with `cond && (++counter < N)`. Counter = one `Function`-storage u32 variable per invocation
-  (declared in the entry block), shared by all loops of the shader (bounds nested loops too).
-- `N` from env, e.g. `VCORE_LOOP_GUARD=<iterations>` (0 = off); suggested 1<<20 (a stuck wave then
-  exits after well under a second, far below amdgpu's 10 s gfx timeout).
-- **The guard changes SPIR-V: it must be part of the pipeline/private-shader-cache key** (check how
-  `vk_pipeline_serialization.cpp` derives the `build-<hash>-cache-v4` dir; otherwise old unguarded
-  SPIR-V is served from `work/vcore-shader-cache`). Simplest: different cache dir when the guard
-  is on.
-- Reporting: when the guard fires, atomically increment a counter in a host-visible buffer (a new
-  `BufferType` like `FaultBuffer`, see resource.h:85 / spirv_emit_context.cpp:904 and
-  fault_manager), read it each frame and log `loop guard fired in shader <pgm_hash>`; this also
-  names the hanging shader. Without the counter, at least log which shaders were guarded.
-- Measure overhead with the guard on vs off (one extra add+compare per back edge).
+Three guards against GPU work that never ends, all `// vcore:`-marked in ref/shadps4 branch
+`loopguard` (on top of `vcore`). All are ON by default.
 
-Also cheap and worth adding: a clamp + log for indirect dispatch/draw dimensions read from GPU memory
-(e.g. > 65535 groups per dimension), since a garbage indirect dispatch hangs the ring the same way.
+| Env | Default | Effect |
+|---|---|---|
+| `VCORE_LOOP_GUARD=<n>` | `1048576` (1<<20) | back-edge budget per invocation and outermost loop entry; `0`/`off` = no guard (byte-identical SPIR-V to before, old cache dir) |
+| `VCORE_INDIRECT_CLAMP=0` | on | disables the indirect-argument clamp |
+| `VCORE_INDIRECT_MAX_GROUPS=<n>` | `4194304` (1<<22) | workgroup cap of one indirect dispatch |
+
+### 4.1 Loop guard (shader translator)
+
+Files: `src/shader_recompiler/loop_guard.h` (env, constants, report layout),
+`src/shader_recompiler/backend/spirv/emit_spirv_loop_guard.{h,cpp}` (emission), hooks in
+`emit_spirv.cpp` (`Traverse`, `EmitSPIRV`), 4 fields in `spirv_emit_context.h`, the ordered-count
+turnstile loop in `emit_spirv_atomic.cpp`.
+
+- Every shader with a reachable loop (`Repeat` node) gets one `Function` u32 counter, declared at the
+  top of the entry block. At each back edge (`Repeat`: `OpBranchConditional(cond, header, merge)`)
+  the emitter adds `++counter` and replaces `cond` with `cond && counter < N`. Nested loops share the
+  counter, so the whole loop nest is bounded by N back edges. The counter is reset (after the phis)
+  in the merge block of each **outermost** loop, so separate top-level loops each get N and the
+  counter becomes wave-uniform again after a divergent loop.
+- N = 1<<20: a wave spinning on a memory load exits after roughly 0.1-1 s, below amdgpu's 10 s gfx
+  timeout. Legit Dreams loops are far shorter (PS4 frame budget), so a trip means bad data.
+- The fork's optional ordered-count turnstile (`SHADPS4_DREAMS_ORDERED_COUNT_TURNSTILE=1`, off) is
+  guarded the same way. The float min/max CAS loop is not (a CAS loop always has a winner).
+- **Report.** When a back edge wanted to repeat but the budget is gone, the invocation does
+  `atomicAdd(slot.count, 1)` and writes the shader hash into its slot of a 64 KiB report buffer
+  (4096 slots of 4 dwords, slot = hash of `pgm_hash`). The buffer address reaches the shader as a
+  **u64 specialization constant** (SpecId 0x4c47) through a `PhysicalStorageBuffer` pointer, so the
+  SPIR-V stays address independent and cacheable, and no descriptor layout changes (the fork has
+  ~60 places that match shaders by their exact buffer list). Pipelines that don't pass the constant
+  (fork replay pipelines) keep the sentinel default and skip the report, but are still guarded.
+  The constant is emitted as `OpConstant` with a unique sentinel and patched to `OpSpecConstant`
+  after assembly, like the fork's ordered-phase constant.
+- Host side `src/video_core/renderer_vulkan/vk_loop_guard.{h,cpp}`: the report buffer
+  (device-local host-visible, created in the `PipelineCache` constructor), the specialization info
+  (compute: combined with the DOC phase constant in `vk_compute_pipeline.cpp`; graphics: every
+  stage without its own specialization, `vk_graphics_pipeline.cpp`; Vulkan ignores unused ids),
+  and a thread that polls the buffer every 0.5 s and logs
+  `gpu error (Render.Vulkan): vcore loop guard: TRIPPED in shader 0x... (N loop exits forced so far ...)`
+  once per shader (then at most every 10 s while it keeps tripping). The startup line is
+  `vcore loop guard ON: 1048576 iterations per outermost loop entry; indirect clamp ON; ...`.
+- **Cache key.** The private cache (`SHADPS4_DREAMS_PRIVATE_SHADER_CACHE`) and the regular pipeline
+  cache use the subdirectory `loop-guard-<N>` when the guard is on
+  (`vk_pipeline_serialization.cpp`, `WarmUp`), so unguarded SPIR-V is never reused and the old cache
+  stays valid for `VCORE_LOOP_GUARD=0`. The first guarded run recompiles everything (more stutter
+  once).
+- **Validation.** `tools/spirv_val.c` (spvValidate over libSPIRV-Tools-shared, Vulkan 1.3 env):
+  of the 263 SPIR-V modules a guarded boot produced, 79 carry the guard; 256 validate, and the 7
+  failures are the same pre-existing ones as in the unguarded cache (64-bit `OpBitFieldInsert`,
+  `Offset` on a non-gather sample: need maintenance8/9), none in guard code.
+
+```
+gcc tools/spirv_val.c -o out/spirv-val /usr/lib64/libSPIRV-Tools-shared.so
+out/spirv-val ../work/vcore-shader-cache/build-*-cache-v4/loop-guard-1048576/CUSA08010/*.spv | grep -v ': OK'
+```
+
+### 4.2 Indirect-argument clamp
+
+Files: `src/video_core/renderer_vulkan/vk_indirect_clamp.{h,cpp}`,
+`src/video_core/host_shaders/vcore_indirect_clamp.comp`, call sites in `vk_rasterizer.cpp`.
+
+- Indirect arguments are GPU-written guest memory; the host can't read them without a stall. So
+  before the indirect call a tiny compute pass (64 lanes per workgroup, BDA + push constants, no
+  descriptors) copies the command(s) into a 4 MiB device-local ring with the sizes clamped, and the
+  call reads the copy. Barriers: all prior writes -> clamp shader; clamp -> indirect read.
+- Dispatch (`DispatchIndirect`, all 13 `dispatchIndirect` sites incl. the fork's DOC
+  collect/replay paths, plus the diagnostic descriptors that read the args): each dimension to the
+  device limit (RADV: x 2^32-1, y/z 65535) and the product to `VCORE_INDIRECT_MAX_GROUPS` (1<<22).
+  The clamp runs after the barrier flush and before `BindPipelineResources`, so the guest's compute
+  bindings are untouched. CPU-read dims of the ordered traversal path (`have_ordered_dims`, a
+  diagnostic mode) get the same clamp on the host.
+- Draw (`DrawIndirect`, indexed or not, with or without count buffer, and the VS370 shadow replay):
+  count per command <= 1<<26, instances <= 1<<24, count x instances <= 1<<28. The pass must run
+  outside dynamic rendering: when a scope is open it is ended (a split), **except** when the draw's
+  render state clears attachments on begin (restarting would clear them again); then that draw is
+  not clamped. After the pass the draw's resources are re-bound (RADV keeps push constants in one
+  array for all bind points). The fork's native volume draw (own command buffer) is not touched.
+- A clamp logs once: `vcore indirect clamp: dispatch arguments AxBxC clamped ...` /
+  `... draw arguments count=... instances=... clamped ...` (report area after the loop-guard slots).
+
+### 4.3 The layered D32 copy before the hang ("Coercing copy source layers N and destination layers N+1")
+
+`Runtime::CopyImage` (vk_runtime.cpp) at the hang is an image *growing* by one layer (same guest
+address `0x10e8428000`, 512x512 D32, 1 mip, src 1..3 layers -> dst 2..4): `SanitizeCopyLayers` copies
+`min(src, dst)` layers, so this copy is in bounds and it also happens at boot without harm. Not a
+hang cause. One real hole was found next to it: for two images of the same block-ness the region
+height was the *source* height unchecked (width was already the minimum), so a shorter destination
+got an out-of-bounds copy region. Now width and height are clamped to the destination's mip size.
 
 ## 5. Software GPU (lavapipe) attempt: dropped by the user
 
