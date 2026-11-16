@@ -312,6 +312,8 @@
   1 fallback (252: its audited-SPIR-V guard; same on v2.64 after the rebase); off
   `run-20261115-215739`: 22 fallbacks. The homespace behind the main menu loses its white blocky
   patches (`work/captures/20261115-215358/sheets/compare-20261115-215739.png`). No assertion/STOP.
+  Inside the homespace (runs 220022 on / 220312 off, full-width captures): painterly cloud flecks and
+  a solid puppet with matching, flat white blocks without.
 - run-dreams.sh: `DREAMS_SIGNATURE_MATCH` default 1 (=0 for the old behaviour).
 - Open: 66 non-DOC fork hashes (glass/shadow mip coordinates, linear-write ranges, sculpt/fleck
   diagnostics) need a v2.64 pack (`check`/`emit` with both packs; add keys) or per-shader work.

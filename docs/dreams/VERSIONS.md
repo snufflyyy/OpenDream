@@ -179,7 +179,12 @@ With a v2.64 pack each is one `key` line in `dreams_routes.json` (section 5).
 | homespace scene behind the main menu | white blocky patches | smooth (no patches) |
 
 Compare sheet: `work/captures/20261115-215358/sheets/compare-20261115-215739.png` (left on,
-right off). The one remaining fallback is the route's own guard: the 252 replay only runs when
+right off). Inside the homespace (full-width captures, ○ from the main menu; on
+`run-20261115-220022`, off `run-20261115-220312`, sheet
+`work/captures/20261115-220022/sheets/compare-20261115-220312.png`): with matching the clouds are
+Dreams' painterly brush-stroke flecks and the sculpted puppet is solid
+(`work/captures/20261115-220022/f00023_t00075.7.png`); without, the clouds are flat white
+rectangular blocks and slabs (`work/captures/20261115-220312/f00022_t00078.5.png`). The one remaining fallback is the route's own guard: the 252 replay only runs when
 the translated SPIR-V equals the fork's audited binary, and the rebased recompiler (upstream
 shadPS4 + fork) emits different SPIR-V. That affects v2.64 the same way (rebase issue, not a
 version issue); the shader keeps the atomic path as before.
