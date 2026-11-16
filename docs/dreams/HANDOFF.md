@@ -33,7 +33,20 @@ codegen, and the fork's `DataOrderedCount` lowering is present (same guest code 
 0x400). Do not re-bless the gate until a capture ties the artifact to 252.
 
 Also fixed this session: `agent-run.sh` now reaps a timed-out game by its private `--user` dir, so
-a survivor cannot hold the single-instance lock (`e46e159`).
+a survivor cannot hold the single-instance lock (`e46e159`), and `run-dreams.sh` disables MangoHud
+by default (`4362667`; its layer could leave a stale presented frame while the capture showed the
+newest one; `DREAMS_MANGOHUD=1` opts in).
+
+### Two-agent coordination (2026-11-16)
+
+A second agent (Gemini / Antigravity) is working on **rendering accuracy**. Live ownership,
+file claims and the current renderer lead are in `$REPO/work/COORDINATION.md`; read it before
+editing `ref/shadps4` or `port/vcore/shim`. One writer per file, one GPU run at a time.
+
+Current lead: Ancient Dangers' scattered black blocks correlate with two DOC fallbacks in
+`work/logs/run-20261116-155844.log` — `0x3937a849` SceneCompact (`dim_x=2371` exceeds the 11-bit
+ordered-token limit of 2048) and the known `0x252ccde6` alias refusal. Raising the SceneCompact
+cap alone would wrap the token; it needs a token/encoding fix, not just a bigger buffer.
 
 ---
 

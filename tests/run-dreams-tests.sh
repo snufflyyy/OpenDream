@@ -24,6 +24,10 @@ out/tests/backing-pages-test copy
 "$CXX" -std=c++23 -O2 -g -Wall -Wextra -Werror -Ivcore/shim/include -Ivcore/shim \
     -I"${SHADPS4_DIR:-../ref/shadps4}/src" -Isrc tests/test_abi_contract.cpp -o out/tests/abi-contract-test
 out/tests/abi-contract-test
+# SceneCompact ordered-count scratch layout + prefix scan model (no GPU, no game).
+"$CXX" -std=c++23 -O2 -g -Wall -Wextra -Werror -I"${SHADPS4_DIR:-../ref/shadps4}/src" \
+    tests/test_scenecompact_ordered_layout.cpp -o out/tests/scenecompact-ordered-layout-test
+out/tests/scenecompact-ordered-layout-test
 python3 -I tests/test_fps_sample.py
 python3 -I tests/test_content_inventory.py
 python3 -I tests/test_content_closure.py
