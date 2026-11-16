@@ -280,3 +280,12 @@
   the software-GPU path).
 - Next: loop guard with env switch + cache-key change + host-visible hit counter, indirect-dims clamp;
   then one guarded repro with work/hang-user.
+- **OSC thread 100% CPU fixed** (2026-11-15). gdb on the spinning `OSC` thread (Dreams' Open Sound
+  Control remote-signals listener) showed it looping in Dreams code around eboot +0xda2621 calling
+  sceKernelGetProcessTimeCounter and scePthreadGetthreadid: a receive loop whose socket calls all
+  failed instantly offline (sceNetSocket/Recvfrom/EpollWait returned ENETUNREACH), so it never slept.
+  runtime_services.c now models an unplugged network: socket/bind/listen/setsockopt/getsockname
+  succeed on a local socket table; recv/recvfrom/accept wait for SO_RCVTIMEO (0x1106, µs; 0 = until
+  abort/close) then EAGAIN (non-blocking SO_NBIO/MSG_DONTWAIT: EAGAIN at once); sceNetEpollWait waits
+  for its timeout; Abort/Close wake waiters (EINTR); send/sendto/connect stay ENETUNREACH; NetCtl/Np
+  still offline. Measured in a sandbox run: OSC 103.8% -> 0.4% of a core.

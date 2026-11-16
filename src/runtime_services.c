@@ -126,6 +126,156 @@ static ABI int32_t net_pool_destroy(int id) { (void)id; return 0; }
 static ABI int32_t net_unreachable(void) { net_errno=51; return NET_ENETUNREACH; }
 static ABI int32_t net_epoll_create(const char *name,int flags) { (void)name; (void)flags; return new_id(); }
 static ABI int32_t net_epoll_destroy(int id) { (void)id; return 0; }
+/* Dreams port: sceNetEpollWait / sceNetEpollAbort. Offline nothing ever becomes ready, but the call
+ * must still WAIT for its timeout like the real one (ref: shadPS4 net.cpp sceNetEpollWait(eid,
+ * events, maxevents, timeout_us); negative timeout = until aborted). The return-error stub made
+ * Dreams' "OSC" remote-signals thread spin at 100% of a core. Returns 0 (timed out), or EINTR when
+ * sceNetEpollAbort wakes the waiters. */
+#define NET_EINTR ((int32_t)0x80410104)
+static pthread_mutex_t epoll_lock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t epoll_cv;
+static pthread_once_t epoll_once=PTHREAD_ONCE_INIT;
+static uint64_t epoll_aborts;
+static void epoll_init(void) {
+    pthread_condattr_t a; pthread_condattr_init(&a);
+    pthread_condattr_setclock(&a,RUNTIME_COND_CLOCK);
+    pthread_cond_init(&epoll_cv,&a); pthread_condattr_destroy(&a);
+}
+static ABI int32_t net_epoll_wait(int eid, void *events, int max_events, int timeout_us) {
+    (void)eid; (void)events; (void)max_events;
+    pthread_once(&epoll_once,epoll_init);
+    pthread_mutex_lock(&epoll_lock);
+    const uint64_t gen=epoll_aborts;
+    int32_t r=0;
+    if (timeout_us<0) {
+        while (gen==epoll_aborts) pthread_cond_wait(&epoll_cv,&epoll_lock);
+        r=NET_EINTR;
+    } else {
+        struct timespec d; clock_gettime(RUNTIME_COND_CLOCK,&d);
+        d.tv_sec+=timeout_us/1000000; d.tv_nsec+=(long)(timeout_us%1000000)*1000;
+        if (d.tv_nsec>=1000000000) { ++d.tv_sec; d.tv_nsec-=1000000000; }
+        while (gen==epoll_aborts && pthread_cond_timedwait(&epoll_cv,&epoll_lock,&d)==0) {}
+        if (gen!=epoll_aborts) r=NET_EINTR;
+    }
+    pthread_mutex_unlock(&epoll_lock);
+    if (r) net_errno=4;
+    return r;
+}
+/* Dreams port: offline sockets that behave like a PS4 with the network cable unplugged (ref: shadPS4
+ * net.cpp, which uses real host sockets). Local setup (socket/bind/listen/setsockopt/getsockname)
+ * succeeds; receives and accepts WAIT for the socket's receive timeout (SO_RCVTIMEO, µs; 0 = until
+ * aborted/closed) and report EAGAIN, or EAGAIN at once for non-blocking sockets (SO_NBIO /
+ * MSG_DONTWAIT); sends/connects fail with ENETUNREACH. Before this, everything failed instantly and
+ * Dreams' "OSC" (Open Sound Control remote signals) thread spun at 100% of a core around its receive
+ * call. NetCtl/Np still report offline, so online features stay off. */
+#define NET_EAGAIN ((int32_t)0x80410123)
+#define NET_EBADF ((int32_t)0x80410109)
+#define NET_SOCKETS 256
+#define NET_SOCKET_BASE 0x1000
+typedef struct { int used, nonblocking, rcv_timeout_us; uint64_t aborts; } OfflineSocket;
+static OfflineSocket sockets[NET_SOCKETS];
+static OfflineSocket *socket_get(int id) {
+    const int i=id-NET_SOCKET_BASE;
+    return i>=0 && i<NET_SOCKETS && sockets[i].used ? &sockets[i] : NULL;
+}
+static ABI int32_t net_socket(const char *name, int family, int type, int protocol) {
+    (void)name; (void)family; (void)type; (void)protocol;
+    pthread_once(&epoll_once,epoll_init);
+    pthread_mutex_lock(&epoll_lock);
+    for (int i=0;i<NET_SOCKETS;++i) if (!sockets[i].used) {
+        memset(&sockets[i],0,sizeof(sockets[i])); sockets[i].used=1;
+        pthread_mutex_unlock(&epoll_lock);
+        return NET_SOCKET_BASE+i;
+    }
+    pthread_mutex_unlock(&epoll_lock);
+    net_errno=24; return (int32_t)0x80410118; /* EMFILE */
+}
+static ABI int32_t net_socket_close(int id) {
+    pthread_mutex_lock(&epoll_lock);
+    OfflineSocket *so=socket_get(id);
+    if (so) { so->used=0; ++so->aborts; pthread_cond_broadcast(&epoll_cv); }
+    pthread_mutex_unlock(&epoll_lock);
+    if (!so) { net_errno=9; return NET_EBADF; }
+    return 0;
+}
+static ABI int32_t net_socket_abort(int id, int flags) {
+    (void)flags;
+    pthread_mutex_lock(&epoll_lock);
+    OfflineSocket *so=socket_get(id);
+    if (so) { ++so->aborts; pthread_cond_broadcast(&epoll_cv); }
+    pthread_mutex_unlock(&epoll_lock);
+    if (!so) { net_errno=9; return NET_EBADF; }
+    return 0;
+}
+static ABI int32_t net_socket_ok(int id) { /* bind, listen, shutdown, ... on a valid socket */
+    pthread_mutex_lock(&epoll_lock); OfflineSocket *so=socket_get(id); pthread_mutex_unlock(&epoll_lock);
+    if (!so) { net_errno=9; return NET_EBADF; }
+    return 0;
+}
+static ABI int32_t net_setsockopt(int id, int level, int name, const void *value, uint32_t len) {
+    pthread_mutex_lock(&epoll_lock);
+    OfflineSocket *so=socket_get(id);
+    int v=0;
+    if (so && value && len>=4) memcpy(&v,value,4);
+    if (so && level==0xffff && name==0x1106) so->rcv_timeout_us=v;   /* SO_RCVTIMEO (µs) */
+    if (so && level==0xffff && name==0x1200) so->nonblocking=v!=0;   /* SO_NBIO */
+    pthread_mutex_unlock(&epoll_lock);
+    if (!so) { net_errno=9; return NET_EBADF; }
+    return 0;
+}
+static ABI int32_t net_getsockopt(int id, int level, int name, void *value, uint32_t *len) {
+    pthread_mutex_lock(&epoll_lock);
+    OfflineSocket *so=socket_get(id);
+    int v=0;
+    if (so && level==0xffff && name==0x1106) v=so->rcv_timeout_us;
+    if (so && level==0xffff && name==0x1200) v=so->nonblocking;
+    pthread_mutex_unlock(&epoll_lock);
+    if (!so) { net_errno=9; return NET_EBADF; }
+    if (value && len && *len>=4) { memset(value,0,*len); memcpy(value,&v,4); *len=4; }
+    return 0;
+}
+static ABI int32_t net_getsockname(int id, void *addr, uint32_t *len) {
+    if (net_socket_ok(id)) return NET_EBADF;
+    if (addr && len && *len>=16) { memset(addr,0,16); ((uint8_t *)addr)[0]=16; ((uint8_t *)addr)[1]=2; *len=16; }
+    return 0;
+}
+/* Wait like a blocking receive on an unplugged network: until the receive timeout, an abort or a
+ * close; then EAGAIN (or EINTR when aborted). */
+static int32_t socket_wait(int id, int flags) {
+    pthread_once(&epoll_once,epoll_init);
+    pthread_mutex_lock(&epoll_lock);
+    OfflineSocket *so=socket_get(id);
+    if (!so) { pthread_mutex_unlock(&epoll_lock); net_errno=9; return NET_EBADF; }
+    int32_t r=NET_EAGAIN;
+    if (!so->nonblocking && !(flags & 0x80)) {
+        const uint64_t gen=so->aborts;
+        const int timeout=so->rcv_timeout_us;
+        if (timeout<=0) {
+            while (so->used && gen==so->aborts) pthread_cond_wait(&epoll_cv,&epoll_lock);
+        } else {
+            struct timespec d; clock_gettime(RUNTIME_COND_CLOCK,&d);
+            d.tv_sec+=timeout/1000000; d.tv_nsec+=(long)(timeout%1000000)*1000;
+            if (d.tv_nsec>=1000000000) { ++d.tv_sec; d.tv_nsec-=1000000000; }
+            while (so->used && gen==so->aborts && pthread_cond_timedwait(&epoll_cv,&epoll_lock,&d)==0) {}
+        }
+        if (gen!=so->aborts) r=NET_EINTR;
+    }
+    pthread_mutex_unlock(&epoll_lock);
+    net_errno = r==NET_EINTR ? 4 : r==NET_EBADF ? 9 : 35;
+    return r;
+}
+static ABI int32_t net_recv(int id, void *buf, uint64_t len, int flags) { (void)buf; (void)len; return socket_wait(id,flags); }
+static ABI int32_t net_recvfrom(int id, void *buf, uint64_t len, int flags, void *addr, uint32_t *addrlen) {
+    (void)buf; (void)len; (void)addr; (void)addrlen; return socket_wait(id,flags);
+}
+static ABI int32_t net_accept(int id, void *addr, uint32_t *addrlen) { (void)addr; (void)addrlen; return socket_wait(id,0); }
+static ABI int32_t net_epoll_control(int eid, int op, int id, void *event) { (void)eid; (void)op; (void)id; (void)event; return 0; }
+static ABI int32_t net_epoll_abort(int eid, int flags) {
+    (void)eid; (void)flags;
+    pthread_once(&epoll_once,epoll_init);
+    pthread_mutex_lock(&epoll_lock); ++epoll_aborts; pthread_cond_broadcast(&epoll_cv); pthread_mutex_unlock(&epoll_lock);
+    return 0;
+}
 static ABI int32_t net_resolver_create(const char *name,int pool,int flags) { (void)name; (void)pool; (void)flags; return new_id(); }
 static ABI int32_t net_resolver_destroy(int id) { (void)id; return 0; }
 static ABI uint16_t net_htons(uint16_t v) { return htons(v); }
@@ -437,13 +587,13 @@ static const RuntimeExport exports[]={
     {"sceNetResolverCreate",net_resolver_create}, {"sceNetResolverDestroy",net_resolver_destroy},
     {"sceNetHtons",net_htons}, {"sceNetNtohs",net_ntohs}, {"sceNetHtonl",net_htonl}, {"sceNetNtohl",net_ntohl},
     {"sceNetInetPton",net_pton}, {"sceNetInetNtop",net_ntop},
-    {"sceNetSocket",net_unreachable}, {"sceNetConnect",net_unreachable}, {"sceNetBind",net_unreachable},
-    {"sceNetListen",net_unreachable}, {"sceNetAccept",net_unreachable}, {"sceNetSend",net_unreachable},
-    {"sceNetSendto",net_unreachable}, {"sceNetRecv",net_unreachable}, {"sceNetRecvfrom",net_unreachable},
-    {"sceNetSetsockopt",net_unreachable}, {"sceNetGetsockopt",net_unreachable},
-    {"sceNetGetsockname",net_unreachable}, {"sceNetShutdown",net_unreachable},
-    {"sceNetSocketClose",net_unreachable}, {"sceNetSocketAbort",net_unreachable},
-    {"sceNetEpollControl",net_unreachable}, {"sceNetEpollWait",net_unreachable}, {"sceNetEpollAbort",net_unreachable},
+    {"sceNetSocket",net_socket}, {"sceNetConnect",net_unreachable}, {"sceNetBind",net_socket_ok},
+    {"sceNetListen",net_socket_ok}, {"sceNetAccept",net_accept}, {"sceNetSend",net_unreachable},
+    {"sceNetSendto",net_unreachable}, {"sceNetRecv",net_recv}, {"sceNetRecvfrom",net_recvfrom},
+    {"sceNetSetsockopt",net_setsockopt}, {"sceNetGetsockopt",net_getsockopt},
+    {"sceNetGetsockname",net_getsockname}, {"sceNetShutdown",net_socket_ok},
+    {"sceNetSocketClose",net_socket_close}, {"sceNetSocketAbort",net_socket_abort},
+    {"sceNetEpollControl",net_epoll_control}, {"sceNetEpollWait",net_epoll_wait}, {"sceNetEpollAbort",net_epoll_abort},
     {"sceNetResolverStartNtoa",net_unreachable}, {"sceNetResolverStartAton",net_unreachable},
     {"sceNetCtlGetState",netctl_state}, {"sceNetCtlGetInfo",netctl_info},
     {"sceNetCtlRegisterCallback",netctl_register}, {"sceNetCtlCheckCallback",netctl_check},

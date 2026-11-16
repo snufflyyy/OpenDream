@@ -146,3 +146,4 @@ sceAudio3dPortClose/PortFlush/PortGetQueueLevel/BedWrite/BedWrite2/AudioOutOutpu
 GetDefaultOpenParameters/Terminate, sceContentExportInit/Term, sceNpWordFilterCreateRequest/
 AbortRequest/CensorComment, sceCoredumpUnregisterCoredumpHandler, sceHmdInitialize, sceImeKeyboardClose,
 pthread_rwlock_init/destroy/tryrdlock/trywrlock, getdents.
+| (14 NIDs) | sceNetSocket/SocketClose/SocketAbort/Bind/Listen/Shutdown/Setsockopt/Getsockopt/Getsockname/Recv/Recvfrom/Accept/EpollControl/EpollWait/EpollAbort | libSceNet | `runtime_services.c` offline socket table | Unplugged-network semantics: local setup works, receives wait for SO_RCVTIMEO then EAGAIN, sends fail ENETUNREACH. Fixes the OSC thread's 100% CPU spin. Ref shadPS4 net.cpp | 2026-11-15 |
