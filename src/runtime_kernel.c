@@ -88,6 +88,12 @@ static ABI uint64_t process_time(void) {
     struct timespec t; clock_gettime(CLOCK_MONOTONIC,&t);
     return (uint64_t)(t.tv_sec-process_start.tv_sec)*1000000+(uint64_t)((t.tv_nsec-process_start.tv_nsec)/1000);
 }
+/* Dreams port: a CLOCK_MONOTONIC microsecond value on the process clock (sceKernelGetProcessTime's
+ * origin). Used for the pad timestamp (runtime_pad.c). */
+uint64_t runtime_monotonic_to_process_us(uint64_t monotonic_us) {
+    const uint64_t start=(uint64_t)process_start.tv_sec*1000000+(uint64_t)process_start.tv_nsec/1000;
+    return monotonic_us>start ? monotonic_us-start : 0;
+}
 static ABI uint64_t process_time_counter(void) {
     struct timespec t; clock_gettime(CLOCK_MONOTONIC,&t);
     return (uint64_t)(t.tv_sec-process_start.tv_sec)*1000000000+(uint64_t)(t.tv_nsec-process_start.tv_nsec);

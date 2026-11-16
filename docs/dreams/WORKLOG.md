@@ -177,3 +177,12 @@
   (`DREAMS_LOG=0` off), and frame capture ON by default at 1000 ms (`DREAMS_CAPTURE=0` off) into
   `work/captures/<RUN_ID>`, so the next hang leaves a log plus pictures. After a hang, also copy
   `/sys/class/drm/card1/device/devcoredump/data` *before rebooting* if the desktop still allows it.
+- Gyro debugging (user: imp doesn't follow DS4 motion). `tools/sdl_gyro_watch.c` (waits for Cross,
+  records 10 s) showed SDL reads the DS4 USB gyro fine outside the game (peak 9.1 rad/s). The
+  in-game `DREAMS_PAD_SENSOR_TRACE=1` log also shows real motion reaching our PadData once the user
+  moved it (samples #134304+ in work/logs/run-20261115-192439.log; earlier samples were the pad at
+  rest, which I first misread as stale data). So the data reaches scePadRead. Found a semantic bug:
+  the PadData `timestamp` the game reads was CLOCK_MONOTONIC-since-boot µs, while PS4/shadPS4 use
+  the process clock (sceKernelGetProcessTime). Now converted at the hand-off in pad_read_state
+  (`runtime_monotonic_to_process_us`, runtime_kernel.c). Candidate fix for the imp; pending
+  user test.

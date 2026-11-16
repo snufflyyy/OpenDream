@@ -158,6 +158,12 @@ static ABI int32_t pad_read_state(int32_t handle, PadData *data) {
         }
     }
     runtime_re_watch_tick(data,(uint64_t)reads);
+    /* Dreams port: the PS4 pad timestamp is microseconds on the process clock
+     * (sceKernelGetProcessTime; shadPS4 input/controller.cpp stamps states with it). The pad code
+     * runs on CLOCK_MONOTONIC since boot internally (only differences matter there); convert just
+     * the copy the game reads, so the game's motion processing (timed against its own process
+     * clock) doesn't see samples from hours in the future. */
+    data->timestamp=runtime_monotonic_to_process_us(data->timestamp);
     return 0;
 }
 /* Buffered read: the port samples once per call, so one entry is returned. */

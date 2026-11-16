@@ -141,6 +141,8 @@ extern uintptr_t runtime_libc_base;
 uintptr_t runtime_compat_resolve(const char *name);
 /* Dreams port: PS4 functions Dreams needs beyond bbport's runtime (runtime_dreams.c). */
 uintptr_t runtime_dreams_resolve(const char *name);
+/* Dreams port: CLOCK_MONOTONIC microseconds -> process-clock microseconds (runtime_kernel.c). */
+uint64_t runtime_monotonic_to_process_us(uint64_t monotonic_us);
 /* Dreams port: system services audit (runtime_dreams_services.c), event flags
  * (runtime_eventflag.c), Audio3d (runtime_audio3d.c). */
 uintptr_t runtime_dreams_services_resolve(const char *name);

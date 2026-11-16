@@ -27,6 +27,13 @@ int runtime_avplayer_active(void) { return 0; }
 int runtime_avplayer_skip(void) { return 0; }
 int bbgpu_free_camera(void) { return 0; }
 void runtime_re_watch_tick(const void *pad_buffer, uint64_t reads) { (void)pad_buffer; (void)reads; }
+/* runtime_kernel.c's version subtracts the process start; here: the start is "now" at first call,
+ * so the game-facing timestamp must come out small (seconds since start, not since boot). */
+uint64_t runtime_monotonic_to_process_us(uint64_t monotonic_us) {
+    static uint64_t start;
+    if (!start) start=monotonic_us;
+    return monotonic_us-start;
+}
 uintptr_t runtime_libc_base;
 uintptr_t runtime_lookup(const RuntimeExport *table, size_t count, const char *name) {
     for (size_t i=0;i<count;++i) if (!strcmp(table[i].name,name)) return (uintptr_t)table[i].function;
