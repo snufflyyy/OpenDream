@@ -36,9 +36,10 @@ At ~90–100 fps (DREAMS_FPS=120) GpuComm is the ceiling (FPS.md).
 3. **Allocation churn (GpuComm):** `EnsureResident` allocating device memory during play: pre-size
    or pool residency chunks so steady state allocates nothing; fewer, larger VkDeviceMemory blocks
    (also fixes the libdrm VA-list walk).
-4. **Frame pacing at the end of the frame:** `present_mode=Immediate` (fork config) tears and lets
-   frame times wobble. Offer FIFO/Mailbox plus a frame limiter at the target rate, with precise
-   sleep-then-spin pacing (bbport/Lantern `NATIVE_FRAME_RATE.md`).
+4. **Frame pacing at the end of the frame:** **done in part:** `DREAMS_PRESENT=mailbox|fifo|immediate`
+   in run-dreams.sh, default **mailbox** (the fork used Immediate, which tears and shows frame-time
+   wobble directly). Still to do: a precise frame limiter at the target rate (sleep-then-spin;
+   bbport/Lantern `NATIVE_FRAME_RATE.md`) and checking pacing with MangoHud's frame-time graph.
 5. **Parallelism:** Lantern's parallel draw pipeline (`ref/lantern/engine/docs/parallel_gpu.md`,
    `parallel-stageb.md`) to split GpuComm's work, for >100 fps.
 Measure every step with the same method (per-thread CPU, frame-time p99, fps) before and after.

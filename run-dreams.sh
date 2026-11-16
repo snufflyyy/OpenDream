@@ -98,6 +98,17 @@ p,n=sys.argv[1],int(sys.argv[2]); c=json.load(open(p)); c["GPU"]["vblank_frequen
 json.dump(c,open(p,"w"),indent=2)' "$VUSER/custom_configs/$SERIAL.json" "$DREAMS_FPS"
         echo "run-dreams.sh: DREAMS_FPS=$DREAMS_FPS: vblank_frequency $DREAMS_FPS"
     fi
+    # Presentation (docs/dreams/PERF.md): DREAMS_PRESENT=mailbox (default: no tearing, newest frame
+    # each refresh, low latency), fifo (strict vsync), immediate (the Dreams fork's setting: tears,
+    # frame-time wobble shows directly). shadPS4 falls back to FIFO if the mode is unsupported.
+    present=${DREAMS_PRESENT:-mailbox}
+    case ${present,,} in
+        mailbox) present=Mailbox ;; fifo) present=Fifo ;; immediate) present=Immediate ;;
+        *) echo "run-dreams.sh: DREAMS_PRESENT must be mailbox, fifo or immediate (got '$present')" >&2; exit 2 ;;
+    esac
+    python3 -I -c 'import json,sys
+p,m=sys.argv[1],sys.argv[2]; c=json.load(open(p)); c["GPU"]["present_mode"]=m
+json.dump(c,open(p,"w"),indent=2)' "$VUSER/custom_configs/$SERIAL.json" "$present"
     printf 'native' > "$WORK/vcore-probe/mode.txt"
     # Exactly the fork launcher's switches (DreamsCore.cs strips other SHADPS4_* first).
     for v in $(env | grep -o '^SHADPS4_[A-Z0-9_]*' || true); do
