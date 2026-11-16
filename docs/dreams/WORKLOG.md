@@ -346,3 +346,15 @@
   m326284ee5d6145). A freshly seeded save dir (`DREAMS_USER_DIR=work/agent-user-docmatch2`, run
   223112) is back to normal: purple backdrop, homespace with painterly clouds and the puppet.
   Reseed `work/agent-user` (delete it; agent-run.sh seeds it again from work/user).
+- Merged `docmatch2` (shadPS4 0ba1070a + d03472b2, port 7f6ddb3): the intermittent 84aa assert was
+  undefined behaviour (an immediate read as an `IR::Inst*`), now fixed; route emitters run inside
+  `Common::RecoverableAssertScope` and a failing route is REFUSED and recompiled generically instead
+  of stopping the game. Lead verification: 26 routes, 0 refused, 1 DOC fallback, homespace loads.
+- **Transient slowdown, not a regression:** every run between ~22:33 and ~22:44 (user's own run
+  223309, several sandbox runs, both the main and the docmatch2 builds, three different saves) ran
+  at ~5 fps falling to ~1 fps. From 22:45 on, the same builds and saves run at a steady 30 fps
+  (e.g. run-20261115-224822). GPU was ~30% busy with no game running during the slow window, 16–19%
+  after. Cause unknown (another GPU client or a GPU power/clock state). If it recurs, check
+  `/sys/class/drm/card1/device/gpu_busy_percent` and other GPU clients before suspecting the code.
+- `work/agent-user` was reset (its homespace never loaded since ~22:08: empty maps/dreams in that
+  copy); agent-run.sh re-seeds it from work/user.
