@@ -11,16 +11,16 @@ This is a **snapshot**, not a status doc: current state lives in `HANDOFF.md`/`S
 - **S2/S3/S4** — `build-dreams.sh` records `out/gpu-revision.txt` (`branch`, `head`, tracked
   `dirty`, fault-manager blob) and warns when not a clean `vcore`; it also runs an advisory `nm`
   seam check. A compile-time `tests/test_abi_contract.cpp` pins the runtime↔vcore signatures.
-- **T1/T3/T4** — route-table sync, loop-guard, and game-check tests are in
-  `tests/run-dreams-tests.sh`; optional skips are counted, and `DREAMS_TESTS_STRICT=1` fails on
-  them.
+- **T1/T2/T3/T4** — route-table and import-name sync tests, the loop-guard test, and the
+  game-check test are in `tests/run-dreams-tests.sh`; optional skips are counted, and
+  `DREAMS_TESTS_STRICT=1` fails on them.
 - **L6/E5** — host-independent docs + `doc_lint.py`, `INDEX.md`, `CONVENTIONS.md`,
   `TEST_HARDWARE.md`, `README.DREAMS.md`; `preflight.sh` is the agent gate.
 - **L1/L3** — Dreams banners on `port/README*.md`; stale backend/branch statements corrected.
 
-Still open from the list below: import-name sync (T2), behavioural scene gate (T5), measured
-submit/readback counters (P2), capture-default cost (P1), and the cleanup of stale perf worktrees
-(B4, needs owner approval).
+Still open from the list below: behavioural scene gate (T5), measured submit/readback counters
+(P2), capture-default cost (P1), and the cleanup of stale perf worktrees (B4, needs owner
+approval).
 
 ## Executive summary
 
