@@ -1,5 +1,42 @@
 # Handoff — 2026-11-16
 
+## Audit and cleanup (later this session)
+
+Read `AUDIT.md` first; it is the whole-port snapshot and guardrail list.
+
+**Committed in `port` (branch `dreams`, tree clean):** host-independent docs + `INDEX`/
+`CONVENTIONS`/`TEST_HARDWARE`/`README.DREAMS`/`AUDIT` (`844f179`); doc/route/import/ABI/build-
+provenance gates + `preflight.sh` (`09eeda6`, `40df4ea`); shared-backing pages (`c5f373c`);
+content tools + `DREAMS_VCORE_CONFIG` (`ef691dc`); pad/fps/fault tests (`5f63807`); audit notes
+(`c2ac4ba`, `b1a794f`).
+**`ref/shadps4` `vcore`** commits the fault-bitmap fix (`0ca8d051`); the backup bundle is refreshed.
+**Root repo** is on feature branch `cleanup/audit-20261116` (`5c18d77`, `e46e159`) because `master`
+is commit-protected; `notes/*` edits and `specs/` are left untouched.
+
+Guardrails now run: `port/tools/preflight.sh` (syntax, doc_lint, route-table + import-name sync,
+no absolute home paths, diff check) and `tests/run-dreams-tests.sh` (CPU suite; loop guard, ABI
+contract; `DREAMS_TESTS_STRICT=1` fails on optional skips). `build-dreams.sh` records
+`out/gpu-revision.txt` and warns on a non-reproducible GPU tree.
+
+### Visual bug — current resume point
+
+The artifact scene is the tutorial (`RemixTutorial` / Dream Shaping), not a DreamSurfing launch.
+Deterministic headless entry (no real pad): copy `work/user`, restore
+`…/SYSTEM/savedata.json.before-tutorial-skip-20261115-210501`, then `circle` at 36 s,
+`mdx=3 mdy=-1` at ~42 s, `cross` at ~46 s, `DREAMS_SKIP_INTRO=1`, `DREAMS_CAPTURE=250`,
+`agent-run.sh --seconds 130`. Capture: `work/visual-fix/captures/native-intro-tut2/`.
+The camera-pivot tutorial step renders correctly; the white-quad/black-grid artifact is a
+**later tutorial step** (sculpt/paint) or the Please Hug Me scene. `0x252ccde6` is still the only
+ordered-count fallback (`reason=252 unaudited translated binary`); its dumped current module
+(`work/visual-fix/private/dump/`) differs from the audited golden only by translator-rebase
+codegen, and the fork's `DataOrderedCount` lowering is present (same guest code hash, counter
+0x400). Do not re-bless the gate until a capture ties the artifact to 252.
+
+Also fixed this session: `agent-run.sh` now reaps a timed-out game by its private `--user` dir, so
+a survivor cannot hold the single-instance lock (`e46e159`).
+
+---
+
 The user asked to wrap up after a connection loss and usage exhaustion.
 **No game, agent runner, input script, or background task was running at handoff.**
 All changes remain uncommitted. The current native build includes the two fixes below.
