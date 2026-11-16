@@ -43,3 +43,16 @@ At ~90–100 fps (DREAMS_FPS=120) GpuComm is the ceiling (FPS.md).
 5. **Parallelism:** Lantern's parallel draw pipeline (`ref/lantern/engine/docs/parallel_gpu.md`,
    `parallel-stageb.md`) to split GpuComm's work, for >100 fps.
 Measure every step with the same method (per-thread CPU, frame-time p99, fps) before and after.
+
+## Frame statistics in every run (2026-11-15)
+
+vcore prints `vcore frames: <fps>, frame time p50 / p99 / max ms, stutters (>1.5x p50)` every 5 s
+(`VCORE_FRAME_STATS=<s>`, 0 = off; measured per game flip in Presenter::PrepareFrame via the
+screenshot hook in vcore/shim/kernel_glue.cpp). Baseline, sandbox, main menu, v2.52:
+
+| Mode | fps | p50 | p99 | max | stutters |
+|---|---|---|---|---|---|
+| default (30) | 30.0 | 33.3 | 33.5–36.2 | 33.6–36.3 | 0 / 150 |
+| DREAMS_60HZ=1 | 60.0 | 16.7 | 18.2–18.3 | 18.3–18.8 | 0 / 300 |
+
+Menu pacing is already even; heavy scenes (sculpts, Dreamiverse browsing) still need measuring.

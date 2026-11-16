@@ -7,6 +7,9 @@
 #include <condition_variable>
 #include <mutex>
 #include <boost/asio/io_context.hpp>
+#include <algorithm>
+#include <cstdio>
+#include <vector>
 #include <chrono>
 #include <cstdlib>
 #include <thread>
@@ -161,7 +164,51 @@ void RequestScreenshot(ScreenshotRequest request) {
         screenshot_with_overlays_count.fetch_add(1, std::memory_order_relaxed);
     }
 }
+// Frame pacing statistics (docs/dreams/PERF.md). Presenter::PrepareFrame calls
+// ConsumeGameOnlyScreenshotRequests once per game flip, so this sees the rhythm at which the game
+// hands out frames. Every VCORE_FRAME_STATS seconds (default 5; 0 = off) it prints
+//   "vcore frames: 59.9 fps, frame time p50 16.7 / p99 18.1 / max 21.0 ms, stutters 0 (>1.5x p50)"
+// so headless agent runs (no MangoHud in the sandbox) can measure fps and pacing before/after.
+static void FrameStatsTick() {
+    static const double window_s = [] {
+        const char* e = std::getenv("VCORE_FRAME_STATS");
+        return e ? std::atof(e) : 5.0;
+    }();
+    if (window_s <= 0.0) {
+        return;
+    }
+    using Clock = std::chrono::steady_clock;
+    static Clock::time_point last{}, window_start{};
+    static std::vector<float> ms;
+    const auto now = Clock::now();
+    if (last.time_since_epoch().count() != 0) {
+        ms.push_back(std::chrono::duration<float, std::milli>(now - last).count());
+    } else {
+        window_start = now;
+    }
+    last = now;
+    const double elapsed = std::chrono::duration<double>(now - window_start).count();
+    if (elapsed < window_s || ms.size() < 2) {
+        return;
+    }
+    std::vector<float> sorted = ms;
+    std::sort(sorted.begin(), sorted.end());
+    const float p50 = sorted[sorted.size() / 2];
+    const float p99 = sorted[std::min(sorted.size() - 1, sorted.size() * 99 / 100)];
+    const float worst = sorted.back();
+    size_t stutters = 0;
+    for (const float v : ms) {
+        stutters += v > 1.5f * p50 ? 1 : 0;
+    }
+    std::printf("vcore frames: %.1f fps, frame time p50 %.1f / p99 %.1f / max %.1f ms, stutters %zu "
+                "(>1.5x p50) of %zu\n",
+                ms.size() / elapsed, p50, p99, worst, stutters, ms.size());
+    std::fflush(stdout);
+    ms.clear();
+    window_start = now;
+}
 u32 ConsumeGameOnlyScreenshotRequests() {
+    FrameStatsTick();
     return screenshot_game_only_count.exchange(0, std::memory_order_acq_rel) + TimedScreenshot();
 }
 u32 ConsumeWithOverlaysScreenshotRequests() {
