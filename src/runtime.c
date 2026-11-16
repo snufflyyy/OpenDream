@@ -98,6 +98,7 @@ void runtime_report(void) {
     runtime_memory_report();
     runtime_ajm_report();
     runtime_audio_report();
+    runtime_avplayer_report();
     runtime_audio3d_report();
     runtime_pad_report();
     runtime_savedata_report();
@@ -275,6 +276,10 @@ uintptr_t runtime_resolve(const char *name, int is_data) {
     if (eventflag) return eventflag;
     uintptr_t audio3d = runtime_audio3d_resolve(name);
     if (audio3d) return audio3d;
+    uintptr_t avplayer = runtime_avplayer_resolve(name); /* runtime_avplayer.c (before the GPU library's) */
+    if (avplayer) return avplayer;
+    uintptr_t ime = runtime_ime_resolve(name); /* runtime_ime.c */
+    if (ime) return ime;
     uintptr_t compat = runtime_compat_resolve(name);
     if (compat) return compat;
     return bbgpu_resolve(name);

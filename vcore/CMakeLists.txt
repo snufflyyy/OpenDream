@@ -125,8 +125,8 @@ file(GLOB VCORE_SHIM CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/shim/*.cpp)
 # talks to the native runtime (runtime_file_translate, runtime_thread_attach_host).
 # Interim: the runtime is getting its own CPU-side AvPlayer; the loader asks the runtime before
 # bbgpu_resolve(), so a runtime implementation overrides this one automatically. Turn it off with
-# -DVCORE_BBPORT_AVPLAYER=OFF once the runtime has it.
-option(VCORE_BBPORT_AVPLAYER "Serve libSceAvPlayer with bbport's AvPlayer (interim)" ON)
+# Default OFF since 2026-11-15: the runtime serves AvPlayer (src/runtime_avplayer.c). ON = bbport fallback.
+option(VCORE_BBPORT_AVPLAYER "Serve libSceAvPlayer with bbport's AvPlayer (fallback)" OFF)
 set(VCORE_BBPORT_AVPLAYER_SOURCES "")
 if (VCORE_BBPORT_AVPLAYER)
     set(VCORE_BBPORT_AVPLAYER_SOURCES

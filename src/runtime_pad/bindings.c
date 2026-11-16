@@ -328,7 +328,8 @@ static void video_skip(PadData *d, const bool *k) {
     static int was_down;
     const int down=(k && (k[SDL_SCANCODE_RETURN] || k[SDL_SCANCODE_KP_ENTER] || k[SDL_SCANCODE_ESCAPE])) ||
                    (d->buttons & BTN_OPTIONS);
-    if (down && !was_down && bbgpu_video_active() && bbgpu_video_skip()) {
+    if (down && !was_down && ((runtime_avplayer_active() && runtime_avplayer_skip()) ||
+                               (bbgpu_video_active() && bbgpu_video_skip()))) {
         d->buttons=(d->buttons & ~(uint32_t)(BTN_CIRCLE|BTN_CROSS))|BTN_OPTIONS;
     }
     was_down=down;

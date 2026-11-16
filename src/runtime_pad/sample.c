@@ -121,6 +121,8 @@ static void sample_host(PadData *d) {
     prompt_note(g,pad_active,keyboard_active);
     apply_keyboard(d,k); /* the bound mouse buttons too */
     video_skip(d,k);
+    sensors_mouse(&mouse_dx,&mouse_dy,captured,motion_dt); /* Dreams port: runtime_pad/sensors.c */
+    sensors_report(d);
     if (motion_on()) {
         motion_from_desktop(d,k,&mouse_dx,&mouse_dy,captured);
         motion_report(d,motion_dt);

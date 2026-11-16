@@ -100,6 +100,7 @@ static uint8_t connected_count;
 #include "runtime_pad/bindings.c"
 #include "runtime_pad/prompts.c"
 #include "runtime_pad/motion.c"
+#include "runtime_pad/sensors.c"
 #include "runtime_pad/sample.c"
 
 static ABI int32_t pad_init(void) { pthread_mutex_lock(&lock); initialized=1; pthread_mutex_unlock(&lock); return 0; }
@@ -115,6 +116,12 @@ static ABI int32_t pad_open(int32_t user, int32_t type, int32_t index, const voi
     pthread_mutex_unlock(&lock);
     if (already) return ERR_ALREADY_OPENED;
     puts("Runtime: pad opened for user 1 (SDL gamepad or keyboard)");
+    pthread_mutex_lock(&lock);
+    sensors_reset_orientation(); /* PS4: orientation starts at the open */
+    sensors_attach(current_gamepad()); /* logs the gamepad used and its sensors */
+    if (!gamepad) puts("Runtime: pad motion: no gamepad connected yet (keyboard/mouse: the controller reads as lying still)");
+    sensors_start();
+    pthread_mutex_unlock(&lock);
     return PAD_HANDLE;
 }
 static ABI int32_t pad_close(int32_t handle) {
@@ -184,14 +191,47 @@ static ABI int32_t pad_vibration(int32_t handle, const uint8_t *param) {
 }
 static ABI int32_t pad_ok_handle(int32_t handle) { return handle==PAD_HANDLE && opened ? 0 : ERR_INVALID_HANDLE; }
 static ABI int32_t pad_ok_handle_flag(int32_t handle, uint8_t flag) { (void)flag; return pad_ok_handle(handle); }
+/* Motion settings (runtime_pad/sensors.c; ref pad.cpp: shadPS4 only logs them). */
+static ABI int32_t pad_reset_orientation(int32_t handle) {
+    if (pad_ok_handle(handle)) return ERR_INVALID_HANDLE;
+    pthread_mutex_lock(&lock); sensors_reset_orientation(); pthread_mutex_unlock(&lock);
+    return 0;
+}
+static int32_t pad_motion_flag(int32_t handle, int *flag, uint8_t value, const char *what) {
+    if (pad_ok_handle(handle)) return ERR_INVALID_HANDLE;
+    pthread_mutex_lock(&lock);
+    const int changed=*flag!=(value!=0);
+    *flag=value!=0;
+    pthread_mutex_unlock(&lock);
+    static int told; /* Dreams toggles bias correction often: the first changes only */
+    if (changed && told<8 && ++told) printf("Runtime: pad motion: %s %s%s\n",what,value ? "on" : "off",told==8 ? " (further changes not logged)" : "");
+    return 0;
+}
+static ABI int32_t pad_tilt_correction(int32_t handle, uint8_t on) { return pad_motion_flag(handle,&sensors.tilt,on,"tilt correction"); }
+static ABI int32_t pad_bias_correction(int32_t handle, uint8_t on) { return pad_motion_flag(handle,&sensors.bias_correction,on,"angular velocity bias correction"); }
+static ABI int32_t pad_deadband(int32_t handle, uint8_t on) { return pad_motion_flag(handle,&sensors.deadband,on,"angular velocity deadband"); }
+/* scePadSetLightBar (ref pad.cpp): OrbisPadLightBarParam {u8 r, g, b, reserved}. */
+static ABI int32_t pad_light_bar(int32_t handle, const uint8_t *rgb) {
+    if (pad_ok_handle(handle)) return ERR_INVALID_HANDLE;
+    if (!rgb) return ERR_INVALID_ARG;
+    pthread_mutex_lock(&lock);
+    SDL_Gamepad *g=current_gamepad();
+    if (g) SDL_SetGamepadLED(g,rgb[0],rgb[1],rgb[2]);
+    pthread_mutex_unlock(&lock);
+    return 0;
+}
 
 static const RuntimeExport exports[]={
     {"scePadInit",pad_init}, {"scePadOpen",pad_open}, {"scePadClose",pad_close},
     {"scePadReadState",pad_read_state}, {"scePadRead",pad_read},
     {"scePadGetControllerInformation",pad_info}, {"scePadSetVibration",pad_vibration},
-    {"scePadResetOrientation",pad_ok_handle},
-    {"scePadSetAngularVelocityDeadbandState",pad_ok_handle_flag}, {"scePadSetTiltCorrectionState",pad_ok_handle_flag},
+    {"scePadResetOrientation",pad_reset_orientation}, {"scePadSetLightBar",pad_light_bar},
+    {"scePadSetAngularVelocityDeadbandState",pad_deadband}, {"scePadSetTiltCorrectionState",pad_tilt_correction},
+    {"scePadSetAngularVelocityBiasCorrectionState",pad_bias_correction},
     {"scePadSetMotionSensorState",pad_ok_handle_flag},
 };
 uintptr_t runtime_pad_resolve(const char *name) { return RUNTIME_LOOKUP(exports,name); }
-void runtime_pad_report(void) { printf("Runtime: pad reads=%zu, gamepad=%s\n",reads,gamepad ? SDL_GetGamepadName(gamepad) : "none"); }
+void runtime_pad_report(void) {
+    printf("Runtime: pad reads=%zu, gamepad=%s, motion samples=%lu (gyro %s)\n",reads,gamepad ? SDL_GetGamepadName(gamepad) : "none",
+           sensors.samples,sensors.has_gyro ? "on" : "none");
+}

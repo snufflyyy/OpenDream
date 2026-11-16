@@ -46,8 +46,26 @@ signal), which the watchdog reports after `DREAMS_TIMEOUT` seconds.
 None hard. Next is input past the first-run preferences screen (press ✕ on the pad; the runtime
 samples SDL gamepads, the vcore window pumps their events) and following the menus toward
 homespace, compared with the reference emulator. The old blocker (`DS_ORDERED_COUNT` in bbport's
-recompiler) is gone with vcore. AvPlayer is currently served by vcore (bbport's AvPlayer compiled
-in, interim) until the runtime has its own (`VCORE.md` §2).
+recompiler) is gone with vcore. AvPlayer is now the runtime's own (`src/runtime_avplayer.c`, FFmpeg
+via `out/libdreams-av.so`); it wins over vcore's interim copy and was verified with
+`-DVCORE_BBPORT_AVPLAYER=OFF` (`work/avp-gpu-noavp2.log`), so that option can be turned off.
+
+## Input, video, text entry (CPU runtime, 2026-11-15)
+
+- **AvPlayer**: runtime-side (`src/runtime_avplayer.c` + `src/runtime_avplayer/av_glue.c` ->
+  `out/libdreams-av.so`, built by `build-deps.sh` from system FFmpeg, dlopen'ed). The Mm logo
+  animation plays fully (wall clock, Dreams fork rule) and Dreams goes on to the indreams.me card
+  and the preferences screen, with and without vcore's bbport AvPlayer compiled in. Tutorial
+  videos use the same path (not yet seen in a run: they play later in the game).
+- **Pad motion**: real DS4/DualSense gyro + accelerometer through SDL3 (`src/runtime_pad/sensors.c`,
+  "PadMotion" thread at ~500 Hz, orientation integrated, Dreams' tilt and bias correction
+  settings honoured). Verified on the user's DS4 (`/dev/hidraw11`, HIDAPI, 250 Hz) in a GPU run
+  (`work/motion-gpu1.log`, `DREAMS_PAD_SENSOR_TRACE=1`): Dreams turns on tilt + bias correction,
+  the pad's 12 degree rest tilt shows up in the orientation. Not yet confirmed by the user moving
+  the imp. Without a gyro the controller reads as lying still (use Dreams' Joypad scheme).
+- **IME**: `src/runtime_ime.c`. sceImeOpen text entry through the game window's title bar
+  (Enter/Esc); USB keyboard events from SDL key events. Not yet exercised by the game in a run
+  (Dreams opens it when naming a creation).
 
 ## Temporary behaviours to remove later
 
@@ -57,10 +75,12 @@ in, interim) until the runtime has its own (`VCORE.md` §2).
 | Ajm AAC needs the optional codec library; MP3 is always silent | `src/runtime_ajm.c`, `src/runtime_codecs.c` | AAC is decoded by fdk-aac from `out/libdreams-codecs.so` (`./build-deps.sh`, dlopen at first use). Without the library AAC is silent (logged: "SILENT decoder"). Dreams creates no MP3 instances so far | Have `build-dreams.sh` run `./build-deps.sh` (incremental, ~6 s clean) before linking; MP3 via minimp3 if Dreams ever needs it. Licence note: fdk-aac (Fraunhofer FDK licence, which the FSF considers GPL-incompatible) and artswap (GPL-3.0-or-later) stay in this separate, locally built library; shadPS4 bundles the same sources |
 | RAW AAC = one access unit per Ajm run | `src/runtime_ajm.c` `aac_frame` | fdk's RAW transport can't split concatenated AUs; shadPS4 has the same limit | Only if Dreams submits several raw AUs in one job (check `BB_AUDIO_TRACE=1` for AAC results `0xc0000000`) |
 | Audio3d mixes to stereo without spatialisation | `src/runtime_audio3d.c` | port of shadPS4's software Audio3d (object position/spread ignored, objects with no GAIN are silent) | shadPS4's OpenAL variant (`audio3d_openal.cpp`) if positional audio matters |
-| Ime keyboard: open succeeds, no key events | `src/runtime_dreams_services.c` | USB keyboard text entry isn't wired | SDL keyboard -> OrbisImeEvent (editor work) |
+| IME text shows only in the window title; the window can't cancel text entry when the game closes the IME first | `src/runtime_ime.c`, `vcore/shim/window.cpp` | no on-screen keyboard/overlay in vcore | an overlay text box; `bbgpu_text_input_end()` in vcore (the runtime already calls it if exported, weak symbol) |
+| No gyro: controller reads as lying still; mouse-as-gyro (`DREAMS_PAD_MOUSE_GYRO=1`) needs vcore's mouse capture (`bbgpu_mouse_take` is a stub) | `src/runtime_pad/sensors.c` | keyboard/mouse players | vcore mouse capture, then make it the default without a gyro |
 | Audit no-ops (`ok`) | `src/runtime_dreams_services.c` | 0 is right offline (profiler hooks, streaming/sharing, sanitizers, Neo mode off) | Revisit if a feature needs one (e.g. Neo mode for PS4 Pro resolution) |
 | `BB_SKIP_GAME_CHECK=1` | `run-dreams.sh` | bbport's check pins Bloodborne's image hash | Title-based Dreams check (decision D7) |
-| AvPlayer served by the GPU library (bbport's AvPlayer compiled into vcore) | `vcore/CMakeLists.txt` `VCORE_BBPORT_AVPLAYER` | Dreams waits for its intro video; vcore had no AvPlayer | Runtime-side AvPlayer (it overrides automatically: runtime resolves before `bbgpu_resolve`), then `-DVCORE_BBPORT_AVPLAYER=OFF` |
+| vcore still compiles bbport's AvPlayer (unused: the runtime's resolves first) | `vcore/CMakeLists.txt` `VCORE_BBPORT_AVPLAYER` | interim before the runtime AvPlayer | set the option's default to OFF (verified working, `work/avp-gpu-noavp2.log`) |
+| AvPlayer: no looping, trick speed, HLS; resolution changes mid-file drop frames | `src/runtime_avplayer.c` | Dreams doesn't import SetLooping/SetTrickSpeed | implement if a v2.64 import needs it |
 | No ImGui overlay in vcore; presenter blits the frame | ref/shadps4 `vcore` branch, `vk_presenter.cpp` | upstream draws the game through Dear ImGui | Fine as is; add a small overlay later if wanted |
 
 ## Numbers to track
@@ -84,5 +104,6 @@ in, interim) until the runtime has its own (`VCORE.md` §2).
 - The CPU audit (2026-11-15) could only exercise boot up to the point `--cpu-only` reaches (the main
   loop waits on GPU fences). Audio3d, AudioOut mastering, the error dialog etc. are first called
   later; they are unit-tested (`tests/run-dreams-tests.sh`) but not yet seen in a real run.
-- With the vcore build, the 18 `libSceAvPlayer` imports are unresolved (bbport's libbbgpu used to
-  provide them): the intro/tutorial videos need them (GPU-library side).
+- AvPlayer, pad motion and IME are unit-tested (`tests/run-dreams-tests.sh`: generated MP4,
+  SDL virtual gamepad with sensors, fake window); in real runs only the logo video and the DS4's
+  sensor stream have been seen so far.

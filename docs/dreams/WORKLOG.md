@@ -124,3 +124,35 @@
 - Run 3/4: **Dreams boots natively to the first-run preferences screen ("✕ CONTINUE")** via the
   indreams.me card, ~40-60 s after launch, rendered correctly, no GPU assertion in 150 s. GPU log
   matches the reference emulator's (SRT-walker errors, DOC fallbacks, one BC3-3D format error).
+- CPU runtime: AvPlayer, pad motion, IME (agent "cpu-runtime-2", 2026-11-15).
+  - **libSceAvPlayer** moved to the runtime: `src/runtime_avplayer.c` (C, pthreads; shadPS4
+    avplayer_state/source semantics, Dreams fork logo rule) + FFmpeg glue
+    `src/runtime_avplayer/av_glue.c` built by `build-deps.sh` into `out/libdreams-av.so`
+    (dlopen, `DREAMS_AV_LIB` overrides; no build-dreams.sh change). Frames: decode thread ->
+    bounded host queues -> copied on the game's Get*Data call into a ring of the game's own
+    buffers (`num_output_video_framebuffers`), with runtime_memory_note_write/prepare/note_cpu_write
+    around the copy. Learned: x264 clips seek to the previous keyframe, so JumpToTime drops decoded
+    frames before the target; a test that pulls audio greedily runs the audio clock ahead and
+    video frames then go stale (the game's audio thread paces it, as on PS4). GPU runs: logo plays
+    (300 frames, 1920x1088 pitch 1920), indreams.me card, preferences screen; same with vcore built
+    `-DVCORE_BBPORT_AVPLAYER=OFF` in `vcore/build-noavp` (`work/avp-gpu-noavp2.log`, real pad
+    hidden with `SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT=0x0000/0x0000` because a button press
+    on the user's DS4 made Dreams skip the logo in `work/avp-gpu-noavp.log`).
+  - **Pad motion** (user report: motion did nothing): bbport's runtime filled only a synthetic
+    "lying still" pose (or its spray-can emulation with BB_PAD_MOTION). New
+    `src/runtime_pad/sensors.c`: SDL3 gamepad gyro/accel enabled on the chosen pad, "PadMotion"
+    thread integrates at ~500 Hz, tilt/bias/deadband settings from the game,
+    scePadSetLightBar/ResetOrientation. Only ONE SDL gamepad exists on the user's machine (HIDAPI
+    `/dev/hidraw11`, gyro+accel 250 Hz: `tools/sdl_pads.c`); the second "gamepad connected" line
+    in `work/user-play-1.log` is the same pad being reopened after SDL dropped it once. Sensors now
+    track the pad by SDL id (a reopened pad may get the same pointer back). Dreams calls
+    scePadSetTiltCorrectionState(1) and toggles bias correction often. Verified with the real DS4
+    in a GPU run (`work/motion-gpu1.log`).
+  - **IME**: `src/runtime_ime.c` (keyboard functions moved out of runtime_dreams_services.c):
+    sceImeOpen via the window's title-bar text entry, USB keyboard events via an SDL event watch.
+  - Tests added to `tests/run-dreams-tests.sh`: avplayer-test (ffmpeg-made 2 s 200x120 H.264+AAC
+    clip: sync, NV12 content/padding, audio, jump, file callbacks, auto start, logo wall clock),
+    pad-motion-test (integration, tilt convergence, SDL virtual pad with sensors), ime-test.
+    `--cpu-only` run: `work/cpu-avp-ime-motion.log` (17 STUB lines, all GnmDriver/VideoOut).
+  - Non-GPU STUBs seen in GPU runs now: sceNpHasSignedUp, sceKernelSync, sceSigninDialog{Initialize,
+    Open,UpdateStatus,Terminate} (next audit).

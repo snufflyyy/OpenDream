@@ -178,4 +178,58 @@ typedef struct {
 } RuntimeCodecs;
 /* The loaded codec library, or NULL (then AAC is silent and At9Enc can't encode). */
 const RuntimeCodecs *runtime_codecs_get(void);
+
+/* Dreams port: libSceAvPlayer (src/runtime_avplayer.c) decodes with FFmpeg through the optional
+ * library out/libdreams-av.so (build-deps.sh, glue src/runtime_avplayer/av_glue.c), loaded with
+ * dlopen like the codec library. These structs are the ABI between the two. */
+typedef struct {
+    void *opaque;
+    uint64_t size;
+    /* The game's read_offset callback (or a test's): bytes read, <=0 at the end / on error. */
+    int32_t (*read)(void *opaque, uint8_t *buffer, uint64_t position, uint32_t length);
+} RuntimeAvReader;
+typedef struct {
+    int32_t type;           /* 0 video, 1 audio */
+    int32_t ffmpeg_index;
+    uint32_t width, height; /* video: the coded size (not aligned) */
+    float aspect;           /* video: width / height */
+    uint32_t channels, sample_rate;
+    char language[4];       /* ISO 639-2, up to 3 letters, zero padded */
+    uint64_t duration_ms;
+} RuntimeAvStream;
+typedef struct {
+    int32_t type;           /* 0 video (NV12), 1 audio (interleaved s16) */
+    uint64_t timestamp_ms;
+    const uint8_t *data;    /* owned by the media, valid until its next call */
+    uint64_t size;
+    /* video: width = align16(frame_width), height = align16(frame_height) = the plane's rows,
+     * pitch = align64(frame_width); crops as shadPS4's AvPlayerSource::PrepareVideoFrame */
+    uint32_t width, height, pitch, frame_width, frame_height;
+    uint32_t crop_left, crop_right, crop_top, crop_bottom;
+    float sample_aspect;
+    uint32_t channels, sample_rate, samples; /* audio */
+} RuntimeAvFrame;
+typedef struct {
+    /* reader NULL: open host_path; else read through the reader (host_path only for messages). */
+    void *(*open)(const char *host_path, const RuntimeAvReader *reader);
+    void (*close)(void *media);
+    int (*stream_count)(void *media);
+    int (*stream_info)(void *media, int index, RuntimeAvStream *out);
+    /* Opens the decoders of the chosen streams (-1: none) and rewinds; 0 ok, -1 error. */
+    int (*start)(void *media, int video_stream, int audio_stream);
+    int (*seek)(void *media, uint64_t ms);
+    /* The next decoded frame of either enabled stream: 1 frame, 0 end of file, -1 error. */
+    int (*next_frame)(void *media, RuntimeAvFrame *out);
+    const char *(*error)(void *media);
+    const char *(*version)(void);
+} RuntimeAv;
+/* The loaded AvPlayer decoder library, or NULL (then AddSource fails: no video, game goes on). */
+const RuntimeAv *runtime_av_get(void);
+/* runtime_avplayer.c: a video plays now (any player) / stop it (pad: Enter, Escape, Options). */
+int runtime_avplayer_active(void);
+int runtime_avplayer_skip(void);
+uintptr_t runtime_avplayer_resolve(const char *name);
+void runtime_avplayer_report(void);
+/* runtime_ime.c: libSceIme (sceImeOpen text entry through the game window, USB keyboard events). */
+uintptr_t runtime_ime_resolve(const char *name);
 #endif

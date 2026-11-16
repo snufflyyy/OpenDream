@@ -23,4 +23,21 @@ if [[ -f out/libdreams-codecs.so ]] && command -v ffmpeg >/dev/null; then
 else
     echo "skip codecs-test: needs ./build-deps.sh and ffmpeg"
 fi
+# Pad motion sensors and IME (SDL3 virtual gamepad / fake window, dummy video driver).
+read -r -a sdl_cflags <<< "$(pkg-config --cflags sdl3)"
+read -r -a sdl_libs <<< "$(pkg-config --libs sdl3)"
+"$CC" "${flags[@]}" "${sdl_cflags[@]}" tests/test_pad_motion.c "${sdl_libs[@]}" -lm -o out/tests/pad-motion-test
+out/tests/pad-motion-test
+"$CC" "${flags[@]}" "${sdl_cflags[@]}" tests/test_ime.c "${sdl_libs[@]}" -o out/tests/ime-test
+out/tests/ime-test
+# AvPlayer decoder library (./build-deps.sh, FFmpeg) + a 2 s 200x120 red H.264/AAC MP4 (needs ffmpeg).
+if [[ -f out/libdreams-av.so ]] && command -v ffmpeg >/dev/null; then
+    [[ -f out/tests/clip.mp4 ]] || ffmpeg -hide_banner -loglevel error -y -f lavfi -i "color=c=red:s=200x120:r=30:d=2" \
+        -f lavfi -i "sine=frequency=440:sample_rate=48000:duration=2" -ac 2 -c:v libx264 -pix_fmt yuv420p \
+        -c:a aac -b:a 128k -metadata:s:a:0 language=eng -shortest out/tests/clip.mp4
+    "$CC" "${flags[@]}" tests/test_avplayer.c -ldl -lm -o out/tests/avplayer-test
+    out/tests/avplayer-test out/libdreams-av.so out/tests/clip.mp4
+else
+    echo "skip avplayer-test: needs ./build-deps.sh (FFmpeg) and ffmpeg"
+fi
 echo "Dreams runtime tests passed"

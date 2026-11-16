@@ -4,6 +4,10 @@
 #   fdk-aac decoder (Fraunhofer FDK AAC license, see $FDK/NOTICE)   -> Ajm AAC (runtime_ajm.c)
 #   artswap ATRAC9 encoder (GPL-3.0-or-later)                       -> At9Enc (runtime_dreams_services.c)
 #   src/runtime_codecs/codecs_glue.c                                -> small C API over fdk-aac
+# and out/libdreams-av.so (libSceAvPlayer's decoder, src/runtime_avplayer.c): the glue
+# src/runtime_avplayer/av_glue.c linked against the system FFmpeg (pkg-config libavformat
+# libavcodec libswscale libswresample libavutil; Fedora: ffmpeg-devel or ffmpeg-free-devel).
+# Without FFmpeg it is skipped with a message (videos are then skipped by the game).
 # Sources are read from ref/shadps4/externals (the same copies shadPS4 builds). Rebuilds only
 # when a source or this script is newer than the library. No system packages needed.
 # Env: CC, CXX, JOBS, SHADPS4_EXTERNALS (default ../ref/shadps4/externals).
@@ -25,6 +29,24 @@ includes=()
 for m in "${mods[@]}"; do includes+=(-I"$FDK/$m/include"); done
 mapfile -t sources < <(for m in "${mods[@]}"; do ls "$FDK/$m"/src/*.cpp; done)
 glue=src/runtime_codecs/codecs_glue.c
+
+# ---- out/libdreams-av.so (FFmpeg) ----
+AVLIB=out/libdreams-av.so
+avglue=src/runtime_avplayer/av_glue.c
+avpkgs=(libavformat libavcodec libswscale libswresample libavutil)
+mkdir -p out
+if ! pkg-config --exists "${avpkgs[@]}"; then
+    echo "skip $AVLIB: FFmpeg development files not found (pkg-config ${avpkgs[*]})" >&2
+elif [[ -f $AVLIB && -z $(find "$avglue" src/runtime.h "$0" -newer "$AVLIB" -print -quit) ]]; then
+    echo "Up to date: $PWD/$AVLIB"
+else
+    read -r -a avflags <<< "$(pkg-config --cflags "${avpkgs[@]}")"
+    read -r -a avlibs <<< "$(pkg-config --libs "${avpkgs[@]}")"
+    "$CC" -std=c11 -O2 -g -fPIC -shared -fvisibility=hidden -Wall -Wextra -Werror -Isrc "${avflags[@]}" \
+        "$avglue" "${avlibs[@]}" -Wl,--no-undefined -o "$AVLIB"
+    echo "Built $PWD/$AVLIB (FFmpeg $(pkg-config --modversion libavcodec))"
+fi
+
 if [[ -f $LIB ]] && [[ -z $(find "${sources[@]}" "$AT9" "$glue" src/runtime.h "$0" -newer "$LIB" -print -quit) ]]; then
     echo "Up to date: $PWD/$LIB"; exit 0
 fi

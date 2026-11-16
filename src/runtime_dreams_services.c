@@ -337,40 +337,7 @@ static ABI int32_t vr_tracker_term(void) {
     return 0;
 }
 
-/* ---- libSceIme keyboard (ref ime/ime.cpp) ---- USB keyboard events for text entry. Open checks
- * its parameters and succeeds; no keyboard is ever reported connected yet (TODO: SDL keyboard for
- * the editor), so Update has no events to deliver. struct {u32 option; s8 r1[4]; void *arg;
- * handler; s8 r2[8]}. */
-#define IME_ERR_BUSY ((int32_t)0x80BC0001)
-#define IME_ERR_NOT_OPENED ((int32_t)0x80BC0002)
-#define IME_ERR_INVALID_USER_ID ((int32_t)0x80BC0010)
-#define IME_ERR_INVALID_HANDLER ((int32_t)0x80BC0022)
-#define IME_ERR_INVALID_ADDRESS ((int32_t)0x80BC0031)
-#define IME_ERR_INVALID_RESERVED ((int32_t)0x80BC0032)
-typedef struct { uint32_t option; int8_t reserved1[4]; void *arg, *handler; int8_t reserved2[8]; } ImeKeyboardParam;
-static void *ime_keyboard_handler;
-static ABI int32_t ime_keyboard_open(int32_t user, const ImeKeyboardParam *param) {
-    if (!param) return IME_ERR_INVALID_ADDRESS;
-    if (!param->handler) return IME_ERR_INVALID_HANDLER;
-    if (user==-1) return IME_ERR_INVALID_USER_ID;
-    for (int i=0;i<4;++i) if (param->reserved1[i]) return IME_ERR_INVALID_RESERVED;
-    if (ime_keyboard_handler) return IME_ERR_BUSY;
-    ime_keyboard_handler=param->handler;
-    puts("Runtime: Ime keyboard opened (no keyboard events delivered yet)");
-    return 0;
-}
-static ABI int32_t ime_keyboard_close(int32_t user) {
-    (void)user;
-    if (!ime_keyboard_handler) return IME_ERR_NOT_OPENED;
-    ime_keyboard_handler=NULL;
-    return 0;
-}
-static ABI int32_t ime_update(void *handler) { (void)handler; return ime_keyboard_handler ? 0 : IME_ERR_NOT_OPENED; }
-static ABI int32_t ime_keyboard_info(uint32_t resource, void *info) {
-    (void)resource;
-    if (info) memset(info,0,0x20); /* OrbisImeKeyboardInfo: u32 userId; u32 device; u32 type; u32 repeatDelay; u32 repeatRate; u32 status; s8 reserved[12] */
-    return 0;
-}
+/* libSceIme (keyboard and sceImeOpen text entry) moved to runtime_ime.c. */
 
 /* ---- libSceAt9Enc (ref audio/at9enc.cpp, Dreams fork; artswap ATRAC9 encoder) ----
  * Dreams creates an ATRAC9 encoder at boot (sound recording). The encoder lives in the optional
@@ -456,8 +423,6 @@ static const RuntimeExport exports[]={
     {"sceHmdReprojectionQueryGarlicBuffSize",hmd_garlic_size}, {"sceHmdReprojectionQueryGarlicBuffAlign",hmd_buffer_align},
     {"sceHmdReprojectionInitialize",ok}, {"sceHmdReprojectionFinalize",ok},
     {"sceVrTrackerQueryMemory",vr_tracker_query_memory}, {"sceVrTrackerInit",vr_tracker_init}, {"sceVrTrackerTerm",vr_tracker_term},
-    {"sceImeKeyboardOpen",ime_keyboard_open}, {"sceImeKeyboardClose",ime_keyboard_close}, {"sceImeUpdate",ime_update},
-    {"sceImeKeyboardGetInfo",ime_keyboard_info},
     {"sceAt9EncQueryMemSize",at9enc_query_mem_size}, {"sceAt9EncCreateEncoder",at9enc_create},
     {"sceAt9EncClearContext",at9enc_clear}, {"sceAt9EncEncode",at9enc_encode},
     {"sceKernelSleep",kernel_sleep},
