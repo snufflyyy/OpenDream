@@ -47,12 +47,24 @@ if [[ -f tests/test_route_table.py ]]; then
     fi
 fi
 
+step "import-name table matches its source"
+if [[ -f tests/test_import_names.py ]]; then
+    if python3 -I tests/test_import_names.py >/dev/null 2>&1; then
+        ok "import-name sync"
+    else
+        bad "import-name sync (run: python3 -I tests/test_import_names.py)"
+    fi
+fi
+
 step "no absolute home paths in tracked code/tools/scripts/tests"
+# test_doc_lint.py intentionally contains fake absolute paths as negative fixtures.
 if git grep -InE '/home/[A-Za-z0-9._-]+/|/Users/[A-Za-z0-9._-]+/' \
-       -- 'src/*' 'tools/*' 'scripts/*' 'tests/*' '*.sh' >/dev/null 2>&1; then
+       -- 'src/*' 'tools/*' 'scripts/*' 'tests/*' '*.sh' \
+          ':(exclude)tests/test_doc_lint.py' >/dev/null 2>&1; then
     bad "absolute home path found"
     git grep -InE '/home/[A-Za-z0-9._-]+/|/Users/[A-Za-z0-9._-]+/' \
-        -- 'src/*' 'tools/*' 'scripts/*' 'tests/*' '*.sh' || true
+        -- 'src/*' 'tools/*' 'scripts/*' 'tests/*' '*.sh' \
+           ':(exclude)tests/test_doc_lint.py' || true
 else
     ok "no absolute home paths"
 fi
