@@ -189,3 +189,38 @@ the translated SPIR-V equals the fork's audited binary, and the rebased recompil
 shadPS4 + fork) emits different SPIR-V. That affects v2.64 the same way (rebase issue, not a
 version issue); the shader keeps the atomic path as before.
 
+
+## 9. Fail-safe: a route that doesn't fit is refused, not fatal (branch docmatch2)
+
+The fork's route lowering asserts on the exact IR shape it was written for (phi layouts, DOC
+controls with GDS binding, resource counts, ...). An assertion used to stop the game (exit 23).
+Now (`vk_pipeline_cache.cpp` `CompileModule`) a routed program (`Info::dreams_route_alias`) is
+translated and emitted inside a `Common::RecoverableAssertScope` (`common/assert.h`): a failed
+`ASSERT`/`UNREACHABLE` on that thread throws `Common::RecoverableAssertion` instead. The route is
+then refused for that guest hash (`DreamsRoute::Refuse`, logged
+`Dreams route: guest X -> Y REFUSED, using the generic path: <assertion>`), `Info` is reset to
+the guest hash, and the program is compiled on the generic path (atomic DOC fallback). Nothing has
+been created on the device when translation or emission throws. Later `Resolve()` calls for that
+guest hash return the guest hash. Limits: a refusal in a *later permutation* of a program whose
+first permutation used the route leaves that one permutation generic under the route's host
+path (logged as an error, not seen so far); the refusal is per process (next run tries again).
+
+Test/diagnostic switches (pass `VCORE_KEEP_SHADPS4_ENV=1` through run-dreams.sh):
+- `SHADPS4_DREAMS_ROUTE_FORCE_REFUSE=<route hex>`: fail that route at the end of `EmitSPIRV`,
+  after every route emitter ran. Verified with 84aa3dc9: refused, generic DOC fallback, game kept
+  running (`work/logs/run-20261115-221903.log`).
+- `SHADPS4_DREAMS_ROUTE_IR_DUMP=<route hex>`: IR + ASL dumps of that routed program at
+  pre-res-discover / pre-res-patch / pre-lower-phi / final, as
+  `work/vcore-user/shader/dumps/cs_<route>.pid<pid>.g<guest>.<stage>.irprogram.txt`.
+
+### The intermittent 84aa stop (run-20261115-220815: "Dreams 84aa checkpoint value 7 is not a phi")
+
+Not a different shader variant or cache state. 84aa's lane-active value at the DOC cut is
+`Phi [#true], [#true]` (pre-lower-phi dump); upstream's post-structurizer SSA rebuild
+(`LowerPhisToRegsPass` + `SsaRewritePass`) folds it to the immediate `#true`, every time. The
+fork's emitter (written before that rebuild existed) called `Arg(2).Inst()` on it: the union's
+bits were read as an `IR::Inst*`, so the "is a phi" check depended on leftover memory. When it
+happened to pass, the post-DOC merge called `SetDefinition` through that garbage pointer (memory
+corruption). Fix (`emit_spirv_atomic.cpp` `EmitDreamsSculptCheckpoint`): `TryInst()`, constant
+state values need no restore (identical in Collect, Replay and native), assert only on real
+shapes (constant-false lane-active, or a non-phi instruction).
