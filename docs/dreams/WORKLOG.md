@@ -163,3 +163,17 @@
   timeline and 4×4 contact sheets. First use: a 70 s boot gave 122 captures, 66 saved (3.2 MB),
   0 dropped, and one sheet showing Sony card → Media Molecule logo video (runtime AvPlayer) →
   indreams.me card → preferences screen.
+- **Incident 2026-11-15 19:07: GPU hang took the whole desktop down.** The kernel log (`journalctl -b -1 -k`)
+  shows `ring gfx_0.0.0 timeout ... Process Main pid 148458 thread shadPS4:Present`. pid 148458 was
+  `port/out/dreams-probe` (a user-launched native run, started ~19:04:57). The per-queue reset via MES
+  failed, so amdgpu did a MODE1 full GPU reset ("VRAM is lost"), Hyprland and all GPU clients died and
+  the machine rebooted. From 19:05:34 to 19:06:43 an agent capture test ran *at the same time* (two
+  Dreams instances on one GPU). The hang came ~45 s after the test ended. No log or devcoredump survived
+  (the user run's output went only to the terminal; devcoredump is lost on reboot). Suspects: a
+  GPU-side wait that never completes (fork's ordered-count emulation, PRECISE readback waits),
+  interference from the parallel instance, or the user's input path. Unconfirmed.
+- Safeguards added to `run-dreams.sh`: a single-instance `flock` (`work/.dreams-run.lock`, exit 75 when
+  busy, `DREAMS_ALLOW_PARALLEL=1` to override), an always-on per-run log `work/logs/run-<RUN_ID>.log`
+  (`DREAMS_LOG=0` off), and frame capture ON by default at 1000 ms (`DREAMS_CAPTURE=0` off) into
+  `work/captures/<RUN_ID>`, so the next hang leaves a log plus pictures. After a hang, also copy
+  `/sys/class/drm/card1/device/devcoredump/data` *before rebooting* if the desktop still allows it.

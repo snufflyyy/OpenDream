@@ -35,7 +35,9 @@ VCORE_LOG_FILTER="*:info Render.Vulkan:debug" ...   # GPU log filter (shadPS4 sy
 `run-dreams.sh` sets up the Dreams fork's emulator configuration for vcore: per-game config
 `work/vcore-user/custom_configs/<SERIAL>.json` (readbacks Precise, ...), the `SHADPS4_DREAMS_*`
 switches, private shader cache `work/vcore-shader-cache/`, `SHADPS4_USER_DIR=work/vcore-user`.
-It opens a window: always wrap runs in `timeout -s KILL`.
+It opens a window: always wrap agent runs in `timeout -s KILL`. Only one run at a time
+(`flock` on `work/.dreams-run.lock`; a second launch exits 75). Every run logs to
+`work/logs/run-<id>.log` and captures frames to `work/captures/<id>/` (1 s, `DREAMS_CAPTURE=0` off).
 
 Exit codes from the loader: 20 = stopped at an unsupported import (message starts with `STOP:`),
 21 = a runtime `STOP:` for an unimplemented case.

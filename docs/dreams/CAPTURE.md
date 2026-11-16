@@ -9,7 +9,8 @@ Use this to verify boots and fixes and to find graphical glitches.
 cd port
 BB_GAME_PROFILE=none DREAMS_TIMEOUT=0 DREAMS_CAPTURE=1 timeout -s KILL 90 ./run-dreams.sh > ../work/run.log 2>&1
 ```
-- `DREAMS_CAPTURE=1`: a frame every 500 ms; `DREAMS_CAPTURE=<ms>` for another interval (e.g. 100
+- Capture is **on by default at 1000 ms** for every run (so user runs leave a record too);
+  `DREAMS_CAPTURE=0` turns it off. `DREAMS_CAPTURE=1`: a frame every 500 ms; `DREAMS_CAPTURE=<ms>` for another interval (e.g. 100
   for a burst-like look at animation/flicker, 2000 for long soak runs).
 - Output: `work/captures/<YYYYmmdd-HHMMSS>/`: `f<seq>_t<seconds>.png` (480 px wide) + `index.csv`
   (`seq,t_ms,saved,diff,file`; saved = 1 saved, 0 unchanged, -1 dropped because the writer was

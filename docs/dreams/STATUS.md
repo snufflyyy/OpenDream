@@ -107,3 +107,10 @@ via `out/libdreams-av.so`); it wins over vcore's interim copy and was verified w
 - AvPlayer, pad motion and IME are unit-tested (`tests/run-dreams-tests.sh`: generated MP4,
   SDL virtual gamepad with sensors, fake window); in real runs only the logo video and the DS4's
   sensor stream have been seen so far.
+
+## GPU hang risk (2026-11-15)
+
+A native run hung the GPU once (gfx ring timeout in `shadPS4:Present`; amdgpu fell back to a full
+reset that kills the desktop). Cause not yet known (see WORKLOG incident entry). Until it is
+understood: only one Dreams instance at a time (enforced by run-dreams.sh), every run is logged to
+`work/logs/` and captured to `work/captures/`, and agents should save their work before long GPU runs.
