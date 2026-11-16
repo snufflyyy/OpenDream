@@ -21,6 +21,10 @@ int bbgpu_world_active(void) { return 1; }
 unsigned long long bbgpu_world_us(void) { return 0; }
 int bbgpu_video_skip(void) { return 0; }
 int bbgpu_free_camera(void) { return 0; }
+/* Dreams port additions the pad now calls. */
+int runtime_avplayer_active(void) { return 0; }
+int runtime_avplayer_skip(void) { return 0; }
+uint64_t runtime_monotonic_to_process_us(uint64_t monotonic_us) { return monotonic_us; }
 void runtime_re_watch_tick(const void *pad_buffer, uint64_t reads) { (void)pad_buffer; (void)reads; }
 uintptr_t runtime_libc_base;
 uintptr_t runtime_lookup(const RuntimeExport *table, size_t count, const char *name) {
@@ -37,6 +41,7 @@ static void inject(const char *path, const char *tokens) {
 }
 
 int main(void) {
+    setenv("DREAMS_INPUT_PROFILE","bbport",1); /* this test checks bbport's Bloodborne layout */
     char path[]="/tmp/bbport-pad-test-XXXXXX";
     int fd=mkstemp(path);
     assert(fd>=0);

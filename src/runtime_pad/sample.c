@@ -29,6 +29,20 @@ static int steam_pad_only(SDL_Gamepad *g) {
     return steam;
 }
 
+/* Dreams port: while the game's text box (sceImeOpen, runtime_ime.c) takes the typing, keys are
+ * text, not the pad (W would move the left stick, Enter press Cross); after it closes they stay
+ * off until every key is up (the Enter that confirmed the text is not a Cross). Weak: tests that
+ * build the pad alone. */
+extern int runtime_ime_typing(void) __attribute__((weak));
+static int ime_suspends_keys(const bool *k) {
+    static int held;
+    if (runtime_ime_typing && runtime_ime_typing()) { held=1; return 1; }
+    if (!held) return 0;
+    for (int i=0;i<SDL_SCANCODE_COUNT;++i) if (k[i]) return 1;
+    held=0;
+    return 0;
+}
+
 static void sample_host(PadData *d) {
     report_guest_heap();
     memset(d,0,sizeof(*d));
@@ -52,6 +66,7 @@ static void sample_host(PadData *d) {
     if (bbgpu_overlay_captures_input()) { apply_mouse_look(d,0,0,d->timestamp,0); return; } /* menu open: neutral input */
     const bool *k=SDL_WasInit(SDL_INIT_VIDEO) ? SDL_GetKeyboardState(NULL) : NULL;
     mouse_buttons=captured && SDL_WasInit(SDL_INIT_VIDEO) ? SDL_GetMouseState(NULL,NULL) : 0;
+    if (k && ime_suspends_keys(k)) { k=NULL; memset((void *)key_latch,0,sizeof(key_latch)); }
     const int pad_only=steam_pad_only(g);
     atomic_store_explicit(&steam_only_now,pad_only,memory_order_relaxed);
     if (pad_only) {
@@ -121,7 +136,8 @@ static void sample_host(PadData *d) {
     prompt_note(g,pad_active,keyboard_active);
     apply_keyboard(d,k); /* the bound mouse buttons too */
     video_skip(d,k);
-    sensors_mouse(&mouse_dx,&mouse_dy,captured,motion_dt); /* Dreams port: runtime_pad/sensors.c */
+    /* Dreams port: the mouse moves the imp (runtime_pad/sensors.c), not the camera. */
+    sensors_mouse(&mouse_dx,&mouse_dy,captured,motion_dt,mouse_to_imp,mouse_invert_y);
     sensors_report(d);
     if (motion_on()) {
         motion_from_desktop(d,k,&mouse_dx,&mouse_dy,captured);
@@ -135,7 +151,7 @@ static void sample_host(PadData *d) {
  * options touchpad touchpad_left touchpad_right up down left right) are held while listed;
  * touchpad defaults to a left-side click; lx= ly= rx= ry= (0..255) override
  * the sticks; mdx= mdy= move the mouse that many pixels at every pad read, as if the window held
- * it (mouse look tests). An empty file releases everything. */
+ * it (mouse tests: the imp in the Dreams profile, else the camera). An empty file releases everything. */
 static struct { uint32_t buttons; int stick[4]; int touch_side; float mouse[2]; } injected={0,{-1,-1,-1,-1},-1,{0,0}};
 static int replay_armed;      /* 1 while a BB_PAD_REPLAY recording plays, 2 once it ended */
 static int replay_running;    /* 0: (re)start at the next sample */
@@ -312,8 +328,13 @@ static void sample(PadData *d) {
     static int tap_ms=-1; static uint64_t tap_start;
     if (tap_ms<0) { const char *v=bb_env("BB_PAD_TAP_TEST"); tap_ms=v && *v ? atoi(v) : 0; tap_start=d->timestamp+20000000; }
     if (tap_ms>0 && d->timestamp>=tap_start && (d->timestamp-tap_start)%1200000<(uint64_t)tap_ms*1000) d->right_x=255;
-    if (injected.mouse[0]!=0 || injected.mouse[1]!=0)
-        apply_mouse_look(d,injected.mouse[0],injected.mouse[1],d->timestamp,1);
+    if (injected.mouse[0]!=0 || injected.mouse[1]!=0) {
+        double mx=injected.mouse[0], my=injected.mouse[1];
+        /* Dreams port: as the window's mouse does, the imp first (runtime_pad/sensors.c). */
+        sensors_mouse(&mx,&my,1,0.0f,mouse_to_imp,mouse_invert_y);
+        sensors_report(d);
+        if (mx!=0 || my!=0) apply_mouse_look(d,mx,my,d->timestamp,1);
+    }
     /* Game modules (a menu pointer's presses). */
     const uint8_t sticks[4]={d->left_x,d->left_y,d->right_x,d->right_y};
     bbgpu_filter_pad(&d->buttons,sticks);

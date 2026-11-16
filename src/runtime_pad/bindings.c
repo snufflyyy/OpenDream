@@ -42,6 +42,34 @@ enum { PAD_LEFT_TRIGGER=SDL_GAMEPAD_BUTTON_COUNT, PAD_RIGHT_TRIGGER }; /* trigge
 typedef struct { int key_count, pad_count; int keys[MAX_BIND]; int mods[MAX_BIND]; int pad[MAX_BIND]; } Binding;
 static Binding bindings[IN_COUNT];
 static int bindings_ready;
+/* Dreams port: the input profile (docs/dreams/INPUT.md). "dreams" (the default): Dreams' key
+ * layout below, no Bloodborne tricks (Space/Shift as Circle pulses and holds, walk, the camera
+ * hooks), the mouse moves the imp (runtime_pad/sensors.c). "bbport": bbport's Bloodborne layout and
+ * mouse look. DREAMS_INPUT_PROFILE or bbport.ini input_profile= picks it; DREAMS_MOUSE_MODE or
+ * mouse_mode= (imp | camera) where the mouse's motion goes. */
+static int dreams_profile=1, mouse_to_imp=1, profile_loaded;
+static void load_profile(FILE *f);
+static void dreams_defaults(void) {
+    enum { NONE=-1 };
+    static const struct { int input; int key; } keys[]={
+        {IN_CROSS,SDL_SCANCODE_SPACE}, {IN_CROSS,SDL_SCANCODE_RETURN}, {IN_CROSS,SDL_SCANCODE_KP_ENTER},
+        {IN_CIRCLE,SDL_SCANCODE_BACKSPACE}, {IN_SQUARE,SDL_SCANCODE_TAB}, {IN_TRIANGLE,SDL_SCANCODE_F},
+        {IN_L1,SDL_SCANCODE_Q}, {IN_R1,SDL_SCANCODE_E}, {IN_L2,SDL_SCANCODE_Z}, {IN_R2,SDL_SCANCODE_C},
+        {IN_L3,SDL_SCANCODE_LSHIFT}, {IN_R3,SDL_SCANCODE_LCTRL}, {IN_OPTIONS,SDL_SCANCODE_ESCAPE},
+        {IN_TOUCHPAD,SDL_SCANCODE_G}, {IN_TOUCHPAD_RIGHT,SDL_SCANCODE_H},
+        {IN_UP,SDL_SCANCODE_UP}, {IN_DOWN,SDL_SCANCODE_DOWN}, {IN_LEFT,SDL_SCANCODE_LEFT}, {IN_RIGHT,SDL_SCANCODE_RIGHT},
+        {IN_LEFT,SDL_SCANCODE_1}, {IN_RIGHT,SDL_SCANCODE_2}, {IN_UP,SDL_SCANCODE_3}, {IN_DOWN,SDL_SCANCODE_4},
+        {IN_MOVE_UP,SDL_SCANCODE_W}, {IN_MOVE_DOWN,SDL_SCANCODE_S}, {IN_MOVE_LEFT,SDL_SCANCODE_A}, {IN_MOVE_RIGHT,SDL_SCANCODE_D},
+        {IN_LOOK_UP,SDL_SCANCODE_I}, {IN_LOOK_DOWN,SDL_SCANCODE_K}, {IN_LOOK_LEFT,SDL_SCANCODE_J}, {IN_LOOK_RIGHT,SDL_SCANCODE_L},
+        {IN_R1,MOUSE_KEY+SDL_BUTTON_LEFT}, {IN_R2,MOUSE_KEY+SDL_BUTTON_RIGHT}, {IN_L1,MOUSE_KEY+SDL_BUTTON_MIDDLE},
+        {IN_L2,MOUSE_KEY+SDL_BUTTON_X1}, {IN_SQUARE,MOUSE_KEY+SDL_BUTTON_X2},
+        {IN_UP,MOUSE_WHEEL_UP}, {IN_DOWN,MOUSE_WHEEL_DOWN},
+    };
+    for (size_t i=0;i<sizeof(keys)/sizeof(*keys);++i) {
+        Binding *b=&bindings[keys[i].input];
+        b->mods[b->key_count]=NONE; b->keys[b->key_count++]=keys[i].key;
+    }
+}
 
 static void bind_defaults(void) {
     /* The header comment's layout. */
@@ -80,7 +108,9 @@ static void bind_defaults(void) {
         {IN_LEFT,SDL_GAMEPAD_BUTTON_DPAD_LEFT}, {IN_RIGHT,SDL_GAMEPAD_BUTTON_DPAD_RIGHT},
     };
     memset(bindings,0,sizeof bindings);
-    for (size_t i=0;i<sizeof(keys)/sizeof(*keys);++i) {
+    if (!profile_loaded) load_profile(NULL);
+    if (dreams_profile) dreams_defaults();
+    else for (size_t i=0;i<sizeof(keys)/sizeof(*keys);++i) {
         Binding *b=&bindings[keys[i].input];
         b->mods[b->key_count]=keys[i].mod; b->keys[b->key_count++]=keys[i].key;
     }
@@ -109,11 +139,30 @@ static float mouse_sensitivity=1.0f;
 /* key.<input>= / pad.<input>= lines of the settings file. */
 /* Motion emulation (apply_motion): -1 unknown yet, from bbport.ini pad_motion; BB_PAD_MOTION wins. */
 static int motion_enabled = -1;
+/* The profile and mouse mode first (the defaults depend on them): env, else bbport.ini, else dreams/imp. */
+static void load_profile(FILE *f) {
+    char ini_profile[32]="", ini_mouse[32]="", line[512];
+    while (f && fgets(line,sizeof line,f)) {
+        if (!strncmp(line,"input_profile=",14)) sscanf(line+14,"%31s",ini_profile);
+        if (!strncmp(line,"mouse_mode=",11)) sscanf(line+11,"%31s",ini_mouse);
+    }
+    if (f) rewind(f);
+    const char *profile=bb_env("DREAMS_INPUT_PROFILE"), *mouse=bb_env("DREAMS_MOUSE_MODE");
+    if (!profile || !*profile) profile=ini_profile;
+    if (!mouse || !*mouse) mouse=ini_mouse;
+    profile_loaded=1;
+    dreams_profile=strcmp(profile,"bbport")!=0;
+    mouse_to_imp=*mouse ? strcmp(mouse,"camera")!=0 : dreams_profile;
+    static int told[2][2];
+    if (!told[dreams_profile][mouse_to_imp]++) printf("Runtime: controls: %s profile, the mouse moves the %s\n",dreams_profile ? "Dreams" : "bbport",
+           mouse_to_imp ? "imp (motion)" : "camera (right stick)");
+}
 static void load_bindings(void) {
-    bind_defaults();
-    mouse_look=1; mouse_invert_y=0; mouse_invert_x=0; mouse_sensitivity=1.0f; prompt_forced=-1;
     const char *path=bb_env("BB_CONFIG");
     FILE *f=path ? fopen(path,"r") : NULL;
+    load_profile(f);
+    bind_defaults();
+    mouse_look=1; mouse_invert_y=0; mouse_invert_x=0; mouse_sensitivity=1.0f; prompt_forced=-1;
     if (!f) return;
     char line[512];
     while (fgets(line,sizeof line,f)) {
@@ -127,6 +176,7 @@ static void load_bindings(void) {
                 prompt_forced=!strncmp(value,"playstation",11) ? 0 : !strncmp(value,"xbox",4) ? 1 :
                               !strncmp(value,"keyboard",8) ? 2 : -1;
             }
+            else if (!strncmp(line,"input_profile=",14) || !strncmp(line,"mouse_mode=",11)) {} /* load_profile */
             else if (!strncmp(line,"mouse_invert_y=",15)) mouse_invert_y=atoi(value)!=0;
             else if (!strncmp(line,"mouse_invert_x=",15)) mouse_invert_x=atoi(value)!=0;
             else if (!strncmp(line,"mouse_sensitivity=",18)) {
@@ -348,7 +398,7 @@ static void apply_keyboard(PadData *d, const bool *k) {
         if (i==IN_TOUCHPAD || i==IN_TOUCHPAD_RIGHT || !key_down(k,i)) continue;
         d->buttons |= (i==IN_OPTIONS && menu && !options_latched) ? BTN_CIRCLE : input_buttons[i];
     }
-    if (keyboard_circle(k,d->timestamp,menu)) d->buttons|=BTN_CIRCLE;
+    if (!dreams_profile && keyboard_circle(k,d->timestamp,menu)) d->buttons|=BTN_CIRCLE;
     if (key_down(k,IN_TOUCHPAD)) touch_click(d,0);
     if (key_down(k,IN_TOUCHPAD_RIGHT)) touch_click(d,1);
     if (key_down(k,IN_L2)) d->l2=255;
@@ -358,7 +408,7 @@ static void apply_keyboard(PadData *d, const bool *k) {
               key_down(k,IN_MOVE_UP),key_down(k,IN_MOVE_DOWN),&d->left_x,&d->left_y);
     /* Walk (default Left Alt, held): the left stick at 40%, the game's walking pace, from the move
      * keys or a gamepad's stick (FromSoftware's PC ports bind it the same way). */
-    if (key_down(k,IN_WALK)) {
+    if (!dreams_profile && key_down(k,IN_WALK)) {
         d->left_x=(uint8_t)(128+((int)d->left_x-128)*2/5);
         d->left_y=(uint8_t)(128+((int)d->left_y-128)*2/5);
     }
@@ -419,7 +469,7 @@ static void mouse_auto_rotation_hold(int hold) {
     held=hold;
 }
 static void apply_mouse_look(PadData *d, double dx, double dy, uint64_t now, int captured) {
-    mouse_auto_rotation_hold(mouse_look && captured && !bbgpu_free_camera());
+    if (!dreams_profile) mouse_auto_rotation_hold(mouse_look && captured && !bbgpu_free_camera()); /* Bloodborne's code bytes */
     /* The free camera (patch) takes the mouse through the right stick below. */
     if (captured && (dx!=0 || dy!=0) && !bbgpu_free_camera()) {
         const float k=MOUSE_RAD_PER_PIXEL*mouse_sensitivity;

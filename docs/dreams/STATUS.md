@@ -59,10 +59,15 @@ via `out/libdreams-av.so`); it wins over vcore's interim copy and was verified w
   videos use the same path (not yet seen in a run: they play later in the game).
 - **Pad motion**: real DS4/DualSense gyro + accelerometer through SDL3 (`src/runtime_pad/sensors.c`,
   "PadMotion" thread at ~500 Hz, orientation integrated, Dreams' tilt and bias correction
-  settings honoured). Verified on the user's DS4 (`/dev/hidraw11`, HIDAPI, 250 Hz) in a GPU run
-  (`work/motion-gpu1.log`, `DREAMS_PAD_SENSOR_TRACE=1`): Dreams turns on tilt + bias correction,
-  the pad's 12 degree rest tilt shows up in the orientation. Not yet confirmed by the user moving
-  the imp. Without a gyro the controller reads as lying still (use Dreams' Joypad scheme).
+  settings honoured). **The imp follows motion** since the pad timestamp is on the process clock
+  (`3a31dd3`; root cause in `notes/input-research.md`): verified headless with synthetic motion
+  (`DREAMS_PAD_SYNTH_MOTION`, captures `work/captures/20261115-201803`), and the old clock gives a
+  frozen imp (`work/captures/20261115-202118`). Still to confirm with the user's DS4.
+- **Keyboard & mouse** (`docs/dreams/INPUT.md`): Dreams key profile (Space/Enter ✕, Backspace ○,
+  WASD/IJKL sticks, ...), the mouse moves the imp (click the window to give it the mouse, F1
+  releases), mouse buttons R1/R2/L1. Injected mouse motion moves the imp the right way in a headless
+  run (`work/captures/20261115-202429`); the window's real mouse capture (relative mode on Wayland)
+  can't be tested headless: pending the user.
 - **IME**: `src/runtime_ime.c`. sceImeOpen text entry through the game window's title bar
   (Enter/Esc); USB keyboard events from SDL key events. Not yet exercised by the game in a run
   (Dreams opens it when naming a creation).
@@ -76,7 +81,7 @@ via `out/libdreams-av.so`); it wins over vcore's interim copy and was verified w
 | RAW AAC = one access unit per Ajm run | `src/runtime_ajm.c` `aac_frame` | fdk's RAW transport can't split concatenated AUs; shadPS4 has the same limit | Only if Dreams submits several raw AUs in one job (check `BB_AUDIO_TRACE=1` for AAC results `0xc0000000`) |
 | Audio3d mixes to stereo without spatialisation | `src/runtime_audio3d.c` | port of shadPS4's software Audio3d (object position/spread ignored, objects with no GAIN are silent) | shadPS4's OpenAL variant (`audio3d_openal.cpp`) if positional audio matters |
 | IME text shows only in the window title; the window can't cancel text entry when the game closes the IME first | `src/runtime_ime.c`, `vcore/shim/window.cpp` | no on-screen keyboard/overlay in vcore | an overlay text box; `bbgpu_text_input_end()` in vcore (the runtime already calls it if exported, weak symbol) |
-| No gyro: controller reads as lying still; mouse-as-gyro (`DREAMS_PAD_MOUSE_GYRO=1`) needs vcore's mouse capture (`bbgpu_mouse_take` is a stub) | `src/runtime_pad/sensors.c` | keyboard/mouse players | vcore mouse capture, then make it the default without a gyro |
+| Keyboard/mouse layout is a first guess (INPUT.md); mouse → imp sensitivity default 0.0004 rad/px (≈1:1 at 1080p) | `src/runtime_pad/bindings.c` `dreams_defaults`, `sensors.c` | basic keyboard & mouse | check each binding against Dreams' prompts with the user; tune `DREAMS_MOUSE_IMP_SENS` |
 | Audit no-ops (`ok`) | `src/runtime_dreams_services.c` | 0 is right offline (profiler hooks, streaming/sharing, sanitizers, Neo mode off) | Revisit if a feature needs one (e.g. Neo mode for PS4 Pro resolution) |
 | `BB_SKIP_GAME_CHECK=1` | `run-dreams.sh` | bbport's check pins Bloodborne's image hash | Title-based Dreams check (decision D7) |
 | vcore still compiles bbport's AvPlayer (unused: the runtime's resolves first) | `vcore/CMakeLists.txt` `VCORE_BBPORT_AVPLAYER` | interim before the runtime AvPlayer | set the option's default to OFF (verified working, `work/avp-gpu-noavp2.log`) |

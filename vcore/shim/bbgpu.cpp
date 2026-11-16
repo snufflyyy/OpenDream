@@ -256,6 +256,13 @@ extern "C" int bbgpu_text_input_begin(const char* initial, const char* prompt) {
     return 1;
 }
 
+// runtime_ime.c: the game closed its IME first (weak there).
+extern "C" void bbgpu_text_input_end(void) {
+    if (g_window) {
+        g_window->EndTextInput();
+    }
+}
+
 extern "C" int bbgpu_text_input_poll(char* out, uint64_t size) {
     if (!g_window) {
         return 2;
@@ -286,17 +293,31 @@ void bbgpu_dump_guest_writes(void*) {}
 int bbgpu_overlay_captures_input(void) {
     return 0;
 }
+// Mouse (window.cpp): the motion and wheel the window collected while it held the mouse.
 void bbgpu_mouse_take(double* dx, double* dy, int* wheel_up, int* wheel_down) {
-    *dx = 0;
-    *dy = 0;
-    *wheel_up = 0;
-    *wheel_down = 0;
+    double x = 0, y = 0;
+    int up = 0, down = 0;
+    if (g_window) {
+        g_window->TakeMouse(x, y, up, down);
+    }
+    *dx = x;
+    *dy = y;
+    *wheel_up = up;
+    *wheel_down = down;
 }
 int bbgpu_mouse_captured(void) {
-    return 0;
+    return g_window && g_window->MouseCaptured() ? 1 : 0;
 }
-void bbgpu_mouse_capture(void) {}
-void bbgpu_mouse_look_enable(int) {}
+void bbgpu_mouse_capture(void) {
+    if (g_window) {
+        g_window->RequestMouseCapture();
+    }
+}
+void bbgpu_mouse_look_enable(int enabled) {
+    if (g_window) {
+        g_window->EnableMouseCapture(enabled != 0);
+    }
+}
 void bbgpu_add_event_filter(BbGpuEventFilter) {}
 int bbgpu_world_active(void) {
     return 0;

@@ -192,3 +192,34 @@
   hardware mostly idle. The user wants 120 fps+ eventually, plus basic keyboard & mouse. Research first
   (user request): notes/high-fps-research.md and notes/input-research.md (agents, read-only / diagnostic
   worktree only).
+
+## 2026-11-15 (input agent): imp motion root cause confirmed, keyboard & mouse
+
+- Root cause of "the imp doesn't follow the DS4" (disassembly, `notes/input-research.md`): Dreams
+  keeps every scePadRead sample in a 256-entry ring and the imp looks its orientation up at
+  `sceKernelGetProcessTime() - 1.5 sample periods` (eboot 0x771ac0), falling back to the identity
+  quaternion when no sample is that old. Our boot-monotonic timestamps were always "newer", so the
+  imp got identity every frame and, moving by orientation *changes*, never moved. `3a31dd3` (process
+  clock) is the fix.
+- Verified headless (`tools/agent-run.sh`, worktree `port-diag`, branch `input`) with a synthetic
+  figure-eight motion (`DREAMS_PAD_SYNTH_MOTION=25,4,0`) and a tutorial-skip copy of the save
+  (`work/agent-user-input`, seeded with port-fps's `scripts/dreams_seed_save.py`, passed as
+  `--user`): at the "offline mode" notice after the main menu the imp sweeps the screen with the 4 s
+  period (`work/captures/20261115-201803`, sheet 60-64 s); with the old timestamps (temporary
+  `DREAMS_PAD_TS_LEGACY=1`, since removed) it stays still on CONTINUE
+  (`work/captures/20261115-202118`). Without the tutorial-skip save, the first-run path is
+  preferences → control-scheme screen → a ~100 s intro film before the imp appears (~180 s).
+- Keyboard & mouse (INPUT.md): vcore's window takes the mouse on click (relative mode), F1 toggles,
+  focus loss releases; `bbgpu_mouse_*` are real; `bbgpu_text_input_end` added. Runtime: Dreams input
+  profile (bbport's Bloodborne layout stays as `DREAMS_INPUT_PROFILE=bbport`), mouse motion = a
+  yaw/pitch rotation composed after the sensors' orientation (DS4 and mouse together), keys and mouse
+  buttons pause while the IME text box is open and until all keys are released. `BB_PAD_FILE`
+  `mdx=/mdy=` now go through the same path: in a headless run, mdx=+6 moved the imp right, -6 left,
+  mdy=-6 up, +6 down (`work/captures/20261115-202429`). Sensitivity calibrated from the synthetic run
+  (10 degrees of yaw ≈ 480 px of imp at Imp Sensitivity 6): default 0.0004 rad/px ≈ 1:1 at 1080p.
+- Tests: `tests/test_pad_input.c` (new, in run-dreams-tests.sh); bbport's `tests/test_pad.c` didn't
+  link before (no AvPlayer stubs), now fixed and run with the bbport profile; pad-motion and IME tests
+  pass.
+- Learned: the imp is visible on the offline-mode notice right after the main menu loads (~40 s with
+  the tutorial-skip save): the quickest place for imp tests. A Cross press doesn't hit CONTINUE unless
+  the imp is over it.

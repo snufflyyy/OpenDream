@@ -59,18 +59,42 @@ public:
     void BeginTextInput(const std::string& initial, const std::string& prompt);
     /// 0 while typing, 1 confirmed (Enter), 2 cancelled (Escape); text is UTF-8.
     int PollTextInput(std::string& text);
+    /// The game closed its text box first: stop typing into it (window thread does it).
+    void EndTextInput();
+
+    /// Mouse (bbgpu_mouse_*, runtime_pad): a click in the window takes the mouse (relative mode),
+    /// F1 or losing focus lets it go. Motion and wheel notches since the last call, reset.
+    void TakeMouse(double& dx, double& dy, int& wheel_up, int& wheel_down);
+    bool MouseCaptured() const {
+        return mouse_captured.load(std::memory_order_relaxed);
+    }
+    /// Asks the window thread to take the mouse (as a click does).
+    void RequestMouseCapture() {
+        capture_requested.store(true, std::memory_order_relaxed);
+    }
+    /// false: clicks never take the mouse (bbport.ini mouse_look=0).
+    void EnableMouseCapture(bool enabled) {
+        capture_enabled.store(enabled, std::memory_order_relaxed);
+    }
 
 private:
     void UpdateTextTitle();
+    void CaptureMouse(bool capture);
 
     std::atomic<s32> width, height;
     std::atomic<bool> is_open{true};
     std::mutex text_mutex;
-    bool text_requested{}, text_active{};
+    bool text_requested{}, text_active{}, text_end_requested{};
     int text_state{};
     std::string text, text_prompt, base_title;
     SDL_Window* window{};
     WindowSystemInfo window_info{};
+    std::mutex mouse_mutex;
+    double mouse_dx{}, mouse_dy{};
+    int wheel_up{}, wheel_down{};
+    std::atomic<bool> mouse_captured{false}, capture_requested{false}, capture_enabled{true};
+    bool mouse_user_released{};
+    u64 capture_settle_ms{};
 };
 
 } // namespace Frontend

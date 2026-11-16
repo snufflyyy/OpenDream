@@ -29,15 +29,24 @@
  *   scePadSetAngularVelocityDeadbandState         |omega| below DEADBAND reported as 0.
  * PS4 defaults (all off until the game asks) are assumed.
  *
- * Fallbacks without a gyro (keyboard and mouse, Xbox-style pads): the controller is reported lying
- * still (identity orientation, 1 g up): Dreams' "Joypad" control scheme (options) needs no motion.
- * DREAMS_PAD_MOUSE_GYRO=1 turns mouse motion (while the window holds the mouse) into angular
- * velocity instead of camera look, like shadPS4's mouse-to-gyro (input/input_mouse.cpp
- * EmulateGyro). bbport's spray-can emulation (motion.c, BB_PAD_MOTION=1) still overrides all of
- * this when on. DREAMS_PAD_SENSORS=0 ignores the controller's sensors. */
-#define TILT_GAIN 0.6f     /* rad/s per unit of gravity direction error */
-#define DEADBAND 0.0087f   /* 0.5 degree per second */
-#define MOUSE_GYRO 0.0025f /* radians per pixel */
+ * Without a gyro (keyboard and mouse, Xbox-style pads) the controller is reported lying still
+ * (identity orientation, 1 g up) apart from the mouse.
+ *
+ * The mouse moves the imp (docs/dreams/INPUT.md, notes/input-research.md): Dreams moves the imp by
+ * the *change* of the orientation between its updates (eboot 0x771ac0..0x772342), so mouse motion
+ * (while the window holds the mouse) is turned into a rotation of the controller: x into yaw about
+ * its y axis, y into pitch about its x axis (shadPS4's mouse gyro, input/input_mouse.cpp
+ * EmulateGyro, has the same signs). It is kept apart from the sensors' orientation and composed
+ * after it (reported = sensors (x) mouse), so a DualShock 4 and the mouse work together and tilt
+ * correction never pulls the mouse's pitch back; its rate is added to the angular velocity (Dreams
+ * counts that as the pad being used). DREAMS_MOUSE_IMP_SENS (radians per pixel, default
+ * MOUSE_IMP_SENS) scales it; DREAMS_MOUSE_MODE=camera gives the mouse to bbport's camera look (the
+ * right stick) instead. bbport's spray-can emulation (motion.c, BB_PAD_MOTION=1) still overrides all
+ * of this when on. DREAMS_PAD_SENSORS=0 ignores the controller's sensors. */
+#define TILT_GAIN 0.6f          /* rad/s per unit of gravity direction error */
+#define DEADBAND 0.0087f        /* 0.5 degree per second */
+#define MOUSE_IMP_SENS 0.0004f  /* radians per pixel: about 1:1 at 1080p with Imp Sensitivity 6 (agent run 2026-11-15: 10 degrees of yaw moved the imp ~480 px) */
+#define MOUSE_PITCH_MAX 1.4f    /* radians (80 degrees) */
 
 static struct {
     SDL_JoystickID pad;        /* the gamepad whose sensors are on (0: none); an id, not the
@@ -56,6 +65,7 @@ static struct {
 static void sensors_reset_orientation(void) {
     sensors.q[0]=sensors.q[1]=sensors.q[2]=0.0f; sensors.q[3]=1.0f;
 }
+static void synth_pose(float yaw, float pitch, float q[4]);
 
 /* One integration step: body-frame angular velocity `w` (rad/s) for `dt` seconds, then (tilt
  * correction) a proportional pull of the predicted gravity direction towards the measured one. */
@@ -142,7 +152,7 @@ static void sensors_attach(SDL_Gamepad *g) {
            sensors.has_gyro ? " (DREAMS_PAD_SENSOR_TRACE=1 prints samples)" : "");
     if (!sensors.has_gyro && SDL_GamepadHasSensor(g,SDL_SENSOR_GYRO)) printf("Runtime: pad motion: %s\n",SDL_GetError());
     if (!sensors.has_gyro) printf("Runtime: pad motion: no gyro: the controller is reported lying still "
-                                  "(choose Dreams' Joypad control scheme, or DREAMS_PAD_MOUSE_GYRO=1)\n");
+                                  "(the mouse moves the imp; or choose Dreams' Left & Right Sticks scheme)\n");
 }
 /* Under lock: the current gamepad's sensors read and integrated. */
 static void sensors_poll(uint64_t now) {
@@ -154,13 +164,52 @@ static void sensors_poll(uint64_t now) {
     if (sensors.has_accel) SDL_GetGamepadSensorData(g,SDL_SENSOR_ACCEL,accel,3);
     sensors_feed(gyro,accel,now);
 }
+/* DREAMS_PAD_SYNTH_MOTION=<amplitude deg>[,<period s>[,<delay s>]] (diagnostics, agent runs without
+ * a controller; notes/input-research.md): the controller's motion is replaced by a synthetic
+ * figure eight, yaw = A sin(2 pi t/T) and pitch = A/2 sin(4 pi t/T), starting <delay> s after the pad
+ * opened. The orientation is set in closed form (no drift), the angular velocity is its derivative
+ * in the controller's frame and the accelerometer reads gravity in that frame. */
+static void synth_pose(float yaw, float pitch, float q[4]) {
+    const float qy[4]={0.0f,sinf(0.5f*yaw),0.0f,cosf(0.5f*yaw)}, qp[4]={sinf(0.5f*pitch),0.0f,0.0f,cosf(0.5f*pitch)};
+    quat_mul(qy,qp,q); /* yaw about the world's up, then pitch about the controller's right */
+}
+static int synth_motion(uint64_t now) {
+    static int on=-1; static float amp, period=4.0f, delay=0.0f; static uint64_t t0;
+    if (on<0) {
+        const char *e=bb_env("DREAMS_PAD_SYNTH_MOTION");
+        on=e && *e && atof(e)>0.0;
+        if (on) {
+            amp=(float)atof(e)*3.14159265f/180.0f;
+            const char *c=strchr(e,',');
+            if (c) { period=(float)atof(c+1); c=strchr(c+1,','); if (c) delay=(float)atof(c+1); }
+            if (period<=0.1f) period=4.0f;
+            t0=now;
+            printf("Runtime: pad motion: SYNTHETIC figure eight, %.1f deg, period %.1f s, from %.1f s (DREAMS_PAD_SYNTH_MOTION)\n",
+                   (double)(amp*180.0f/3.14159265f),(double)period,(double)delay);
+        }
+    }
+    if (!on) return 0;
+    float t=(float)(now-t0)*1e-6f-delay;
+    if (t<0.0f) t=0.0f;
+    const float w=2.0f*3.14159265f/period;
+    const float yaw=amp*sinf(w*t), pitch=0.5f*amp*sinf(2.0f*w*t);
+    const float dyaw=amp*w*cosf(w*t), dpitch=amp*w*cosf(2.0f*w*t);
+    synth_pose(yaw,pitch,sensors.q);
+    /* Body rates of q = yaw(world y) * pitch(body x): pitch rate on x, the yaw rate seen in the
+     * pitched frame on y and z. */
+    sensors.gyro[0]=dpitch; sensors.gyro[1]=dyaw*cosf(pitch); sensors.gyro[2]=-dyaw*sinf(pitch);
+    up_in_frame(sensors.q,sensors.accel);
+    sensors.has_gyro=sensors.has_accel=1;
+    ++sensors.samples;
+    return 1;
+}
 static void *sensors_thread(void *arg) {
     (void)arg;
     pthread_setname_np(pthread_self(),"PadMotion");
     for (;;) {
         pthread_mutex_lock(&lock);
         if (sdl_ready>=0 && !SDL_WasInit(SDL_INIT_VIDEO) && SDL_WasInit(SDL_INIT_GAMEPAD)) SDL_UpdateGamepads(); /* no window pumps events */
-        sensors_poll(now_us());
+        if (!synth_motion(now_us())) sensors_poll(now_us());
         const int active=sensors.has_gyro;
         pthread_mutex_unlock(&lock);
         usleep(active ? 2000 : 20000);
@@ -173,21 +222,44 @@ static void sensors_start(void) {
     if (!pthread_create(&t,NULL,sensors_thread,NULL)) { pthread_detach(t); sensors.thread_started=1; }
 }
 
-/* Without a gyro: the mouse as one (DREAMS_PAD_MOUSE_GYRO=1); called from sample_host under lock. */
-static void sensors_mouse(double *dx, double *dy, int captured, float dt) {
-    static int on=-1;
-    if (on<0) { const char *e=bb_env("DREAMS_PAD_MOUSE_GYRO"); on=e && e[0]=='1'; }
-    if (!on || sensors.has_gyro) return;
-    sensors.gyro[0]=sensors.gyro[1]=sensors.gyro[2]=0.0f;
-    if (!captured || dt<=0.0f) return;
-    const float w[3]={-(float)*dy*MOUSE_GYRO/dt,-(float)*dx*MOUSE_GYRO/dt,0.0f};
-    for (int i=0;i<3;++i) sensors.gyro[i]=w[i];
-    sensors_integrate(sensors.q,w,sensors.accel,dt,0);
-    *dx=*dy=0; /* the motion, not the camera */
+/* The mouse's rotation of the controller (see the top of the file); under lock. */
+static struct { float yaw, pitch, rate[3]; } mouse_rot;
+static void sensors_mouse_reset(void) { memset(&mouse_rot,0,sizeof mouse_rot); }
+static float mouse_imp_sens(void) {
+    static float k=-1.0f;
+    if (k<0.0f) {
+        const char *e=bb_env("DREAMS_MOUSE_IMP_SENS");
+        k=e && *e && atof(e)>0.0 ? (float)atof(e) : MOUSE_IMP_SENS;
+    }
+    return k;
+}
+/* Called from sample_host under lock with the mouse motion since the last read; takes it (dx, dy
+ * zeroed) when the mouse moves the imp. dt: seconds since the last read. */
+static void sensors_mouse(double *dx, double *dy, int captured, float dt, int to_imp, int invert_y) {
+    mouse_rot.rate[0]=mouse_rot.rate[1]=mouse_rot.rate[2]=0.0f;
+    if (!to_imp || !captured || (*dx==0 && *dy==0)) return;
+    const float k=mouse_imp_sens();
+    const float dyaw=-(float)*dx*k, dpitch=(invert_y ? 1.0f : -1.0f)*(float)*dy*k;
+    mouse_rot.yaw+=dyaw;
+    if (mouse_rot.yaw>(float)M_PI) mouse_rot.yaw-=2.0f*(float)M_PI;
+    if (mouse_rot.yaw<-(float)M_PI) mouse_rot.yaw+=2.0f*(float)M_PI;
+    const float pitch=fmaxf(-MOUSE_PITCH_MAX,fminf(MOUSE_PITCH_MAX,mouse_rot.pitch+dpitch));
+    /* Rate over at least 1/120 s (Dreams reads the pad several times a frame) and at most 20 rad/s
+     * (Dreams' activity measure only needs it to be clearly non-zero). */
+    const float span=fmaxf(dt,1.0f/120.0f);
+    mouse_rot.rate[0]=fmaxf(-20.0f,fminf(20.0f,(pitch-mouse_rot.pitch)/span));
+    mouse_rot.rate[1]=fmaxf(-20.0f,fminf(20.0f,dyaw/span));
+    mouse_rot.pitch=pitch;
+    *dx=*dy=0;
 }
 
-/* The state the game reads. */
+/* The state the game reads: the sensors' orientation, then the mouse's rotation. */
 static void sensors_report(PadData *d) {
-    for (int i=0;i<4;++i) d->orientation[i]=sensors.q[i];
-    for (int i=0;i<3;++i) { d->acceleration[i]=sensors.accel[i]; d->angular_velocity[i]=sensors.gyro[i]; }
+    float qm[4], q[4];
+    synth_pose(mouse_rot.yaw,mouse_rot.pitch,qm);
+    quat_mul(sensors.q,qm,q);
+    /* The mouse's yaw rate seen in its pitched frame (as synth_motion's). */
+    const float w_mouse[3]={mouse_rot.rate[0],mouse_rot.rate[1]*cosf(mouse_rot.pitch),-mouse_rot.rate[1]*sinf(mouse_rot.pitch)};
+    for (int i=0;i<4;++i) d->orientation[i]=q[i];
+    for (int i=0;i<3;++i) { d->acceleration[i]=sensors.accel[i]; d->angular_velocity[i]=sensors.gyro[i]+w_mouse[i]; }
 }

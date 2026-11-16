@@ -1,8 +1,12 @@
 // SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore: the game window (shim/include/sdl_window.h). Reduced from bbport's gpu/shim/window.cpp
-// (GPL-2.0-or-later): no overlay menu, cursor art or mouse look. Gamepads are sampled by the
+// (GPL-2.0-or-later): no overlay menu or cursor art. Gamepads and the keyboard are sampled by the
 // runtime (port/src/runtime_pad); their SDL events are pumped here along with the window's.
+// Mouse (Dreams port, docs/dreams/INPUT.md): a click in the window takes the mouse (relative mode,
+// pointer hidden and locked; that click is not a game button), F1 lets it go and takes it back,
+// losing focus lets it go. The runtime reads the motion and wheel through bbgpu_mouse_take
+// (bbgpu.cpp) and turns them into the imp's motion (runtime_pad/sensors.c).
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -79,6 +83,47 @@ int WindowSDL::PollTextInput(std::string& out) {
     return text_state;
 }
 
+void WindowSDL::EndTextInput() {
+    std::scoped_lock lock{text_mutex};
+    text_requested = false;
+    text_end_requested = true;
+}
+
+void WindowSDL::TakeMouse(double& dx, double& dy, int& up, int& down) {
+    std::scoped_lock lock{mouse_mutex};
+    dx = mouse_dx;
+    dy = mouse_dy;
+    up = wheel_up;
+    down = wheel_down;
+    mouse_dx = mouse_dy = 0;
+    wheel_up = wheel_down = 0;
+}
+
+// Window thread only. Motion from before is dropped, so taking the mouse does not move the imp.
+void WindowSDL::CaptureMouse(bool capture) {
+    if (capture == mouse_captured.load(std::memory_order_relaxed)) {
+        return;
+    }
+    if (!SDL_SetWindowRelativeMouseMode(window, capture) && capture) {
+        std::printf("Mouse: relative mouse mode failed: %s\n", SDL_GetError());
+        return;
+    }
+    {
+        std::scoped_lock lock{mouse_mutex};
+        mouse_dx = mouse_dy = 0;
+        wheel_up = wheel_down = 0;
+    }
+    mouse_captured.store(capture, std::memory_order_relaxed);
+    if (capture) {
+        capture_settle_ms = SDL_GetTicks() + 100; // the pointer's jump into relative mode
+    }
+    static bool told;
+    if (capture && !told) {
+        told = true;
+        std::printf("Mouse: taken by the game window (F1 releases it, a click or F1 takes it again)\n");
+    }
+}
+
 void WindowSDL::UpdateTextTitle() {
     const std::string title =
         text_active ? base_title + " - " + text_prompt + ": " + text + "_  (Enter = OK, Esc = cancel)"
@@ -95,9 +140,28 @@ bool WindowSDL::PollEvents() {
             SDL_StartTextInput(window);
             UpdateTextTitle();
         }
+        if (text_end_requested) {
+            text_end_requested = false;
+            if (text_active) {
+                text_active = false;
+                text_state = 2;
+                SDL_StopTextInput(window);
+                UpdateTextTitle();
+            }
+        }
+    }
+    if (capture_requested.exchange(false, std::memory_order_relaxed)) {
+        mouse_user_released = false;
+        CaptureMouse(true);
     }
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_EVENT_MOUSE_MOTION && mouse_captured.load(std::memory_order_relaxed) &&
+            SDL_GetTicks() >= capture_settle_ms) {
+            std::scoped_lock lock{mouse_mutex};
+            mouse_dx += event.motion.xrel;
+            mouse_dy += event.motion.yrel;
+        }
         if (text_active &&
             (event.type == SDL_EVENT_TEXT_INPUT || event.type == SDL_EVENT_KEY_DOWN)) {
             std::scoped_lock lock{text_mutex};
@@ -117,6 +181,30 @@ bool WindowSDL::PollEvents() {
             }
             UpdateTextTitle();
             continue;
+        }
+        // A click takes the mouse (it is not passed on as a game button: the runtime reads the
+        // buttons only while the mouse is held).
+        if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && !mouse_captured.load(std::memory_order_relaxed)) {
+            if (capture_enabled.load(std::memory_order_relaxed)) {
+                mouse_user_released = false;
+                CaptureMouse(true);
+            }
+            continue;
+        }
+        if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat && event.key.key == SDLK_F1) {
+            mouse_user_released = mouse_captured.load(std::memory_order_relaxed);
+            CaptureMouse(!mouse_user_released && capture_enabled.load(std::memory_order_relaxed));
+            continue;
+        }
+        if (event.type == SDL_EVENT_MOUSE_WHEEL && mouse_captured.load(std::memory_order_relaxed)) {
+            const float notches = event.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -event.wheel.y : event.wheel.y;
+            if (notches != 0) {
+                std::scoped_lock lock{mouse_mutex};
+                (notches > 0 ? wheel_up : wheel_down) += 1;
+            }
+        }
+        if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) {
+            CaptureMouse(false);
         }
         switch (event.type) {
         case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
