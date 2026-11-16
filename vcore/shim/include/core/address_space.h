@@ -35,6 +35,8 @@ public:
     /// Guest page -> host pointer of its backing (the runtime's memfd view), for hashing guest
     /// memory without tripping write/read traps. Same shape as upstream's
     /// Common::MultiLevelPageTable<Traits>::find(): returns a pointer to the entry, or nullptr.
+    /// Read-only, consume immediately: the entry is thread-local and invalidated by the next
+    /// lookup; backing contents can change on guest writes/remaps. Split pages use a copy.
     class BackingPageTable {
     public:
         u8* const* find(u64 page) const;

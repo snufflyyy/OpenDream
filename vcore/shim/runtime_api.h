@@ -11,6 +11,9 @@ extern "C" {
 int runtime_memory_is_mapped(uintptr_t address, uint64_t size);
 int runtime_memory_write_backing(uintptr_t address, const void* data, uint64_t size);
 void runtime_memory_read_backing(uintptr_t address, void* data, uint64_t size);
+// Borrow at most *size contiguous bytes of shared backing; NULL sets *size=0. Consume
+// immediately, never retain across mappings. Private direct memory uses the copying fallback.
+const void* runtime_memory_backing_span(uintptr_t address, uint64_t* size);
 uint64_t runtime_memory_clamp(uintptr_t address, uint64_t size);
 int runtime_memory_region(uintptr_t address, uintptr_t* start, uintptr_t* end, int* mapped);
 int runtime_memory_vma_info(uintptr_t address, int* prot, int* type, uintptr_t* end);

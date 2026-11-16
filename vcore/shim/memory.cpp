@@ -147,21 +147,6 @@ bool MemoryManager::TryStoreBacking(VAddr address, const void* data, u32 size) {
 
 // ---- AddressSpace ----------------------------------------------------------------------------
 
-u8* const* AddressSpace::BackingPageTable::find(u64 page) const {
-    // Upstream returns the backing pointer of one 16 KiB guest page. The runtime has no exported
-    // VA->backing lookup for every mapping kind, so hand out a per-thread copy of the page read
-    // through the backing view (callers only read it: texture_cache.cpp HashBackingMemory).
-    thread_local u8 copy[GUEST_PAGE_SIZE];
-    thread_local u8* entry = nullptr;
-    const VAddr address = page << GUEST_PAGE_BITS;
-    if (!runtime_memory_is_mapped(address, 1)) {
-        return nullptr;
-    }
-    runtime_memory_read_backing(address, copy, GUEST_PAGE_SIZE);
-    entry = copy;
-    return &entry;
-}
-
 void AddressSpace::Protect(VAddr virtual_addr, u64 size, MemoryPermission perms) {
     runtime_memory_gpu_protect(virtual_addr, size, True(perms & MemoryPermission::Read),
                                True(perms & MemoryPermission::Write));

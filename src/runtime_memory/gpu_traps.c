@@ -290,6 +290,27 @@ void runtime_memory_read_backing(uintptr_t address, void *data, uint64_t size) {
     }
     read_unlock();
 }
+/* Borrow a contiguous span in the permanent shared backing view, bounded by one VMA and
+ * the requested *size. Used immediately by vcore texture hashing; never cache across remaps.
+ * No GPU readback or guest-page access: even PROT_NONE guest pages are safe to hash here.
+ * Private direct allocations have only the guest view (which can fault/unmap), so use the
+ * caller's copying fallback for those. This is not a snapshot against concurrent writes. */
+const void *runtime_memory_backing_span(uintptr_t address, uint64_t *size) {
+    if (!size || !*size) return NULL;
+    const void *p=NULL;
+    read_lock();
+    const size_t i=vma_index(address);
+    if (i<vma_count && vmas[i].start<=address && vmas[i].kind!=KIND_RESERVED) {
+        const uint64_t phys=vmas[i].phys+(address-vmas[i].start);
+        if (!(private_import && phys<POOL_SIZE)) {
+            if (vmas[i].end-address<*size) *size=vmas[i].end-address;
+            p=backing_at(phys);
+        }
+    }
+    if (!p) *size=0;
+    read_unlock();
+    return p;
+}
 /* Per-thread cache of recently found regions for the GPU's per-draw queries:
  * entries hold for as long as the table generation they were read at. */
 typedef struct { uint64_t generation; uintptr_t start, end; int kind; } CachedRegion;
