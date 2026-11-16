@@ -110,6 +110,24 @@ which is stable across builds (all three keys the fork published map to the same
 | a3a9e9ef | B1TransformWriter | 1e4b6169 | 0b43adf3d7d23b0f | - | B1 store at 0x2020 (v0), predicate at 0x1f04 |
 | 63ddac84 | A3LookupProducer | 28ed40dd | acebdb2fe22583a4 | - | atomics at 0x12c / 0x1ac |
 | d049fb84 | ModelFinalize | 6c1424ae | 55f16b0ad6c08b40 | - | V_OR v7,v16 at 0x4d0 |
+| fd2a2c3b | SpriteCullShader | 243e52a5 | 47286830cfa30cb4 | - | 74KB culling kernel, 3 unnormalized da=1 fetches, DS_APPEND, V_BFE_U32, V_CMP_CLASS_F32, S_ADDK_I32=false |
+| e4dcd599 | SpriteCullShaderAlt | fc62f3fb | 150ee32a04cb4cba | - | 74KB culling kernel, 3 unnormalized da=1 fetches, DS_APPEND, V_BFE_U32, V_CMP_CLASS_F32, S_ADDK_I32=true |
+| 3706083c | DreamsSpriteGeometryVertexShaderAlt | 2c1d441d | bc192dad1b8a9f69 | - | VS cuboid proxies (Vs370InterfaceCapture), stride 192, SRT offset 248, POS0/PARAM0/PARAM1 exports |
+| d25db925 | DreamsSpriteGeometryVertexShader | aed5e6c9 | c3eb1ca8b4c3c0bc | - | VS indexed indirect geometry, transform stride 192 from s[28:29], binds 3 buffers |
+| 3f6e1a00 | DreamsSpriteGeometryFragmentShader | 2b78fc9e | d55ffac21a6d014c | - | FS sprite geometry main, interpolates PARAM0.xy and PARAM1.x, exports MRT0 + depth |
+| ce3b8413 | DreamsSculptFragmentShader | c2f015b2 | e2044947cf4cb2c5 | - | FS sculpt atlas raymarching (Ce3ReadConst), sole FS with V_BFE_U32 + S_ADDK_I32 + V_CMP_CLASS_F32 |
+| dcc325c2 | DreamsFleckDecodeFragmentShader | 0551b29f | af539a0a983d5173 | - | FS fleck decode, sole FS with V_AND_B32 0x7fffff tag 2 unpacking and dynamic constants at 0x60 |
+| 345893a7 | PrimGlassMipBlurDownCS | 5e4e4286 | 09a188a7876bd1c3 | - | Glass mip builder, sole CS with 4 2D unnormalized explicit LOD IMAGE_SAMPLE_L + IMAGE_STORE |
+| e165304b | SunShadowMipCascade0 | 04075db1 | d3f33bd1ac363a47 | - | CS sun shadow mip 0, da=1 explicit LOD IMAGE_SAMPLE_L, V_BFE_U32=true |
+| 9f3303a7 | SunShadowMipCascade1 | fe774a8b | d4e9e29894725da7 | - | CS sun shadow mip 1, da=1 explicit LOD IMAGE_SAMPLE_L, V_BFE_U32=true |
+| cfbf6b00 | ShadowHeightPyramidProducer | 57271d77 | 38f978f67b474862 | - | CS shadow height pyramid, 4 da=1 IMAGE_SAMPLE_L fetches + IMAGE_STORE_MIP |
+| 5e8446a4 | SpotShadowMipOccluders | dd74cafd | ce25bcb63f4d45e7 | - | CS spot shadow occluders, 4 da=1 IMAGE_SAMPLE_L fetches + IMAGE_STORE_MIP |
+| 34267ace | Array2dLodSelector | 8afe507e | e6fbdf52f53022e1 | - | CS array LOD selector, DS_APPEND, 3 unnormalized da=1 fetches, V_CMP_CLASS_F32=true |
+| 3091e6c1 | Array2dLodMip | 0a08e5a1 | 0628ccca9a8e1223 | - | CS array LOD mip, explicit LOD da=1 IMAGE_SAMPLE_L + IMAGE_STORE_MIP |
+| 48a95ab7 | TemporalResolveShader | 270c22d3 | 934f55c82e21cd04 | - | CS temporal resolve, LDS memory barrier target, 19 SOP2 live-mask operations |
+| 80aed032 | SpatialReconstructionPrepareShader | 7b02b3ec | 3652d300f1bdc45e | - | CS spatial reconstruction prepare, post-fill LDS barrier target, reads raw image tiles |
+| b1b1758b | SpatialReconstructionShader | 659d2209 | 35d13191c514feec | - | CS spatial reconstruction, post-fill LDS barrier target, 8 LDS writes in branch loop |
+| bb773aed | GpuScalarTableReadCamera | c27a3c14 | 1a17c97278488d07 | - | CS camera table read, nested SRT pointer from root 2, 112 SMRD table reads |
 
 "shared" signatures are not unique among routes, so rule 3 never uses them (a future build with
 changed code for these four needs its code hash added). Four v2.52 DOC kernels have no fork route

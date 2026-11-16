@@ -208,6 +208,150 @@
    "doc": null,
    "shape_match": false,
    "evidence": "no DOC; unique v2.52 shader with V_OR_B32 of v7|v16 at fork PC 0x4d0"
+  },
+  {
+   "fork_hash": "fd2a2c3b",
+   "name": "SpriteCullShader (Subgroup compact atomic inc)",
+   "key": "47286830cfa30cb4",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "Massive 74KB culling kernel; 3 unnormalized da=1 IMAGE_SAMPLE_L fetches at pc=11b04/11b88/11b90, DS_APPEND, V_BFE_U32, V_CMP_CLASS_F32, S_ADDK_I32=false"
+  },
+  {
+   "fork_hash": "e4dcd599",
+   "name": "SpriteCullShaderAlt (Subgroup compact atomic inc)",
+   "key": "150ee32a04cb4cba",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "Massive 74KB culling kernel; 3 unnormalized da=1 IMAGE_SAMPLE_L fetches at pc=119b4/11a38/11a40, DS_APPEND, V_BFE_U32, V_CMP_CLASS_F32, S_ADDK_I32=true"
+  },
+  {
+   "fork_hash": "3706083c",
+   "name": "DreamsSpriteGeometryVertexShaderAlt (Vs370InterfaceCapture)",
+   "key": "bc192dad1b8a9f69",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "VS cuboid proxies; loads 4 transform columns at stride 192 from SRT offset 248, exports POS0, PARAM0, PARAM1 components 0..3"
+  },
+  {
+   "fork_hash": "d25db925",
+   "name": "DreamsSpriteGeometryVertexShader (Indexed indirect)",
+   "key": "c3eb1ca8b4c3c0bc",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "VS indexed indirect geometry; loads transform columns at stride 192 from s[28:29], binds 3 buffers, exports PARAM1 components 0..3"
+  },
+  {
+   "fork_hash": "3f6e1a00",
+   "name": "DreamsSpriteGeometryFragmentShader",
+   "key": "d55ffac21a6d014c",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "FS sprite geometry main; interpolates PARAM0.xy and PARAM1.x, loads descriptors at offsets 0x10/0x20/0x30 from s[13:14], exports to MRT0 and depth (target 8)"
+  },
+  {
+   "fork_hash": "ce3b8413",
+   "name": "DreamsSculptFragmentShader (Ce3ReadConst)",
+   "key": "e2044947cf4cb2c5",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "FS sculpt atlas raymarching; sole FS with V_BFE_U32 + S_ADDK_I32 + V_CMP_CLASS_F32, dynamic SMRD loads from s[0:1] + SGPR2*16 + 96"
+  },
+  {
+   "fork_hash": "dcc325c2",
+   "name": "DreamsFleckDecodeFragmentShader",
+   "key": "af539a0a983d5173",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "FS fleck decode; sole FS with V_AND_B32 0x7fffff tag 2 unpacking and dynamic constants at offset 96 (0x60)"
+  },
+  {
+   "fork_hash": "345893a7",
+   "name": "PrimGlassMipBlurDownCS (Glass mip)",
+   "key": "09a188a7876bd1c3",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "Glass mip builder; sole CS with exactly 4 2D unnormalized explicit LOD IMAGE_SAMPLE_L followed by IMAGE_STORE"
+  },
+  {
+   "fork_hash": "e165304b",
+   "name": "SunShadowMipCascade0",
+   "key": "d3f33bd1ac363a47",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "CS sun shadow mip 0; da=1 explicit LOD IMAGE_SAMPLE_L, V_BFE_U32=true, V_CMP_CLASS_F32=false"
+  },
+  {
+   "fork_hash": "9f3303a7",
+   "name": "SunShadowMipCascade1",
+   "key": "d4e9e29894725da7",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "CS sun shadow mip 1; da=1 explicit LOD IMAGE_SAMPLE_L, V_BFE_U32=true, V_CMP_CLASS_F32=false"
+  },
+  {
+   "fork_hash": "cfbf6b00",
+   "name": "ShadowHeightPyramidProducer",
+   "key": "38f978f67b474862",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "CS shadow height pyramid; 4 da=1 IMAGE_SAMPLE_L fetches followed by IMAGE_STORE_MIP"
+  },
+  {
+   "fork_hash": "5e8446a4",
+   "name": "SpotShadowMipOccluders",
+   "key": "ce25bcb63f4d45e7",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "CS spot shadow occluders; 4 da=1 IMAGE_SAMPLE_L fetches followed by IMAGE_STORE_MIP"
+  },
+  {
+   "fork_hash": "34267ace",
+   "name": "Array2dLodSelector",
+   "key": "e6fbdf52f53022e1",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "CS array LOD selector; DS_APPEND, 3 unnormalized da=1 IMAGE_SAMPLE_L fetches, V_CMP_CLASS_F32=true, V_BFE_U32=false"
+  },
+  {
+   "fork_hash": "3091e6c1",
+   "name": "Array2dLodMip",
+   "key": "0628ccca9a8e1223",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "CS array LOD mip; explicit LOD da=1 IMAGE_SAMPLE_L at pc=010c followed by IMAGE_STORE_MIP at pc=0148"
+  },
+  {
+   "fork_hash": "48a95ab7",
+   "name": "TemporalResolveShader",
+   "key": "934f55c82e21cd04",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "CS temporal resolve; LDS memory barrier target, 19 SOP2 live-mask operations matching scalar_alu.cpp:385"
+  },
+  {
+   "fork_hash": "80aed032",
+   "name": "SpatialReconstructionPrepareShader",
+   "key": "3652d300f1bdc45e",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "CS spatial reconstruction prepare; post-fill LDS barrier target, reads raw image tiles, branch loop LDS write at pc=0174..01a4"
+  },
+  {
+   "fork_hash": "b1b1758b",
+   "name": "SpatialReconstructionShader",
+   "key": "35d13191c514feec",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "CS spatial reconstruction; post-fill LDS barrier target, 8 LDS writes in branch loop, V_CMP_CLASS_F32=true, V_BFE_U32=false"
+  },
+  {
+   "fork_hash": "bb773aed",
+   "name": "GpuScalarTableReadCamera",
+   "key": "1a17c97278488d07",
+   "doc": null,
+   "shape_match": false,
+   "evidence": "CS camera table read; nested SRT pointer from root 2 (s[2:3]), 112 SMRD table reads, no LDS instructions, V_CMP_CLASS_F32=true"
   }
  ]
 }

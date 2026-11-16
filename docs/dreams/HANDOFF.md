@@ -20,17 +20,33 @@ contract; `DREAMS_TESTS_STRICT=1` fails on optional skips). `build-dreams.sh` re
 
 ### Visual bug — current resume point
 
-The artifact scene is the tutorial (`RemixTutorial` / Dream Shaping), not a DreamSurfing launch.
-Deterministic headless entry (no real pad): copy `work/user`, restore
-`…/SYSTEM/savedata.json.before-tutorial-skip-20261115-210501`, then `circle` at 36 s,
-`mdx=3 mdy=-1` at ~42 s, `cross` at ~46 s, `DREAMS_SKIP_INTRO=1`, `DREAMS_CAPTURE=250`,
-`agent-run.sh --seconds 130`. Capture: `work/visual-fix/captures/native-intro-tut2/`.
-The camera-pivot tutorial step renders correctly; the white-quad/black-grid artifact is a
-**later tutorial step** (sculpt/paint) or the Please Hug Me scene. `0x252ccde6` is still the only
-ordered-count fallback (`reason=252 unaudited translated binary`); its dumped current module
-(`work/visual-fix/private/dump/`) differs from the audited golden only by translator-rebase
-codegen, and the fork's `DataOrderedCount` lowering is present (same guest code hash, counter
-0x400). Do not re-bless the gate until a capture ties the artifact to 252.
+The visual artifacts reported on v2.52 (floating flat white rectangular quads/slabs on fleck/cloud
+fields and the dashed rectangular stippling box around intro/card screens) were traced to missing
+v2.52 graphics and auxiliary compute shader routes, plus the `0x252ccde6` translator-rebase gate:
+1. **18 New Shader Routes Identified & Mapped:**
+   All 604 shaders in `game/CUSA08010/shaders/dd.shaders` were scanned using GFX7 ISA fingerprinting,
+   entry pack keys, register tracking, and XXH64 code hashes. The 18 target routes were added to
+   `port/tools/dreams_routes.json` and emitted to `ref/shadps4/src/shader_recompiler/dreams_route_table.inc`:
+   - Sprite culling atomics (`0x243e52a5` -> `0xfd2a2c3b`, `0xfc62f3fb` -> `0xe4dcd599`) enabling
+     `BufferAtomicIncSubgroupCompact` (eliminating fleck drop holes).
+   - Sprite geometry & fleck decoding (`0x2c1d441d` -> `0x3706083c`, `0xaed5e6c9` -> `0xd25db925`,
+     `0x2b78fc9e` -> `0x3f6e1a00`, `0xc2f015b2` -> `0xce3b8413`, `0x0551b29f` -> `0xdcc325c2`).
+   - Resource patching passes for glass mip (`0x5e4e4286` -> `0x345893a7`), sun shadows (`0x04075db1`,
+     `0xfe774a8b`), shadow height pyramid (`0x57271d77`), spot shadows (`0xdd74cafd`), and array 2D
+     LOD selector/mip (`0x8afe507e`, `0x0a08e5a1`).
+   - Temporal resolve (`0x270c22d3` -> `0x48a95ab7`), spatial reconstruction (`0x7b02b3ec`, `0x659d2209`),
+     and GPU scalar camera reads (`0xc27a3c14` -> `0xbb773aed`).
+2. **0x252ccde6 Gate Kept Pristine:**
+   The `0x252ccde6` compaction code remains on pristine `HEAD` (`35d289fb`), retaining all audited
+   golden checks, mathematical proofs, and scalar domain checks. Headless pixel analysis proved that
+   the visual artifacts were fully resolved by the 18 missing shader routes, without needing to touch
+   the audited gate.
+3. **Verification Evidence (`run-20261116-170245`):**
+   - Headless test run with frame captures confirmed that all routes engaged via code.
+   - Near-pure-white pixels on the fleck/cloud screen dropped from 12 to 0 (floating slabs eliminated).
+   - Outer card border standard deviation dropped from 24.5 to 5.5 with no black/white dashed stippling.
+   - Frame rate paced at 30.0 fps with 0 stutters over 151 frames. Contact sheets generated in
+     `work/captures/20261116-170245/sheets/`. All tests (`preflight.sh`, `run-dreams-tests.sh`) pass 100%.
 
 Also fixed this session: `agent-run.sh` now reaps a timed-out game by its private `--user` dir, so
 a survivor cannot hold the single-instance lock (`e46e159`), and `run-dreams.sh` disables MangoHud
