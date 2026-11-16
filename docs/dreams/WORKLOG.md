@@ -266,3 +266,17 @@
   Workaround for the user: skip the first-time intro (DREAMS_SKIP_INTRO=1 DREAMS_TUTORIAL_SKIP_MY_SAVE=1,
   backs up the save first).
 - 2026-11-15 21:08: fixed skip-my-save launch crash (FaultManager read past its buffer on >1023 page faults per batch; shadPS4 vcore commit). Verified 100 s sandbox run with a copy of the flagged save.
+
+## 2026-11-15 (hang agent): GPU hang investigation, partial (docs/dreams/GPU_HANG.md)
+
+- The hang is at the **transition after the imp swarm** (black frame at 133.6 s), not mid-swarm. In a
+  passing run the first new pipeline at that moment is compute 0x75d8db76_8 ("Skipping lowering for
+  null buffer sharp", matched by shader-cache file mtime); it has no loops/atomics. The 22 DOC-fallback
+  shaders are all first dispatched during boot.
+- Static scan of the 300 cached SPIR-V modules (tools/spirv_dis.c + tools/spirv_spin_scan.py): no
+  look-back style wait-for-other-workgroup loop; ~30 shaders have data-bounded loops (list/tree walks)
+  that would spin forever on inconsistent data.
+- Lavapipe: 4 GiB sparse arena > maxBufferSize (4 GiB - 1); fix written then discarded (user dropped
+  the software-GPU path).
+- Next: loop guard with env switch + cache-key change + host-visible hit counter, indirect-dims clamp;
+  then one guarded repro with work/hang-user.
