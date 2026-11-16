@@ -323,3 +323,26 @@
   merge (run-20261115-220815) asserted `Dreams 84aa checkpoint value 7 is not a phi` compiling the
   SculptVolumeWriter route; two later runs were clean. Sent back to the agent (branch docmatch2) to
   find the cause and make route emission fall back instead of asserting.
+
+## 2026-11-15 (docmatch2): route fail-safe; the intermittent 84aa stop explained and fixed
+
+- Stop in `run-20261115-220815` ("Dreams 84aa checkpoint value 7 is not a phi"): undefined
+  behaviour, not a different variant or cache state. 84aa's lane-active value is
+  `Phi [#true], [#true]`; upstream's post-structurizer SSA rebuild folds it to `#true` in every
+  process (IR dumps of 5 processes, `SHADPS4_DREAMS_ROUTE_IR_DUMP=84aa3dc9`). The fork's emitter
+  read that immediate as an `IR::Inst*`: the phi check depended on leftover memory, and when it
+  passed, `SetDefinition` wrote through the garbage pointer. Fixed in `EmitDreamsSculptCheckpoint`
+  (shadPS4 d03472b2): constants need no restore.
+- Fail-safe (shadPS4 0ba1070a): routed programs compile inside `Common::RecoverableAssertScope`; a
+  failed assertion refuses the route for that guest hash (logged `REFUSED`) and recompiles
+  generically. Verified with `SHADPS4_DREAMS_ROUTE_FORCE_REFUSE=84aa3dc9` (run 221903: refused,
+  atomic fallback, game kept running). VERSIONS.md section 9.
+- Verification: 4 runs 222156..222757 + 223112, each 26 routes, 0 refused, 84aa exact path active,
+  no STOP.
+- Note: from ~22:08 every run with the shared `work/agent-user` save (also the merged main build,
+  run 220856) shows a black menu backdrop, a loading spinner, and never loads the homespace
+  (`MM_dreamqueen.dat` never opened); ✕ on the offline notice does nothing. That save's
+  `player_progress.maps` / `dreams` are now empty (the user's save has homespace map
+  m326284ee5d6145). A freshly seeded save dir (`DREAMS_USER_DIR=work/agent-user-docmatch2`, run
+  223112) is back to normal: purple backdrop, homespace with painterly clouds and the puppet.
+  Reseed `work/agent-user` (delete it; agent-run.sh seeds it again from work/user).
