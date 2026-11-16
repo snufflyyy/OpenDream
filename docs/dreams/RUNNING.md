@@ -25,6 +25,17 @@ DREAMS_TIMEOUT=30 ./run-dreams.sh --cpu-only      # watchdog: dump thread stacks
 `run-dreams.sh` re-runs the offline prep only when `eboot.bin` or `scripts/link_modules.py`
 changed. Outputs go to `work/out/`; the guest's user dir (saves) is `work/user/`.
 
+GPU (vcore, the default build), see `VCORE.md` §5:
+```
+BB_GAME_PROFILE=none DREAMS_TIMEOUT=0 timeout -s KILL 150 ./run-dreams.sh > ../work/run.log 2>&1
+VCORE_SCREENSHOT_EVERY=10 ...    # PNG of the presented frame every 10 s -> work/vcore-user/screenshots/
+VCORE_LOG_FILTER="*:info Render.Vulkan:debug" ...   # GPU log filter (shadPS4 syntax; default *:warning)
+```
+`run-dreams.sh` sets up the Dreams fork's emulator configuration for vcore: per-game config
+`work/vcore-user/custom_configs/<SERIAL>.json` (readbacks Precise, ...), the `SHADPS4_DREAMS_*`
+switches, private shader cache `work/vcore-shader-cache/`, `SHADPS4_USER_DIR=work/vcore-user`.
+It opens a window: always wrap runs in `timeout -s KILL`.
+
 Exit codes from the loader: 20 = stopped at an unsupported import (message starts with `STOP:`),
 21 = a runtime `STOP:` for an unimplemented case.
 

@@ -11,14 +11,15 @@ Last updated: 2026-11-15. Game under test: CUSA08010 v2.52 (user moving to v2.64
 | 3 | Runtime generalisation: NID-only resolvers, Dreams NID→name table, missing libc-init hooks | **done for boot** (more real implementations needed, see STUBS.md) |
 | 4 | CPU-only boot: module inits return, game entry runs, reaches GPU/VideoOut init | **done** — `main()` runs, ~40 guest threads start, `GameUpdate` main loop thread created |
 | 5 | Null GPU backend | **skipped for now**: bbport's libbbgpu already works as a real GPU backend for Dreams up to the first unsupported shader op (see below) |
-| 6 | "vcore": GPU library from latest upstream shadPS4 video_core + shader_recompiler + gnmdriver + videoout behind bbport's runtime↔GPU seam | **next** |
-| 7 | Apply Dreams fork patches (ref/shadps4 branch `dreams`); extend `CUSA04301` gates to our title ID; shader-hash census | todo (needed for DS_ORDERED_COUNT) |
+| 6 | "vcore": GPU library from latest upstream shadPS4 video_core + shader_recompiler + gnmdriver + videoout behind bbport's runtime↔GPU seam | **done** (2026-11-15): `port/vcore` → `libvcore.so`, default in `build-dreams.sh`. See `VCORE.md` |
+| 7 | Apply Dreams fork patches (ref/shadps4 branch `dreams`); extend `CUSA04301` gates to our title ID; shader-hash census | **mostly done**: vcore compiles branch `vcore` (= `dreams` + 2 native edits); `GameSerial()=CUSA08010` turns the fork's gates on; readbacks Precise + `SHADPS4_DREAMS_*` applied by `run-dreams.sh`. Open: v2.52 shader-hash census (15 DOC routes fall back to the atomic path), eboot byte patches not ported |
 | 8 | First frame of main menu / homespace; then audio, pad (motion), saves (tutorial-skip save), intro video | todo |
 | 9 | Optional: bbport memory model / performance work | todo |
 
 ## What works right now
 
-`./run-dreams.sh` (GPU on, bbport's libbbgpu, `BB_GAME_PROFILE=none`):
+`./run-dreams.sh` (GPU on, **vcore**, `BB_GAME_PROFILE=none`). Steps 1-6 were first reached with
+bbport's libbbgpu, step 7 is vcore:
 1. Loader maps 187,712,088 bytes, applies 35,240 relocations.
 2. libc.prx, libSceFios2.prx and libSceJobManager.prx initialisers return 0.
 3. Game entry → `_init_env` → `main()`. Dreams prints its engine banner ("UNICORN", built
@@ -30,20 +31,23 @@ Last updated: 2026-11-15. Game under test: CUSA08010 v2.52 (user moving to v2.64
 6. Video out opened; Hmd/VR, Ime keyboard, AppContent, Ajm (AAC via fdk-aac when `./build-deps.sh` has built `out/libdreams-codecs.so`, else silent), PlayGo (all 6
    chunks local), all offline tutorial videos found, SaveData/Camera/Move/VideoPlayer/GameUpdate
    threads created.
-7. First compute dispatch: the shader recompiler hits **`DS_ORDERED_COUNT`** (unknown opcode) →
-   assertion → `STOP: GPU library assertion failed`. Log: `docs/dreams/logs-gpu-run1.txt`.
+7. With vcore (2026-11-15): `DS_ORDERED_COUNT` compute passes run (fork DOC paths), the intro
+   video plays (AvPlayer), and the screen shows "Sony Interactive Entertainment presents" → the
+   indreams.me card → the first-run **preferences screen ("✕ CONTINUE")**, animated, waiting for
+   input, ~40-60 s after start. Same point as the reference emulator. No GPU assertion in 150 s.
+   Logs `work/vcore-run3.log`, `work/vcore-run4.log`; screenshots via `VCORE_SCREENSHOT_EVERY`.
+   (With `DREAMS_GPU=bbport` it still stops at `DS_ORDERED_COUNT`: `docs/dreams/logs-gpu-run1.txt`.)
 
 `./run-dreams.sh --cpu-only` gets the same far on the CPU side and then idles (no GPU fences ever
 signal), which the watchdog reports after `DREAMS_TIMEOUT` seconds.
 
 ## Current blocker
 
-`DS_ORDERED_COUNT` (GDS ordered append/consume, used by Dreams' compute passes). bbport's shader
-recompiler (an older shadPS4 copy) doesn't implement it. The Dreams fork implements it
-("ordered-count", "doc-prefix", "ordered-guards" builds). That's why we move to milestone 6/7: build
-the GPU library from `ref/shadps4` branch `dreams`. A short-term alternative is to port only the
-fork's DS_ORDERED_COUNT translation into bbport's `gpu/shader/` (105/110 files still match
-upstream layout); this isn't the chosen direction (decision D2) but could be a quick experiment.
+None hard. Next is input past the first-run preferences screen (press ✕ on the pad; the runtime
+samples SDL gamepads, the vcore window pumps their events) and following the menus toward
+homespace, compared with the reference emulator. The old blocker (`DS_ORDERED_COUNT` in bbport's
+recompiler) is gone with vcore. AvPlayer is currently served by vcore (bbport's AvPlayer compiled
+in, interim) until the runtime has its own (`VCORE.md` §2).
 
 ## Temporary behaviours to remove later
 
@@ -56,7 +60,8 @@ upstream layout); this isn't the chosen direction (decision D2) but could be a q
 | Ime keyboard: open succeeds, no key events | `src/runtime_dreams_services.c` | USB keyboard text entry isn't wired | SDL keyboard -> OrbisImeEvent (editor work) |
 | Audit no-ops (`ok`) | `src/runtime_dreams_services.c` | 0 is right offline (profiler hooks, streaming/sharing, sanitizers, Neo mode off) | Revisit if a feature needs one (e.g. Neo mode for PS4 Pro resolution) |
 | `BB_SKIP_GAME_CHECK=1` | `run-dreams.sh` | bbport's check pins Bloodborne's image hash | Title-based Dreams check (decision D7) |
-| GPU library = bbport's libbbgpu | `build-dreams.sh` | unblocked CPU-side work | vcore (milestone 6) |
+| AvPlayer served by the GPU library (bbport's AvPlayer compiled into vcore) | `vcore/CMakeLists.txt` `VCORE_BBPORT_AVPLAYER` | Dreams waits for its intro video; vcore had no AvPlayer | Runtime-side AvPlayer (it overrides automatically: runtime resolves before `bbgpu_resolve`), then `-DVCORE_BBPORT_AVPLAYER=OFF` |
+| No ImGui overlay in vcore; presenter blits the frame | ref/shadps4 `vcore` branch, `vk_presenter.cpp` | upstream draws the game through Dear ImGui | Fine as is; add a small overlay later if wanted |
 
 ## Numbers to track
 

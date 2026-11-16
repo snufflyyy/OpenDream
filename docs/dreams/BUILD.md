@@ -37,16 +37,32 @@ out/bb-probe --vulkan-only        # expect: "AMD Radeon RX 7800 XT (RADV NAVI32)
 `BB_NET=OFF` drops the online module (Dreams is offline-only). LTO is off only to speed up
 iteration.
 
-## 3. The port (loader + C runtime)
+## 3. The port (loader + C runtime) + GPU library
 
 ```
 cd port
-./build-dreams.sh                 # -> out/dreams-probe, links ../ref/bbport/out/gpu/libbbgpu.so
+./build-dreams.sh                 # default DREAMS_GPU=vcore: builds vcore/build/libvcore.so,
+                                  # ./build-deps.sh (codec library), then out/dreams-probe
+DREAMS_GPU=bbport ./build-dreams.sh   # links ../ref/bbport/out/gpu/libbbgpu.so instead (section 2)
 ```
-Override the GPU library location with `BBGPU_DIR=...`. The C side must stay `-no-pie`.
+`out/gpu-library.txt` records which one was linked (run-dreams.sh reads it). Override bbport's
+library location with `BBGPU_DIR=...`. The C side must stay `-no-pie`.
 
-## 4. Later: vcore (milestone 6)
+## 4. vcore (milestone 6, done 2026-11-15)
 
-The GPU library will be rebuilt from `ref/shadps4` branch `dreams` (latest upstream + Dreams fork
-patches). See `notes/shadps4-dreams-rebase.md` for how that branch was produced and
-`notes/bbport-reuse-plan.md` §3–4 for the seam and the adapter design.
+`port/vcore/` compiles the GPU sources of `ref/shadps4` branch **`vcore`** (= `dreams` + 2 native
+edits) **in place**, plus glue in `port/vcore/shim/`. Full design: `docs/dreams/VCORE.md`.
+
+- First `./build-dreams.sh` configures it:
+  `CC=~/.local/bin/clang CXX=~/.local/bin/clang++ cmake -S vcore -B vcore/build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo`
+  (clang 20 like the reference shadPS4 build; override with `VCORE_CC`/`VCORE_CXX`), then
+  `ninja -C vcore/build vcore` (`VCORE_JOBS`, default 15). Clean build ≈ 6 min, ~300 MB.
+- Third-party code comes from `ref/shadps4/externals` (pinned versions, no extra packages). System:
+  Vulkan loader, SDL3, FFmpeg dev packages (RPM Fusion, already installed), glslang.
+- None of the bbport Fedora workarounds (FindZydis, magic_enum compat, ref/vulkan-headers) are
+  needed: vcore uses shadPS4's own copies.
+- CMake options: `SHADPS4_DIR` (default `../ref/shadps4`), `VCORE_MARCH` (default `x86-64-v3`),
+  `VCORE_BBPORT_AVPLAYER` (default ON, interim AvPlayer).
+- `libvcore.so` leaves `runtime_*` undefined on purpose (`--allow-shlib-undefined`); they come from
+  `dreams-probe` (`-rdynamic`). Check: `nm -D -u vcore/build/libvcore.so | grep -v @` should list
+  only `runtime_*` (+ weak `__gmon_start__`/`_ITM_*`).

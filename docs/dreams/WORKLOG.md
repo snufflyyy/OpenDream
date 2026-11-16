@@ -91,3 +91,36 @@
 - After (`work/cpu-audit-2.log`): 17 `STUB:` lines, all GnmDriver/VideoOut; 154 non-GPU imports
   unresolved at load. The codec library loads, Dreams creates its two ATRAC9 encoders and AAC
   instances with the real decoder. The cpu-only run still ends at the GPU-fence watchdog.
+
+## 2026-11-15 (vcore agent): milestone 6/7, the shadPS4-based GPU library
+
+- Built `port/vcore/` (CMake → `libvcore.so`): the bbport 0.7 `bbgpu.h` API over ref/shadps4
+  branch `vcore` (= `dreams` + commit `5f10ad43` with 2 `// vcore:` edits), compiled **in place**
+  (video_core, shader_recompiler, common subset, emulator_settings, gnmdriver, videoout, equeue).
+  Glue in `port/vcore/shim/`: header shadowing for core/memory.h, address_space.h, libs.h,
+  kernel.h, threads.h, file_sys/fs.h, net/guest_net.h, sdl_window.h, imgui headers; .cpp for the C
+  API, MemoryManager over `runtime_memory_*`, signal registry, stdout logging, window, kernel clocks,
+  stubs. Third-party from shadPS4's pinned externals. Design and mapping table: `VCORE.md`.
+- Surprise: upstream video_core needed less adapter than estimated (~1.9k lines incl. CMake and
+  comments, low end of the 1.5-2.5k estimate). After two compile rounds the only missing symbols were `io_context`/`KernelSignalRequest`
+  (equeue timers).
+- The emulator draws the game frame only through Dear ImGui; vcore has no ImGui, so
+  `vk_presenter.cpp` got a `VCORE_NATIVE` blit into the swapchain. `path_util.cpp` got
+  `SHADPS4_USER_DIR` so the library never touches `./user` or `~/.local/share/shadPS4`.
+- Settings/serial: upstream `emulator_settings.cpp` is compiled as is and loads
+  `work/vcore-user/custom_configs/CUSA08010.json` (the fork's CUSA04301.json); log shows
+  `readbacks_mode=2`, `GameSerial()=CUSA08010 (Dreams gates ON)`. `run-dreams.sh` exports the fork
+  launcher's `SHADPS4_DREAMS_*` set (same as `tools/run-shadps4-reference.sh`).
+- `build-dreams.sh`: `DREAMS_GPU=vcore` (default) / `bbport`; also runs `./build-deps.sh`.
+- Run 1: past `DS_ORDERED_COUNT` (DOC routes active, "DOC atomic fallback" for v2.52 hashes),
+  but the screen stayed on "Sony Interactive Entertainment presents" (found by adding
+  `VCORE_SCREENSHOT_EVERY`, which drives shadPS4's own screenshot readback). Cause: all 18
+  `libSceAvPlayer` imports were `STUB:`s (bbport's libbbgpu used to provide AvPlayer), so the intro
+  video never ended.
+- Compiled bbport's native AvPlayer (`port/gpu/platform/avplayer`, FFmpeg, runtime file paths,
+  runtime-attached host threads) into vcore in place (CMake option `VCORE_BBPORT_AVPLAYER`, interim:
+  the lead routes a runtime-side AvPlayer to another agent; the runtime resolves before
+  `bbgpu_resolve`, so it will override this automatically).
+- Run 3/4: **Dreams boots natively to the first-run preferences screen ("✕ CONTINUE")** via the
+  indreams.me card, ~40-60 s after launch, rendered correctly, no GPU assertion in 150 s. GPU log
+  matches the reference emulator's (SRT-walker errors, DOC fallbacks, one BC3-3D format error).
