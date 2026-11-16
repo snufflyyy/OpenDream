@@ -58,8 +58,9 @@ rebased shadPS4 *emulator* on the game with the Dreams fork's config: the GPU re
 run the game's own x86-64 code; the GPU library **vcore** (`port/vcore/`, latest shadPS4 + Dreams
 fork patches from `ref/shadps4` branch `vcore`) renders the Sony card, the indreams.me card and the
 first-run preferences screen, the same point the reference emulator reaches. The CPU-only boot has
-17 return-0 stubs left, all GnmDriver/VideoOut (served by vcore in GPU runs). In progress: runtime
-AvPlayer (interim: bbport's, compiled into vcore), DualShock/DualSense gyro, IME text input. Next:
+17 return-0 stubs left, all GnmDriver/VideoOut (served by vcore in GPU runs). Done since: runtime AvPlayer,
+DS4 motion (imp verified headless with synthetic motion), basic keyboard & mouse
+(`port/docs/dreams/INPUT.md`), IME text input, offline NP/sign-in semantics. Next:
 input through the menus to homespace and the editor; v2.64 (user plans to upgrade); performance
 (Lantern ideas, milestone 9). Details: `port/docs/dreams/STATUS.md`, `VCORE.md`.
 
