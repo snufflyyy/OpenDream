@@ -31,6 +31,7 @@ python3 -I tests/test_dreams_gpu_config.py
 python3 -I tests/test_route_table.py
 python3 -I tests/test_import_names.py
 python3 -I tests/test_doc_lint.py
+python3 -I tests/test_run_mangohud.py
 python3 -I tests/test_dreams_game_check.py
 # Optional GPU-fault regression on Mesa's CPU device only (not a software-GPU game run).
 host_shaders="${VCORE_BUILD_DIR:-vcore/build}/host_shaders/include"

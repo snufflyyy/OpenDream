@@ -16,6 +16,8 @@
 #      DREAMS_FPS=<60..240> (also sets the vblank frequency to that rate).
 #      DREAMS_VCORE_CONFIG=<file>: per-game vcore config template for this run (default
 #      notes/shadps4-dreams-runtime/CUSA04301.json), e.g. a copy with GPU.dump_shaders=true.
+#      DREAMS_MANGOHUD=1: keep MangoHud loaded. Default: disable it, because its Vulkan layer can
+#      leave the window showing an older frame even though the game renders the newest one.
 # See docs/dreams/RUNNING.md and docs/dreams/VCORE.md.
 set -euo pipefail
 cd -- "$(dirname -- "$0")"
@@ -153,5 +155,30 @@ json.dump(c,open(p,"w"),indent=2)' "$VUSER/custom_configs/$SERIAL.json" "$presen
         export VCORE_CAPTURE_DIR=${VCORE_CAPTURE_DIR:-$WORK/captures/$RUN_ID}
     fi
 fi
+# --- mangohud-begin
+# MangoHud (docs/dreams/PERF.md): its Vulkan layer can leave the game window on an older frame
+# while the newest frame is still rendered (DREAMS_CAPTURE shows it). Disable it by default so the
+# window matches what the game draws; DREAMS_MANGOHUD=1 keeps it for profiling. Other LD_PRELOAD
+# entries are preserved.
+if [[ ${DREAMS_MANGOHUD:-0} != 1 ]]; then
+    mangohud_seen=0
+    [[ ${MANGOHUD:-0} == 1 ]] && mangohud_seen=1
+    if [[ ${LD_PRELOAD:-} == *[Mm]ango[Hh]ud* ]]; then
+        mangohud_seen=1
+        cleaned_preload=
+        IFS=: read -r -a _preload_entries <<< "${LD_PRELOAD:-}"
+        for _entry in "${_preload_entries[@]}"; do
+            [[ -z $_entry ]] && continue
+            [[ $_entry == *[Mm]ango[Hh]ud* ]] && continue
+            cleaned_preload=${cleaned_preload:+$cleaned_preload:}$_entry
+        done
+        if [[ -n $cleaned_preload ]]; then export LD_PRELOAD=$cleaned_preload; else unset LD_PRELOAD; fi
+    fi
+    export MANGOHUD=0
+    if (( mangohud_seen )); then
+        echo "run-dreams.sh: disabled MangoHud (its Vulkan layer can leave a stale frame on screen); DREAMS_MANGOHUD=1 keeps it" >&2
+    fi
+fi
+# --- mangohud-end
 exec out/dreams-probe "$OUT/boot-linked.bin" --content-profile "$OUT/content.bin" \
     --app0 "$GAME" --user "$USERDIR" --timeout "${DREAMS_TIMEOUT:-0}" "$@"

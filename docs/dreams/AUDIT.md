@@ -66,6 +66,7 @@ Paths are repository-relative. `[verified]` = inspected, `[hypothesis]` = risk a
 | S6 | The fork switch set is duplicated in `run-dreams.sh` and `tools/run-shadps4-reference.sh` | Medium | S | One sourced env module + a test that both agree |
 | S7 | `ref/shadps4/i-didnt-check-my-work.md` is a generated marker required by that tree's AGENTS.md, not stray noise | Low | — | Keep; do not delete (contrary to a naive `git status` cleanup) |
 | S8 | `tools/agent-run.sh`'s timeout could kill the wrapper while the game process survived and held the single-instance `flock`, blocking later runs | Medium | S | **Done**: after the timeout, kill only a `dreams-probe` whose `--user` is this run's private dir (never the user's run) |
+| S9 | MangoHud's Vulkan layer could leave the window on an older frame while the game rendered the newest one (frame capture showed the imp/doodles; the screen did not) | Medium | S | **Done**: `run-dreams.sh` disables MangoHud by default (`DREAMS_MANGOHUD=1` keeps it), preserving other `LD_PRELOAD` entries; `tests/test_run_mangohud.py` |
 
 ### Identity, legacy, and docs drift
 

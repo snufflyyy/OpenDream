@@ -110,6 +110,7 @@ All in `$REPO/tools/` (the project-root tools, not `port/tools/`), none needs th
 | Env | Effect |
 |---|---|
 | `DREAMS_PRESENT=mailbox\|fifo\|immediate` | presentation mode (default mailbox: no tearing, low latency; immediate = the fork's original) |
+| `DREAMS_MANGOHUD=1` | keep MangoHud loaded. **Default: the port disables MangoHud** because its Vulkan layer can leave the window on an older frame while the game renders the newest one (the frame capture still shows the newest frame); all other `LD_PRELOAD` entries are kept |
 | `DREAMS_60HZ=1` | 60 fps (the Dreams fork's 60 Hz rendering pair, found by signature on 2.52 and 2.64); gameplay stays 30 Hz |
 | `DREAMS_FPS=<61..240>` | the same with a 1/n render-clock floor and an n Hz vblank (~90-100 fps in the menu on the reference machine, `TEST_HARDWARE.md`) |
 | `DREAMS_PROSPERO=1` | `sceKernelIsProspero` = 1: Dreams' own 60 fps PS5 UI while browsing the Dreamiverse |

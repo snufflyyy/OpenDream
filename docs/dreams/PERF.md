@@ -44,8 +44,11 @@ even before arming, and can wait at shutdown. This changes the submission path.
 - **Stacks with symbols:** `eu-stack -p <pid> -n 16` works on sandboxed runs (elfutils). `perf` can't attach
   across the bubblewrap user namespace ("Failure to open any events"), and gdb attaches but
   can't resolve symbols there. Take 8–15 samples and count the top frames.
-- **Frame times:** MangoHud for user runs (`mangohud ./run-dreams.sh`; doesn't load in the sandbox);
-  the game's own frame counters for agent runs (FPS.md).
+- **Frame times:** MangoHud for user runs (`DREAMS_MANGOHUD=1 mangohud ./run-dreams.sh`; it does
+  not load in the sandbox); the game's own frame counters for agent runs (FPS.md). The port
+  disables MangoHud by default because its Vulkan layer can leave the window on an older frame
+  while `DREAMS_CAPTURE` still shows the newest rendered frame. Measure with the overlay on only
+  when the comparison is overlay-on vs overlay-on.
 
 ## Findings (2026-11-15, v2.52, main menu, 30 fps default)
 
