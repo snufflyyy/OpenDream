@@ -14,7 +14,7 @@ Last updated: 2026-11-15. Game under test: CUSA08010 v2.52 (user moving to v2.64
 | 6 | "vcore": GPU library from latest upstream shadPS4 video_core + shader_recompiler + gnmdriver + videoout behind bbport's runtime↔GPU seam | **done** (2026-11-15): `port/vcore` → `libvcore.so`, default in `build-dreams.sh`. See `VCORE.md` |
 | 7 | Apply Dreams fork patches (ref/shadps4 branch `dreams`); extend `CUSA04301` gates to our title ID; shader-hash census | **mostly done**: vcore compiles branch `vcore` (= `dreams` + 2 native edits); `GameSerial()=CUSA08010` turns the fork's gates on; readbacks Precise + `SHADPS4_DREAMS_*` applied by `run-dreams.sh`. Open: v2.52 shader-hash census (15 DOC routes fall back to the atomic path), eboot byte patches not ported |
 | 8 | First frame of main menu / homespace; then audio, pad (motion), saves (tutorial-skip save), intro video | todo |
-| 9 | Optional: bbport memory model / performance work | todo |
+| 9 | Optional: bbport memory model / performance work | **started**: opt-in 60 fps (`DREAMS_60HZ=1`) and 61-240 fps (`DREAMS_FPS=n`, ~90-100 fps measured in the menu) with correct motion speed, gameplay at 30 Hz; limit above ~90 is vcore's GPU command thread. `FPS.md` |
 
 ## What works right now
 
@@ -40,6 +40,13 @@ bbport's libbbgpu, step 7 is vcore:
 
 `./run-dreams.sh --cpu-only` gets the same far on the CPU side and then idles (no GPU fences ever
 signal), which the watchdog reports after `DREAMS_TIMEOUT` seconds.
+
+## Frame rate and test boots (2026-11-15, branch `fps`)
+
+`DREAMS_60HZ=1` gives 60 fps, and `DREAMS_FPS=120|240` gives ~90-100 fps in the main menu. The game's
+render clock follows the real frame time, and gameplay stays at its 30 Hz worker (both measured in game
+memory). `DREAMS_SKIP_INTRO=1` + `DREAMS_USER_DIR` reach the main menu in ~23 s with no input. The
+guest thread `OSC` spins one core at 100% at any frame rate (open). Details and numbers: `FPS.md`.
 
 ## Current blocker
 

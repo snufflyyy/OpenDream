@@ -80,3 +80,14 @@ At pad open the log says which gamepad is used and whether its gyro/acceleromete
 `Runtime: pad motion: using "PS4 Controller" (/dev/hidraw11, SDL id 5): gyro enabled (250 Hz), ...`.
 `tools/sdl_pads.c` (build line in its header) lists SDL's gamepads with their sensors outside the game.
 
+## Frame rate and faster boots (docs/dreams/FPS.md)
+
+| Env | Effect |
+|---|---|
+| `DREAMS_60HZ=1` | 60 fps (the Dreams fork's 60 Hz rendering pair, found by signature on 2.52 and 2.64); gameplay stays 30 Hz |
+| `DREAMS_FPS=<61..240>` | the same with a 1/n render-clock floor and an n Hz vblank (~90-100 fps in the menu on this PC) |
+| `DREAMS_PROSPERO=1` | `sceKernelIsProspero` = 1: Dreams' own 60 fps PS5 UI while browsing the Dreamiverse |
+| `DREAMS_SKIP_INTRO=1` | logo video ends at once; in a separate `DREAMS_USER_DIR` the tutorial flags are set, so Dreams goes straight to the main menu (~23 s) |
+| `DREAMS_USER_DIR=<dir>` | separate guest user dir (saves), seeded once from a copy of `work/user`; use it for test runs |
+| `DREAMS_TUTORIAL_SKIP_MY_SAVE=1` | with `DREAMS_SKIP_INTRO=1`: also edit your own save (backup first) |
+
