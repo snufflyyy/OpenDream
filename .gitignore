@@ -4,7 +4,7 @@
 /work/
 /ref/
 /port/
-/port-diag/
+/port-*/
 /backups/
 /tools/.venv/
 /tools/thirdparty/
