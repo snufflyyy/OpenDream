@@ -166,5 +166,21 @@ With a v2.64 pack each is one `key` line in `dreams_routes.json` (section 5).
 
 | switch | default | effect |
 |---|---|---|
-| `SHADPS4_DREAMS_SIGNATURE_MATCH=1` | off (shadPS4) | rules 2 and 3 |
-| `DREAMS_SIGNATURE_MATCH` (run-dreams.sh) | see RUNNING.md | exports the above |
+| `SHADPS4_DREAMS_SIGNATURE_MATCH=1` | off in shadPS4 (emulator behaviour unchanged) | rules 2 and 3 |
+| `DREAMS_SIGNATURE_MATCH` (run-dreams.sh) | **1** | exports the above; `=0` for A/B runs |
+
+## 8. Result on v2.52 (2026-11-15, agent runs, same scripted input)
+
+| | matching off (`run-20261115-215739`) | matching on (`run-20261115-215358`) |
+|---|---|---|
+| `Dreams route:` lines | 0 | 26 (all `via code`) |
+| DOC atomic fallbacks | 22 | 1: `252ccde6 reason=252 unaudited translated binary` |
+| assertions / STOP | none | none |
+| homespace scene behind the main menu | white blocky patches | smooth (no patches) |
+
+Compare sheet: `work/captures/20261115-215358/sheets/compare-20261115-215739.png` (left on,
+right off). The one remaining fallback is the route's own guard: the 252 replay only runs when
+the translated SPIR-V equals the fork's audited binary, and the rebased recompiler (upstream
+shadPS4 + fork) emits different SPIR-V. That affects v2.64 the same way (rebase issue, not a
+version issue); the shader keeps the atomic path as before.
+
