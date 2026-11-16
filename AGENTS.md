@@ -20,7 +20,8 @@ Tools (`tools/`, run with `python3 -I`): `pkg_extract.py` (fpkg → folder), `ps
 `find_import_calls.py` (call sites of an import in the eboot), `run-shadps4-reference.sh` (runs the
 rebased shadPS4 *emulator* on the game with the Dreams fork's config: the GPU reference),
 `capture_sheet.py` (review a `DREAMS_CAPTURE=1` run: timeline + contact sheets, see
-`port/docs/dreams/CAPTURE.md`). `install_game.sh` (pkg → verified game folder), `collect_crash.sh` (GPU-hang evidence → `work/crash/`), `clean_work.py` (prune `work/`, dry run by default). **To see what a native run shows, use DREAMS_CAPTURE.**
+`port/docs/dreams/CAPTURE.md`). `install_game.sh` (pkg → verified game folder), `collect_crash.sh` (GPU-hang evidence → `work/crash/`), `clean_work.py` (prune `work/`, dry run by default), `dreams_shader_routes.py` (port/tools: route
+table for new game versions, VERSIONS.md), `spirv_val.c`/`loop_guard_test.cpp`/`fps_sample.py` (port/tools, GPU_HANG.md). **To see what a native run shows, use DREAMS_CAPTURE.**
 
 ## Goal and user requirements (do not drift from these)
 
@@ -54,15 +55,15 @@ rebased shadPS4 *emulator* on the game with the Dreams fork's config: the GPU re
 
 ## Current state (keep this paragraph short and current)
 
-**Dreams boots natively** (2026-11-15, port commit `11b66bc`): bbport-derived loader + C runtime
-run the game's own x86-64 code; the GPU library **vcore** (`port/vcore/`, latest shadPS4 + Dreams
-fork patches from `ref/shadps4` branch `vcore`) renders the Sony card, the indreams.me card and the
-first-run preferences screen, the same point the reference emulator reaches. The CPU-only boot has
-17 return-0 stubs left, all GnmDriver/VideoOut (served by vcore in GPU runs). Done since: runtime AvPlayer,
-DS4 motion (imp verified headless with synthetic motion), basic keyboard & mouse
-(`port/docs/dreams/INPUT.md`), IME text input, offline NP/sign-in semantics. Next:
-input through the menus to homespace and the editor; v2.64 (user plans to upgrade); performance
-(Lantern ideas, milestone 9). Details: `port/docs/dreams/STATUS.md`, `VCORE.md`.
+**Dreams boots and plays natively** (2026-11-15, port `dreams` e741924, shadPS4 `vcore` 17e99fee).
+Loader + C runtime run the game's own code; GPU library **vcore** = latest shadPS4 + Dreams fork
+patches. Done: boot to main menu/homespace, DS4 motion + keyboard/mouse (INPUT.md), AvPlayer, IME,
+offline NP/sign-in/sockets, intro skip and 60 Hz/high-fps switches (FPS.md), Mailbox presentation,
+**fork shader routes matched by code on any game version** (VERSIONS.md: fixes the holes/blocks in
+objects on 2.52), **GPU hang guard** (loop guard + indirect clamps, GPU_HANG.md: the intro hang scene
+now survives; root cause lead = indirect draws with 1,949,696 instances), frame stats in every run
+(PERF.md). Next: find the writer of that bad instance count; performance (readback stalls, submit
+batching, allocation churn: PERF.md); editor testing; v2.64 when the user has it.
 
 **GPU hang risk:** a native run once hung the GPU and amdgpu's full reset killed the desktop
 (2026-11-15, see WORKLOG incident). `run-dreams.sh` allows one instance at a time, logs every run
