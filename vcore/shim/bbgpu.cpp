@@ -39,6 +39,7 @@ Frontend::WindowSDL* g_window = nullptr;
 
 namespace Vcore {
 extern std::atomic<u32> g_sdk_version;
+void PatchFrameRate(unsigned char* image, std::uint64_t size); // shim/frame_rate.cpp
 } // namespace Vcore
 
 // ---- NID table filled by LIB_FUNCTION (shim/include/core/libraries/libs.h) ---------------------
@@ -380,7 +381,11 @@ int bbgpu_free_camera(void) {
 uint64_t bbgpu_camera_state(void) {
     return 0;
 }
-void bbgpu_patch_image(unsigned char*, uint64_t) {}
+// Eboot patches before the game runs (image still writable): the opt-in Dreams frame-rate
+// switches (shim/frame_rate.cpp, docs/dreams/FPS.md). Nothing is patched by default.
+void bbgpu_patch_image(unsigned char* image, uint64_t size) {
+    Vcore::PatchFrameRate(image, size);
+}
 // Not in bbgpu.h but called by port/src/runtime_memory/kernel_api.c (BB_ZERO_SCAN diagnostics).
 int bbgpu_gpu_touched(uint64_t) {
     return 0;

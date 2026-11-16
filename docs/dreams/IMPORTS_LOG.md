@@ -101,7 +101,7 @@ Imports that are only served by the generic return-0 fallback are listed in `STU
 | `py6L8jiVAN8` | sceKernelGetSanitizerMallocReplaceExternal | libkernel | `runtime_dreams_services.c `ok`` | libc.prx hooks: 0 = none/disabled. Ref kernel/memory.cpp | 2026-11-15 |
 | `jh+8XiK4LeE` | sceKernelIsAddressSanitizerEnabled | libkernel | `runtime_dreams_services.c `ok`` | libc.prx hooks: 0 = none/disabled. Ref kernel/memory.cpp | 2026-11-15 |
 | `WslcK1FQcGI` | sceKernelIsNeoMode | libkernel | `runtime_dreams_services.c `ok`` | 0: base PS4 (shadPS4 default is_neo=false). Ref kernel/process.cpp | 2026-11-15 |
-| `mpxAdqW7dKY` | sceKernelIsProspero | libkernel_cpumode_platform | `runtime_dreams_services.c `ok`` | 0: base PS4 (shadPS4 default is_neo=false). Ref kernel/process.cpp | 2026-11-15 |
+| `mpxAdqW7dKY` | sceKernelIsProspero | libkernel_cpumode_platform | `runtime_dreams_services.c `kernel_is_prospero`` | 0: base PS4 (shadPS4 returns 0); `DREAMS_PROSPERO=1` answers 1 (Dreams' PS5 60 fps UI path, docs/dreams/FPS.md). Ref kernel/process.cpp | 2026-11-15 |
 | `BQ3tey0JmQM` | sceCommonDialogIsUsed | libSceCommonDialog | `runtime_dreams_services.c `ok`` | false. Ref system/commondialog.cpp | 2026-11-15 |
 | `u4bCGkqhOB4` | sceShareUtilityAdvanceInitialize | libSceShareUtility | `runtime_dreams_services.c `ok`` | Sharing/streaming services: OK no-op (shadPS4 stubs them to OK; no ShareUtility in shadPS4) | 2026-11-15 |
 | `karnJhakdKg` | sceShareUtilityAdvanceSetUploadContentData | libSceShareUtility | `runtime_dreams_services.c `ok`` | Sharing/streaming services: OK no-op (shadPS4 stubs them to OK; no ShareUtility in shadPS4) | 2026-11-15 |

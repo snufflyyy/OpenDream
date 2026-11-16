@@ -223,3 +223,30 @@
 - Learned: the imp is visible on the offline-mode notice right after the main menu loads (~40 s with
   the tutorial-skip save): the quickest place for imp tests. A Cross press doesn't hit CONTINUE unless
   the imp is over it.
+
+- Frame rate (branch `fps`, worktree `port-fps`; research `notes/high-fps-research.md`, results
+  `docs/dreams/FPS.md`).
+  - Dreams picks flip rate 1 (30 fps) itself every frame and floors its measured render clock at
+    1/30. Ported the Dreams fork's 60 Hz pair into `bbgpu_patch_image`
+    (`vcore/shim/frame_rate.cpp`), found by signature (v2.52 `+0xe34d73`/`+0xe72d81`, v2.64 the
+    fork's offsets): `DREAMS_60HZ=1`.
+  - `DREAMS_FPS=n` (61..240) adds a 1/n floor and an n Hz vblank.
+  - Measured in game memory (read-only `/proc/<pid>/mem` sampler, sandboxed runs):
+    - render frames 30.0 → 60.0 (60HZ) → 90.4 (FPS=120) → 97.8 (FPS=240);
+    - the game's render dt equals the real frame time at every rate;
+    - the gameplay update counter (`0x6f738e8`) stays at 30/s;
+    - above ~90 fps the shadPS4 GPU command thread is the limit (78% of a core at 98 fps), with the GPU 44% busy.
+  - `DREAMS_PROSPERO=1` (sceKernelIsProspero = 1, the game's own PS5 60 fps UI) is plumbed, but only
+    consulted while browsing the Dreamiverse: user test pending.
+  - Found: guest thread `OSC` (remote-signals listener) at 99% of a core at any rate.
+- Skip intro: the preferences screen and the control-scheme popup are first-run boot flow, gated by
+  the save's tutorial flags (no ini or game switch).
+  - `DREAMS_SKIP_INTRO=1` ends the logo video at once (fork switch, previously stripped by
+    run-dreams.sh's `SHADPS4_*` clean-up). In a separate `DREAMS_USER_DIR` (seeded from a copy of
+    `work/user`) it also sets the tutorial flags (`scripts/dreams_seed_save.py`, same edit as the
+    fork's SkipDreamsTutorial).
+  - Result: main menu at ~23 s with no input. The offline notice after it still needs ✕.
+  - The player's own save is only edited with `DREAMS_TUTORIAL_SKIP_MY_SAVE=1` (backup first).
+  - Note: until now agent runs used `work/user` too, and the game writes its SYSTEM save during runs
+    (e.g. 19:47 by a research run).
+
