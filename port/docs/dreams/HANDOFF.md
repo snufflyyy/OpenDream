@@ -454,3 +454,18 @@ Do not dismiss the user's movement/progression report based on that premise.
   not the verification report. Actual verification is above.
 - Root `.pi/` contains harness/task artifacts. Do not commit them or anything from `game/`/`work/`.
 - Approximately 26 GB free on `/home` at handoff. Do not extract the ~4.8 GB dev-level packs unnecessarily.
+
+## Repository consolidation — 2026-11-17
+
+The project is now a **single git repository with one branch (`master`)**: `port/` was imported
+under `port/` with its history (68 commits) instead of staying a nested repository. The bbport base
+commit came from a shallow clone, so its truncated parent was dropped to make the history
+self-contained; the original `port/.git` is backed up at `backups/port-git-20261117.tar` and a
+bundle at `backups/port-dreams-grafted.bundle`. `git -C port <cmd>` still works and now addresses
+this repository. The three third-party submodules (`port/gpu/third_party/{fsr-vulkan,imgui}`,
+`port/third_party/LibAtrac9`) keep upstream URLs in the root `.gitmodules`.
+No build output, run output, game data or reference clone is tracked. Documentation that called
+`port/` its own repo (root `AGENTS.md`, `CONVENTIONS.md`) was corrected. Committed hashes from
+earlier sessions (`e9b1d88`, `6048ee3`, ...) no longer resolve after the history rewrite; the
+SHA-256/golden references in the route and alias notes are data hashes, not commits, and are
+unaffected.

@@ -58,8 +58,10 @@ tools are `$REPO/tools/`, port tools are `$REPO/port/tools/`.
 - Stay inside the assigned scope. Read anything; edit only what was assigned.
 - Before editing, inspect the working trees (`$REPO`, `$REPO/port`, `$REPO/ref/shadps4`): the
   project carries uncommitted work and local branches. Never reset or discard it.
-- Nested repositories: `port/` is its own git repo, `ref/shadps4` carries local branches
-  (`dreams`, `vcore`, `docmatch`, `loopguard`). Backups for them are in `$REPO/backups/`.
+- Repositories: `port/` is part of the checkout's git repo (one repo, one branch; `git -C port`
+  and plain `git` operate on the same history). `ref/shadps4` is still a separate clone that
+  carries local-only branches (`dreams`, `vcore`, and fork-reconstruction branches). Backups for
+  the reference clones are in `$REPO/backups/`; they are never committed.
 
 ## Generated vs tracked files
 

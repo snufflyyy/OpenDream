@@ -71,7 +71,7 @@ table for new game versions, VERSIONS.md), `spirv_val.c`/`loop_guard_test.cpp`/`
 
 | Path | What | Tracked? |
 |---|---|---|
-| `port/` | **The Dreams port** (git repo, branch `dreams`, forked from bbport 0.7 `0fc2921`) | own git |
+| `port/` | **The Dreams port** (forked from bbport 0.7 `0fc2921`); tracked in this repository, not a separate repo | yes |
 | `port/docs/dreams/` | Dreams-specific docs (bbport's own docs in `port/docs/` are upstream, mostly Russian) | yes |
 | `game/CUSA08010/` | Extracted game (13 GB, 1,591 PFS files + sce_sys). The user's own copy — never distribute | no |
 | `game/CUSA08010.extract.json` | Per-file SHA-256 manifest of the extraction | no |
@@ -86,7 +86,7 @@ table for new game versions, VERSIONS.md), `spirv_val.c`/`loop_guard_test.cpp`/`
 
 ## Current state (keep this paragraph short and current)
 
-**Dreams boots natively** (port base `dreams` e9b1d88, renderer `vcore` 7d25345b).
+**Dreams boots natively** (port sources in this repository, renderer `vcore` 7d25345b).
 The loader/runtime execute guest x86-64 code; vcore supplies the shadPS4/Dreams-fork GPU path.
 Boot/menu/homespace, input, AvPlayer, offline services, shader routes and hang guards work.
 Fault-bitmap initialization and shared backing prevent the earlier progressive slowdown;
