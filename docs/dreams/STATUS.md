@@ -1,6 +1,8 @@
-# Dreams port — status
+# OpenDream — status
 
-Working directory: `$REPO` (your Dreams-Recomp checkout). Hardware is described generically; the
+**OpenDream** — a native PC port of Dreams (CUSA08010) for the PS4.
+
+Working directory: `$REPO` (your OpenDream checkout). Hardware is described generically; the
 machine behind the measured numbers is the reference machine (`TEST_HARDWARE.md`).
 
 Last updated: 2026-11-16. Game under test: CUSA08010 v2.52 (user moving to v2.64 later).
@@ -51,6 +53,20 @@ render clock follows the real frame time, and gameplay stays at its 30 Hz worker
 memory). `DREAMS_SKIP_INTRO=1` + `DREAMS_USER_DIR` reach the main menu in ~23 s with no input. The
 guest thread `OSC` spins one core at 100% at any frame rate (open). Details and numbers: `FPS.md`.
 
+## Latest manual gameplay status
+
+The user reports Please Hug Me working correctly in manual testing.
+The earlier cloud-screen report is no longer a confirmed current blocker.
+The responsible change, save setup and timing mode are not established by that report.
+Automated scene entry/checkpoints and original-PS4 physics/progression comparisons remain unverified.
+See `SCENE_TESTS.md`; retain the earlier diagnostics as historical evidence.
+
+New user report (2026-11-17): **Comic Sands** (Mm 2D hand-drawn platformer) renders only the
+skybox, not the scene. Not reproduced, diagnosed or fixed — no Comic Sands frame exists yet.
+The partial pad route to its card in the Mm row is in `HANDOFF.md`, together with the warning that
+its timing is not stable across capture settings. Treat this as the current renderer-accuracy
+target until it is reproduced.
+
 ## Current blocker
 
 No hard boot blocker. **Correctness is the priority** (`ACCURACY.md`, user requirement 2026-11-16).
@@ -99,8 +115,8 @@ fallback now defaults OFF.
 | IME text shows only in the window title; the window can't cancel text entry when the game closes the IME first | `src/runtime_ime.c`, `vcore/shim/window.cpp` | no on-screen keyboard/overlay in vcore | an overlay text box; `bbgpu_text_input_end()` in vcore (the runtime already calls it if exported, weak symbol) |
 | Keyboard/mouse layout is a first guess (INPUT.md); mouse → imp sensitivity default 0.0004 rad/px (≈1:1 at 1080p) | `src/runtime_pad/bindings.c` `dreams_defaults`, `sensors.c` | basic keyboard & mouse | check each binding against Dreams' prompts with the user; tune `DREAMS_MOUSE_IMP_SENS` |
 | Audit no-ops (`ok`) | `src/runtime_dreams_services.c` | 0 is right offline (profiler hooks, streaming/sharing, sanitizers, Neo mode off) | Revisit if a feature needs one (e.g. Neo mode for PS4 Pro resolution) |
-| `BB_SKIP_GAME_CHECK=1` | `run-dreams.sh` | bbport's check pins Bloodborne's image hash | Title-based Dreams check (decision D7) |
-| vcore still compiles bbport's AvPlayer (unused: the runtime's resolves first) | `vcore/CMakeLists.txt` `VCORE_BBPORT_AVPLAYER` | interim before the runtime AvPlayer | set the option's default to OFF (verified working, `work/avp-gpu-noavp2.log`) |
+| `BB_SKIP_GAME_CHECK=1` inside offline generators | `scripts/dreams_prepare.py` | Bypasses the inherited Bloodborne hash check only after the Dreams gate succeeds | Keep the version-independent Dreams gate in `run-dreams.sh`; the legacy flag cannot bypass it |
+| Optional bbport AvPlayer fallback | `vcore/CMakeLists.txt` `VCORE_BBPORT_AVPLAYER` | Legacy comparison support only; default OFF. The runtime supplies AvPlayer first | Keep excluded from default builds |
 | AvPlayer: no looping, trick speed, HLS; resolution changes mid-file drop frames | `src/runtime_avplayer.c` | Dreams doesn't import SetLooping/SetTrickSpeed | implement if a v2.64 import needs it |
 | No ImGui overlay in vcore; presenter blits the frame | ref/shadps4 `vcore` branch, `vk_presenter.cpp` | upstream draws the game through Dear ImGui | Fine as is; add a small overlay later if wanted |
 

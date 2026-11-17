@@ -1,7 +1,7 @@
 # Running
 
-Working directory: `$REPO/port` (`$REPO` = your Dreams-Recomp checkout, e.g.
-`REPO=/path/to/Dreams-Recomp`). Paths below are relative to that directory unless they start with
+Working directory: `$REPO/port` (`$REPO` = your OpenDream checkout, e.g.
+`REPO=/path/to/OpenDream`). Paths below are relative to that directory unless they start with
 `$REPO`.
 
 ## Game files
@@ -26,8 +26,26 @@ cd port
 BB_LIST_UNRESOLVED=1 ./run-dreams.sh --cpu-only   # also list every import nothing resolves
 DREAMS_TIMEOUT=30 ./run-dreams.sh --cpu-only      # watchdog: dump thread stacks after 30 s
 ```
-`run-dreams.sh` re-runs the offline prep only when `eboot.bin` or `scripts/link_modules.py`
-changed. Outputs go to `$REPO/work/out/`; the guest's user dir (saves) is `$REPO/work/user/`.
+`run-dreams.sh` validates the Dreams dump before save setup. It then checks the preparation
+cache under the single-instance lock. The cache hashes the game inputs, Python generators,
+and required outputs. Changing game folders, modules, metadata, or generators triggers a rebuild,
+even when timestamps stay unchanged. Failed rebuilds leave no valid manifest.
+Outputs and `dreams-prep.json` go to `$REPO/work/out/`. Guest saves remain in `$REPO/work/user/`.
+
+Check cache freshness without rebuilding or running the game:
+
+```sh
+python3 -I scripts/dreams_prepare.py "$REPO/game/CUSA08010" --out "$REPO/work/out" --check
+```
+
+Exit 0 means current, 1 means stale, and 2 means invalid input or a preparation error.
+The first launch after this cache update rebuilds the offline outputs.
+Keep game folders unchanged during launch and execution. Install another version in a separate
+folder, then set `DREAMS_GAME` to that folder.
+
+The cached `analysis.json` also contains diagnostic directory counts. Asset-only directory changes
+can leave those counts stale without changing the prepared executable. Removing only
+`$REPO/work/out/dreams-prep.json` forces regeneration on the next launch.
 
 GPU (vcore, the default build), see `VCORE.md` §5:
 ```
@@ -39,9 +57,33 @@ VCORE_LOG_FILTER="*:info Render.Vulkan:debug" ...   # GPU log filter (shadPS4 sy
 `run-dreams.sh` sets up the Dreams fork's emulator configuration for vcore: per-game config
 `$REPO/work/vcore-user/custom_configs/<SERIAL>.json` (readbacks Precise, ...), the `SHADPS4_DREAMS_*`
 switches, private shader cache `$REPO/work/vcore-shader-cache/`, `SHADPS4_USER_DIR=$REPO/work/vcore-user`.
-It opens a window: always wrap agent runs in `timeout -s KILL`. Only one run at a time
-(`flock` on `$REPO/work/.dreams-run.lock`; a second launch exits 75). Every run logs to
+It opens a window: always wrap agent runs in `timeout -s KILL`. Only one run at a time: a
+root-global `flock` in `DREAMS_RUN_LOCK_DIR` (default `$REPO/work`, see *Run lock* below); a second
+launch exits 75. Every run logs to
 `$REPO/work/logs/run-<id>.log` and captures frames to `$REPO/work/captures/<id>/` (1 s, `DREAMS_CAPTURE=0` off).
+
+## Run lock (`DREAMS_RUN_LOCK_DIR`)
+
+All runs on the machine share one lock. `DREAMS_RUN_LOCK_DIR` (default `$REPO/work`) holds
+`.dreams-run.lock` (the `flock`) and `.dreams-run.who`; it defaults to the main checkout's `work`,
+so a private `DREAMS_WORK` (test data dir, private cache copies) never creates a second GPU owner.
+A second checkout launched directly computes its own `$REPO/work`, so pass `DREAMS_RUN_LOCK_DIR`
+explicitly there and never rely on the default. Agent runs cannot opt out: `DREAMS_ALLOW_PARALLEL=1` with an agent role
+exits 2, and `$REPO/tools/agent-run.sh` forces the main checkout's lock directory even when
+`DREAMS_PORT_DIR` selects another port checkout.
+
+`.dreams-run.who` is JSON: `{pid, start_ticks, role, since, dev, ino}`. It is only a hint that the
+holder may be an agent. A user launch stops an agent only after the live `/proc` pid start time,
+the holder's fd 9 and its FLOCK record all match the published lock identity, and the signal is
+pidfd-bound. Stale, legacy or unverifiable metadata fails closed with exit 75 and no signal after
+a bounded wait; so does a lock path that no longer names the regular file fd 9 locked. That check
+runs at acquisition time: deleting or replacing `.dreams-run.lock` while a run holds it is
+unsupported (no project tool does), and a run that starts in that window would not be refused.
+
+For a bounded run keep the outer `$REPO/tools/agent-run.sh --seconds` limit comfortably above the
+inner `DREAMS_TIMEOUT` watchdog (for example `DREAMS_TIMEOUT=55` with `--seconds 90` or `120`) so
+the probe's own watchdog fires first and shuts down cleanly. Before each run confirm no leftover
+`dreams-probe` and that the lock is free; a surviving probe keeps the lock and the next run exits 75.
 
 Exit codes from the loader: 20 = stopped at an unsupported import (message starts with `STOP:`),
 21 = a runtime `STOP:` for an unimplemented case.
@@ -82,6 +124,7 @@ be under `$REPO/work/user/` once savedata works (milestone 8); details in
 | `DREAMS_INPUT_PROFILE`, `DREAMS_MOUSE_MODE`, `DREAMS_MOUSE_IMP_SENS` | keyboard/mouse layout and where the mouse goes: see `INPUT.md` |
 | `DREAMS_IME_TEXT=<utf-8>` | sceImeOpen enters this text and confirms at once |
 | `DREAMS_IME_KEYBOARD=0` | no USB keyboard events to the game |
+| `DREAMS_RENDER_RESOLUTION=<WxH>` | experimental internal scene resolution (`1280x720`); default unset = off, see *Internal render resolution* below |
 
 At pad open the log says which gamepad is used and whether its gyro/accelerometer are on:
 `Runtime: pad motion: using "PS4 Controller" (/dev/hidraw11, SDL id 5): gyro enabled (250 Hz), ...`.
@@ -102,8 +145,12 @@ All in `$REPO/tools/` (the project-root tools, not `port/tools/`), none needs th
   README.txt of hang signatures. Run it first thing, before rebooting if possible.
 - `python3 -I $REPO/tools/clean_work.py [--apply] [--keep N] [--older-than DAYS]`: prune captures, run
   logs, mangohud output, scratch `$REPO/work/*.log|*.out` and unused `$REPO/work/agent-rt.*` dirs.
-  Dry run unless `--apply`. Never touches `$REPO/work/out`, `user`, `vcore-user`,
-  `vcore-shader-cache`, `shadps4-ref`, `crash`.
+  Dry run unless `--apply`. Negative or nonfinite retention values are rejected.
+  Symlinked candidates and category directories are skipped. Never touches `$REPO/work/out`,
+  `user`, `vcore-user`, `vcore-shader-cache`, `shadps4-ref`, `crash`.
+  Safe deletion requires no-follow directory descriptors and symlink-resistant FD-relative `rmtree`.
+  Unsupported platforms fail closed. Keep agent testing stopped during `--apply`: `/proc` in-use
+  detection is best effort. This is not a sandbox against direct same-user renames or bind mounts.
 
 ## Frame rate and faster boots (docs/dreams/FPS.md)
 
@@ -117,6 +164,50 @@ All in `$REPO/tools/` (the project-root tools, not `port/tools/`), none needs th
 | `DREAMS_SKIP_INTRO=1` | logo video ends at once; in a separate `DREAMS_USER_DIR` the tutorial flags are set, so Dreams goes straight to the main menu (~23 s) |
 | `DREAMS_USER_DIR=<dir>` | separate guest user dir (saves), seeded once from a copy of `$REPO/work/user`; use it for test runs |
 | `DREAMS_TUTORIAL_SKIP_MY_SAVE=1` | with `DREAMS_SKIP_INTRO=1`: also edit your own save (backup first) |
+
+## Internal render resolution (`DREAMS_RENDER_RESOLUTION`, experimental)
+
+`DREAMS_RENDER_RESOLUTION=<WxH>` makes the game draw its internal scene target at that extent
+instead of the extent it picks itself. It is off by default: with the variable unset,
+`run-dreams.sh` adds no argument, runs no generator and writes no file, so the launch is unchanged.
+
+| Value | Effect |
+|---|---|
+| (unset) | off: the game's own resolution |
+| `1280x720` | the verified value: internal passes that depend on the engine's default dimension record are drawn at 1280x720 (about 2/3 of the game's own extent in the tested screens) |
+| `1920x1080` | explicit no-op: writes the game's own default record back |
+
+Other 16:9 values between 640x360 and 1920x1080 are rejected until they are verified, and so are
+malformed or non-16:9 values. The host window and the presented image keep their size: only the
+internal drawing extent changes, so the scene is upscaled into the unchanged output. No window or
+output scaling is involved.
+
+How it works and what is left untouched:
+
+- `port/tools/dreams_render_resolution.py` locates the engine's dimension constructor in
+  `$DREAMS_GAME/eboot.bin` offline (SELF/ELF parsing, `GNU_EH_FRAME` function bounds, decoded
+  instructions, NID-anchored `sceVideoOutSetBufferAttribute`/`sceVideoOutRegisterBuffers` calls)
+  and emits a 56-byte `BBPATCH2` file: one 16-byte data write at the constructor's shared default
+  dimension vector. The loader applies it through its existing `--patches` path, after relocation
+  and in memory only. The game folder, the prepared outputs and the shader cache are not modified.
+  Generation needs GNU binutils (`objdump`) and runs only when the variable is set.
+- The patch and its JSON report are generated for each run into
+  `$REPO/work/out/render-resolution/<run id>/` (`render-resolution.bbpatch`,
+  `render-resolution.json`). They are published exclusively: an existing patch or report is never
+  overwritten, so a stale artifact cannot be reused by a later run.
+- An explicit `--patches` forwarded to `run-dreams.sh` is refused with exit 2 before preparation:
+  the loader takes one patch file per run, and silently dropping or merging another one would hide
+  a requested patch.
+- Any generator error, an unsupported value or a missing generated patch stops the run with a
+  non-zero exit before the game starts. There is no fallback launch without the patch.
+
+Evidence and limits (from the bounded experiment on the CUSA08010 v2.52 dump; details in
+`$REPO/work/render-resolution/experiment-results.md`): the internal scene plus its dependent pass
+were drawn at about 2/3 of the baseline extent in the boot/preferences screen, Please Hug Me
+gameplay and Dream Shaping editor entry, with unchanged 30 fps cadence, no guard or device loss and
+coherent captures; the final composite stayed 1920x1080. Sculpting and painting, other scenes,
+deeper editor workflows and original-PS4 comparison remain unverified. The same default vector also
+feeds a mode-15 load, an allocation floor and a comparison, so treat this as experimental.
 
 ## Game versions (docs/dreams/VERSIONS.md)
 

@@ -1,6 +1,6 @@
 # vcore: the shadPS4-based GPU library of the native Dreams port
 
-Working directory: `$REPO` (your Dreams-Recomp checkout); build/run steps say when they run from
+Working directory: `$REPO` (your OpenDream checkout); build/run steps say when they run from
 `$REPO/port`.
 
 Status 2026-11-15: **builds and boots Dreams natively to its first-run preferences menu**
@@ -64,7 +64,7 @@ Dreams-ShadPS4 fork patches, `$REPO/notes/shadps4-dreams-rebase.md`) + 1 commit 
 | shadPS4 dependency (used by GPU code) | vcore mapping | file |
 |---|---|---|
 | `core/memory.h` `MemoryManager` (`IsValidMapping` x158 in the fork's rasterizer, `ClampRangeSize`, `CopySparseMemory`, `TryWriteBacking`, `TryReadBacking`, `TryStoreBacking`, `SetRasterizer`, `GetAddressSpace`) | shadowed facade over `runtime_memory_*`: mapping queries with a per-thread region cache (bbport), backing-view reads/writes (`runtime_memory_read/write_backing`, never fault on GPU-protected pages), `SetRasterizer` installs `runtime_memory_set_gpu_hooks`: map -> `Rasterizer::RegisterMemory`+`MapMemory`, unmap -> `UnmapMemory`, host writes (file reads) -> `InvalidateMemory` | `shim/include/core/memory.h`, `shim/memory.cpp` |
-| `core/address_space.h` (`Protect`, `BackingPages().find`, `SystemReservedVirtualBase/Size`, `GetUsableRegions`) | shadowed: `Protect` -> `runtime_memory_gpu_protect`; `BackingPages().find(page)` returns a per-thread copy of the 16 KiB page read through the backing view (only used for hashing) | same |
+| `core/address_space.h` (`Protect`, `BackingPages().find`, `SystemReservedVirtualBase/Size`, `GetUsableRegions`) | shadowed: `Protect` -> `runtime_memory_gpu_protect`; `BackingPages().find(page)` lends complete 16 KiB pages from the permanent backing view for immediate hashing. Split/private mappings retain the per-thread copy fallback. `VCORE_BACKING_COPY=1` forces copying | `shim/backing_pages.cpp`, `shim/memory.cpp` |
 | `core/signals.h` | upstream header kept; `SignalDispatch` implemented as a pure registry (no OS handlers: the loader owns them) | `shim/common_glue.cpp` |
 | `core/emulator_settings.h/.cpp` | **upstream compiled as is**; reads `$SHADPS4_USER_DIR/config.json` + `custom_configs/<serial>.json` exactly like the emulator | (upstream) |
 | `common/path_util.cpp` user dir | upstream + `// vcore:` edit: `SHADPS4_USER_DIR` overrides `./user` / `~/.local/share/shadPS4` | branch `vcore` |
@@ -84,7 +84,7 @@ Dreams-ShadPS4 fork patches, `$REPO/notes/shadps4-dreams-rebase.md`) + 1 commit 
 | `video_core/renderdoc.cpp` (RenderDoc + screenshot requests) | replaced; RenderDoc off; screenshot requests kept, plus `VCORE_SCREENSHOT_EVERY=<s>` timer | `shim/kernel_glue.cpp` |
 | `core/file_sys/ifile.h` (`IsZArchiveFile`, `ReadGameFile`, used by path_util game discovery) | `false` / `nullopt` | `shim/kernel_glue.cpp` |
 | `common/elf_info.h` `ElfInfo` (GameSerial gates!) | filled by a vcore-defined `Core::Emulator` (ElfInfo's friend) from `BbGpuConfig` + param.sfo | `shim/bbgpu.cpp` |
-| AvPlayer (`libSceAvPlayer`) | **interim**: bbport 0.7's native AvPlayer, compiled in place from `port/gpu/platform/avplayer` (FFmpeg). CMake option `VCORE_BBPORT_AVPLAYER` (default ON). The lead plans a CPU-side AvPlayer in the runtime; the loader asks the runtime before `bbgpu_resolve()`, so that one overrides this automatically; then configure with `-DVCORE_BBPORT_AVPLAYER=OFF` | CMakeLists.txt |
+| AvPlayer (`libSceAvPlayer`) | The runtime supplies AvPlayer through `src/runtime_avplayer.c` and its FFmpeg decoder library. `VCORE_BBPORT_AVPLAYER` defaults OFF. Enabling it compiles the optional bbport fallback from `port/gpu/platform/avplayer`; runtime resolution still takes precedence | CMakeLists.txt |
 
 ## 3. bbgpu.h API: implemented vs stubbed
 

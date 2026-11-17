@@ -1,6 +1,170 @@
 # Handoff — 2026-11-16
 
-## Audit and cleanup (later this session)
+## Renderer accuracy — Comic Sands (user report, 2026-11-17)
+
+The user reports that the shipped Media Molecule 2D hand-drawn platformer **Comic Sands** renders
+incorrectly: only the skybox appears, no scene content ("it looked nothing like the pictures shown
+before starting the game"). Treat the old Please Hug Me cloud-backdrop report as a possibly
+related symptom, not as evidence of one shared cause.
+
+State at this handoff: **not reproduced, not diagnosed, no renderer change.** What exists:
+- Comic Sands ids: map `m05700e3389c056` / `v198de1a22ee4de`, pinned scene `da76f79cbd5b1aa` /
+  `v0e9b1cbee7e8a7`, 8th entry of `Mm Arcade` `c2504f84b356f35` (static catalog only).
+- A working partial pad route into the Mm row: `circle` 35–36 s, `mdx=-3 mdy=-1` 42–43 s,
+  `cross` 46–46.3 s, `ly=255` from 54 s; the Comic Sands card is on screen at ~61 s
+  (evidence `$REPO/work/captures/20261117-160159/`, scripts/drivers in `$REPO/work/comic-sands/`).
+- The route is **timing-fragile**: with `VCORE_CAPTURE_WIDTH=1280` + 500 ms captures the boot
+  was slower, the 35 s Circle missed the offline notice and every later input did nothing
+  (`20261117-160522`). Use state checkpoints (a capture/OCR or a log marker), not wall time.
+
+Resume point, in order: (1) make the entry deterministic — checkpoint the offline notice, the hub
+cursor, the DreamSurfing page and the Mm row from captures, then open Comic Sands and capture the
+actual scene; (2) attribute the missing geometry from that run's log (route/DOC fallbacks,
+missing/unmapped v2.52 drawing-shader routes, culling/sprite pipeline, texture formats) before
+touching `ref/shadps4`; (3) A/B the same scene on the reference emulator (`run-shadps4-reference.sh`)
+only as a comparison, not as a hardware oracle. Keep Precise readbacks, routes, guards and
+simulation cadence unchanged; one GPU run at a time.
+
+## Project rename — 2026-11-17
+
+The project is now **OpenDream** (a native PC port of Dreams, CUSA08010, PS4); the checkout moved
+from `Dreams-Recomp` to `OpenDream`. Only naming/paths changed — no source, renderer, route,
+guard, save or test semantics were touched. Absolute build paths were rewritten in place, git
+worktree links and the port's `origin` URL updated, and `vcore` rebuilt clean from the new path.
+A compatibility symlink `Dreams-Recomp -> OpenDream` still exists at the old path for stale
+sessions and recorded ninja dependency paths; delete it once nothing references it.
+Verification: `port/tools/doc_lint.py` (21 normative docs) and the strict port test suite.
+
+## Custom-server research — 2026-11-17
+
+The user requested thorough custom-server feasibility research, with up to three DeepSeek workers,
+to preserve official-like Dreams behavior. Research expands the previous offline-only scope for
+this task only. No online implementation, game run, PSN access or live game-service probe occurred.
+Read `$REPO/notes/dreams-custom-server-research.md` (linked from INDEX): nine documented native
+service families, no complete native wire schema or working Dreams server found in examined sources,
+2.52 before the 2.57 server migration versus planned 2.64 after it, existing offline HLE gates and
+optional bbnet20 seam, editor/version/permission fidelity requirements, tests and low-confidence effort.
+All substantive lanes used `rightnow/deepseek-v4-1-flash-1017`, at most three concurrent. A source-lane
+turn-limit failure was retried once successfully. Supervisor correction passes removed unsupported
+gRPC/auth/data-recovery claims and fixed effort arithmetic. Final accepted conclusions are in the report.
+Recommended next step: a separately scoped 2–4 week protocol-evidence spike before committing to a server.
+An owner-only private online round-trip is estimated at 8/15/28 engineer-weeks (optimistic/central/
+pessimistic), broad core at 31.5/64/115. These are judgments, not promises or parity evidence.
+Default offline behavior, audit/resolution changes, saves, renderer and existing specs remain untouched.
+Preflight, 10 doc-lint tests, 21-document lint, report hygiene and root/port diff checks passed.
+No commits. Earlier rendering and gameplay handoff below remains applicable.
+
+## Latest user update — resolution work and Please Hug Me
+
+The user reports: **“i tested please hug me and everything seems to be working correctly now.”**
+Record this as user/manual functional validation. The old cloud-screen observation is not a
+confirmed current gameplay blocker. Do not infer which patch fixed it, or claim an automated
+scenario pass, measured physics parity, or original-PS4 comparison. Save/timing details were not supplied.
+Earlier negative run reports below remain historical, not the current user-reported status.
+
+Current requested feature: **true internal render resolution through `DREAMS_*` launch variables**,
+not window resizing or merely changing VideoOut's reported size. This is still under investigation.
+The inspected VideoOut settings only control the resolution status returned to the guest.
+Static native tracing found a dimension-bearing engine constructor, but its default vector is
+shared by four loads/floor/comparison operations; scene color/depth/viewport coherence is not proven.
+The private decoder/NID/unwind-anchored data-patch generator passes 13 offline tests, including
+real-binutils synthetic end-to-end cases and publication failures. Parent reran all 13 without skips.
+Independent review approves the 1280x720 candidate only for a bounded experiment, not feature acceptance.
+A bounded baseline/candidate/restore GPU experiment has now run for the boot/preferences/menu
+screen, **Please Hug Me gameplay** and **Dream Shaping editor entry** (documented timed pad route,
+byte-identical warmed private save). Internal scene extents scaled by ~2/3: menu 1920x1080 ->
+1280x720, gameplay 1360x768 -> 912x512 (and 1357x763 -> 905x509), editor 912x512; baseline and
+restore agreed; the window composite stayed 1920x1080; captures were coherent in all scenes;
+cadence stayed 30.0 fps with p50 33.3-33.4 ms; no guards, real asserts or device loss.
+Sculpting, painting, transforms, gadgets, undo/redo and save/reload in the editor were NOT
+exercised, nor were deeper scene workflows, and most pipeline viewport/scissor state resolved as
+unknown, so this is not yet feature acceptance or PS4 parity.
+The private Vulkan observer passed CPU fixtures (forwarding, image/view, command buffers, render
+area, pipeline-selected state, trigger/cap) and was independently reviewed. Launcher lock safety was
+fixed and independently re-reviewed. Everything stays uncommitted.
+
+The feature now has an off-by-default launch option: **`DREAMS_RENDER_RESOLUTION=1280x720`**
+(`port/run-dreams.sh`, `port/tools/dreams_render_resolution.py`, 26 CPU tests, `RUNNING.md`). It
+generates the one-write BBPATCH2 patch for the current dump into a private per-run directory and
+forwards it through the loader's existing `--patches` path; unset adds no file and no argument, and an
+explicit `--patches` together with it is refused (exit 2). It was verified end to end on the GPU:
+unset produced 1360x768 gameplay with no artifact, the option produced the exact reviewed patch
+(loader applied `1 writes, 16 bytes`) with 912x512 gameplay, identical coherent captures and
+unchanged 30 fps. Sculpting/painting, other scenes, deeper editor workflows and PS4 parity remain
+unverified; the shared vector also feeds a mode-15 load, an allocation floor and a comparison.
+Evidence and exact resume gates: `work/render-resolution/status.md`, `experiment-results.md`,
+`reports/`.
+Preserve the earlier audit's uncommitted fixes while continuing; do not replace them with a HEAD-only worktree.
+
+## Latest — deep audit and cleanup
+
+This section supersedes the older tree-state notes below.
+Root base `33acf7f`, port base `e9b1d88`, renderer `7d25345b`.
+**All audit changes remain uncommitted.** Existing root `specs/` was not changed.
+The renderer/shim stayed untouched, and its backup bundle matches both local branch tips.
+No agent game run or physical-GPU lease was issued.
+
+### Accepted changes
+
+- Loader SFO bounds/terminator checks, with a synthetic original-parser SIGSEGV reproduction
+  and a C regression against the actual parser.
+- Descriptor-relative cleanup traversal, sizing and deletion. Ten tests cover protected aliases,
+  replacement races, normal retention, nested links and fail-closed platform checks.
+- Real pre-save Dreams validation, version-independent SELF/ELF recognition and parsed serials.
+  Content-based prep caching covers five game inputs, eight generators and four output files.
+  Fourteen cache tests and seven gate tests include stub-wrapper ordering and cache reuse.
+- Save creation/truncation now persists on close even without a subsequent write. Six cases
+  cover create, truncate, unchanged opens, writes, exclusive failure and descriptor exhaustion.
+  Inherited file-mod tests are also registered in `tests/run-dreams-tests.sh`.
+- Removed unused tooling helpers/imports, duplicate SFO fallback parsing and obsolete pathname
+  cleanup helpers. Corrected build, backend, backing-page, cache and cleanup documentation.
+
+Independent Terra reviews approved the SFO, corrected cleanup and atomic-save changes.
+Review also caught an ELF regression in the gate; it was corrected before integration.
+DeepSeek attempts produced no accepted reports after report limits and credit failure.
+The user authorized at most two concurrent GPT Terra workers for this audit.
+
+### Verification
+
+Evidence: `work/deep-audit-20261116/` (project-root relative).
+
+- `final-gates.log`: preflight and `DREAMS_TESTS_STRICT=1 tests/run-dreams-tests.sh` pass,
+  with zero optional skips. Direct broad Python discovery passes 222 tests with 28 skips
+  for inherited conventional-name binaries.
+- `final-build.log`: `VCORE_JOBS=2 JOBS=2 ./build-dreams.sh` passes. GPU provenance records
+  clean `vcore` `7d25345b`; Ninja has no GPU source work to rebuild.
+- `final-contracts.log`: rebuilt current-source runtime and semaphore contracts pass.
+- `real-prep.log`, `real-prep-report.json`: actual SELF preparation/link/content generation,
+  read-only freshness and unchanged reuse pass without executing guest code. One rebuild takes
+  1.11 s; a warm cache check takes 0.156 s on the reference machine. This is not an FPS benchmark.
+- `import-tool-equivalence.log`: baseline and cleaned real import reports are byte-identical.
+- `extended-legacy-tests.log`: all **222 Python tests pass with zero skips** using current-source
+  native CPU binaries, temporary conventional-name adapters, private fixture paths and strict
+  unresolved-import diagnostics. Temporary adapters are removed afterward. This also exercises
+  all 28 cases skipped by direct discovery's legacy binary-name checks.
+- GCC analysis covers all 29 loader/runtime translation units but hits 1,307 complexity limits.
+  ASan/UBSan cannot link because installed sanitizer runtimes are missing; no sanitizer pass.
+
+Verified review reports are copied to `work/deep-audit-20261116/reviews/`.
+Accepted patches and the new-source archive are kept with the evidence.
+All three audit-created worktrees were removed after integration. Existing perf/indirect
+worktrees remain intact. The 395 MB temporary real-prep directory was removed after verification;
+its manifest and measured report remain. No real cleanup `--apply` run occurred.
+
+### Remaining risks and resume point
+
+Read `AUDIT.md` → **Deep follow-up audit**, especially R1–R8.
+High-priority follow-up: thread stacks/TLS appear unreclaimed after termination/join.
+Other findings: false save-mount success, suppressed metadata/delete failures, capture-worker
+shutdown lifetime, and a second SFO reader in the renderer shim.
+These need bounded repros and approved approaches, not speculative cleanup.
+
+Rendering speed/accuracy remains the broader priority. Renderer files retain the external
+ownership claims in `work/COORDINATION.md`. Preserve Precise readbacks, synchronization, shader
+routes, GPU guards and simulation cadence. Automated Please Hug Me checks and measured
+gameplay/editor parity remain unverified. This audit establishes no new scene pass or rendering speedup.
+
+## Audit and cleanup (earlier session)
 
 Read `AUDIT.md` first; it is the whole-port snapshot and guardrail list.
 

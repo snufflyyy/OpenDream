@@ -3,6 +3,8 @@
 Snapshot: 2026-11-16. Read-only audit of `port/`, its seam to `ref/shadps4`, and the project-root
 `tools/`/`notes/`. No game, GPU or build run was used for the findings; the CPU suite is green.
 This is a **snapshot**, not a status doc: current state lives in `HANDOFF.md`/`STATUS.md`.
+The opening sections describe the earlier audit. The [deep follow-up](#deep-follow-up-audit)
+records the later code review and cleanup.
 
 ## Addressed in the cleanup that followed this snapshot
 
@@ -163,3 +165,85 @@ cd port
 ./tools/preflight.sh
 tests/run-dreams-tests.sh
 ```
+
+## Deep follow-up audit
+
+Date: 2026-11-16. Working directory: `$REPO` (the OpenDream checkout).
+Starting revisions: root `33acf7f`, port `e9b1d88`, renderer `7d25345b`.
+Changes in this follow-up remain uncommitted.
+
+### Scope and limits
+
+The inventory covers 1,347 tracked port paths and project-root tools.
+Review concentrates on the native runtime, renderer integration, preparation, cleanup, tests,
+configuration, and documentation. Static analysis compiles all 29 loader/runtime translation units.
+It does not constitute a line-by-line audit of vendored dependencies or the inherited renderer.
+Package extraction, the legacy GPU build, desktop input, and Windows execution are not rerun.
+
+The 952 tracked paths in `gpu/` support the selectable legacy backend and reference tooling.
+They are not dead code. NID resolvers, weak hooks, dynamic exports, fallback paths, and license
+notices remain intact. Private game data, saves, existing worktrees, and backups are preserved.
+The backup bundle matches the current `dreams` and `vcore` branch tips.
+
+DeepSeek attempts produced no accepted reports after turn-limit and provider-credit failures.
+The user then authorized two concurrent GPT Terra agents. Their source reviews found two
+pre-integration blockers: cleanup alias races and rejection of supported ELF inputs.
+Both received corrections. No game or physical-GPU run forms part of this follow-up.
+
+### Accepted fixes and removals
+
+| ID | Priority | Finding and accepted change | Regression evidence |
+|---|---|---|---|
+| D1 | High | `src/probe.c` `sfo_value` allowed overflowing offsets and unterminated keys. Subtraction-based bounds checks reject malformed tables before pointer arithmetic. | A synthetic original-parser input exits with SIGSEGV. `test_probe_sfo.c` covers valid values, truncation, keys and overflow. Independent review approves the fix. |
+| D2 | High | `tools/clean_work.py` followed category symlinks into protected saves. Path checks alone also permitted replacement races. Traversal, sizing and deletion now use no-follow directory descriptors. | Ten synthetic tests cover static aliases, category replacement, retention, nested links, invalid retention and unsupported-platform rejection. Independent correction review approves. No real cleanup `--apply` run occurs. |
+| D3 | High | `run-dreams.sh` reused prepared code based on only two mtimes. `scripts/dreams_prepare.py` hashes game inputs, generators and outputs, invalidates failed rebuilds, and atomically publishes a manifest. | Fourteen cache tests cover preserved timestamps, folder changes, every dependency, output corruption, failed stages and unstable inputs. The helper has a read-only `--check` mode. |
+| D4 | Medium | The native launcher never called the existing Dreams gate. It now validates before save setup and reads the serial through SFO parsing. The gate accepts SELF and ELF magic, preserving preparation's supported formats. | Seven gate tests include a stub-wrapper integration check, malformed inputs, format checks and a second cache-hit launch. Detailed parsing remains the generators' responsibility. |
+| D5 | High | `runtime_file.c` discarded create/truncate operations when close followed without a write. Successful creation/truncation now initializes the save copy's dirty state. | Six case-selected tests cover empty creation, truncation, unchanged opens, atomic writes, exclusive-create failure and descriptor exhaustion. Independent review approves. Inherited file-mod tests also run. |
+| D6 | Low | Removed unused `tools/ps4_imports.py::decode_id`, two unused tooling imports, and the duplicate fallback SFO parser in `dreams_game_check.py`. Removed pathname-only cleanup helpers superseded by descriptor operations. | Baseline and cleaned import-analysis reports are byte-identical on the local dump. Route-table sync and syntax checks preserve generator behavior. |
+| D7 | Low | Build docs still required the legacy backend and described AvPlayer's fallback as default ON. Backing-page docs still described unconditional copies. | `BUILD.md`, `VCORE.md`, `RUNNING.md`, `STATUS.md`, and the import log now describe the implemented paths. Documentation lint remains mandatory. |
+
+### Deferred findings and exact next actions
+
+These are audit findings, not claims of reproduced gameplay defects.
+
+| ID | Priority | Location and evidence | Next action |
+|---|---|---|---|
+| R1 | High | `runtime_thread.c:75-87,299-348` retains thread stacks and TLS after termination/join. Permanent handle records are intentional, but stack/TLS retention is separate. | Design safe reclamation after host-thread termination, including detached threads. Obtain pointer-lifetime approval and add a bounded creation/join stress test. |
+| R2 | Medium | `runtime_savedata.c:177-190` returns successful mount state even when `runtime_file_mount` fails. | Add mount-table-exhaustion coverage, roll back the slot, and confirm the PS4 error code before changing results. |
+| R3 | Medium | `runtime_savedata.c:133-136,231,260-263` suppresses metadata-write and recursive-delete failures. | Inject disk/permission failures and propagate reference-backed PS4 errors. Do not treat successful calls as proof of durable data. |
+| R4 | Medium | `vcore/shim/capture.cpp:105-106,131-140,202-205` detaches an infinite worker using a function-static object. Normal destruction can race with that worker. `_Exit` bypasses destruction but can lose queued jobs. | Coordinate shutdown ownership with the renderer owner. Reproduce normal-exit behavior before a lifetime fix. No shutdown crash was reproduced here. |
+| R5 | Medium | `vcore/shim/bbgpu.cpp:121-128` retains a second SFO reader with addition in 32-bit fields before conversion. | Harden it with malformed fixtures under the renderer owner's file claim. The loader fix does not fix this separate reader. |
+| R6 | Medium | Cleanup's `/proc` in-use detection remains best effort. Selection by mtime can become stale if an ordinary directory is replaced before deletion. | Coordinate active runtime directories and consider selected-inode revalidation. Symlink protection is not a sandbox against direct same-user renames or bind mounts. |
+| R7 | Medium | A cached `analysis.json` can retain stale diagnostic directory counts after asset-only changes. Serial and preparation also assume an unchanged game folder. | Keep game folders immutable during launch. Remove the manifest to refresh diagnostic inventory. Do not hash all game assets merely to refresh counts. |
+| R8 | Open | Behavioral scene coverage, editor/save parity, capture-default cost, and submit/readback counters remain incomplete. | Continue the existing T5/P1/P2 plan. Please Hug Me remains blocked/unverified. Keep Precise readbacks, routes, guards and simulation cadence unchanged. |
+
+### Verification and interpretation
+
+Evidence lives under `$REPO/work/deep-audit-20261116/` and is not tracked.
+The primary entry point remains `port/tests/run-dreams-tests.sh`.
+It now registers the new parser, cleanup, cache, and save regressions.
+A missing project-root cleanup tool is counted as an optional skip.
+
+The final native build, strict suite and preflight pass with zero optional suite skips.
+Direct broad Python discovery passes 222 tests with 28 skips for legacy binary-name checks.
+An additional run supplies freshly built CPU binaries through temporary conventional-name
+adapters: all 222 tests pass with zero skips. The adapters use private synthetic fixtures and
+are removed afterward. The baseline was 194 tests with 28 skips.
+Rebuilt inherited runtime and semaphore contracts pass against current sources.
+The exact commands, logs and interpretation are in `HANDOFF.md`.
+Actual offline preparation on the local SELF dump also passes, without executing guest code.
+On the reference machine (`TEST_HARDWARE.md`), one rebuild takes 1.11 seconds and a warm
+cache check takes 0.156 seconds. This is one startup measurement, not a cold-cache benchmark
+or an FPS claim. Output hashing adds startup I/O rather than per-frame work.
+
+GCC's analyzer completes all translation units but emits 1,307 complexity-limit warnings.
+Its Audio3d ownership and stable AvPlayer-loader warnings are not accepted as reproduced bugs.
+ASan/UBSan cannot link because installed sanitizer runtimes are missing.
+No sanitizer pass, FPS improvement, original-PS4 parity, or scene/editor pass is claimed.
+
+### User report after the audit
+
+The user subsequently reports Please Hug Me working correctly in manual testing.
+The earlier cloud-screen observation is not a confirmed current blocker.
+This updates the current user-reported status, not the audit's historical evidence.
+The responsible change is unknown; automated scene and original-PS4 comparisons remain unverified.

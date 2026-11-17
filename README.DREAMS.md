@@ -1,4 +1,6 @@
-# Dreams-Recomp: the Dreams port in this directory
+# OpenDream: the Dreams port in this directory
+
+**OpenDream** — a native PC port of Dreams (CUSA08010) for the PS4.
 
 This directory (`port/`) is the **native Linux x86-64 port of Dreams** (CUSA08010, PS4). It is a
 fork of bbport 0.7, deadinside28's native Bloodborne port: the game's own x86-64 code runs on the
@@ -8,7 +10,7 @@ shadPS4 runs the GPU side. No CPU emulation, no JIT, no static recompilation.
 Start with the documentation map, not this file:
 
 - `docs/dreams/INDEX.md` — every Dreams doc: purpose, when to read it, normative vs historical.
-- `$REPO/AGENTS.md` — project layout, goal, rules for agents (`$REPO` = the Dreams-Recomp
+- `$REPO/AGENTS.md` — project layout, goal, rules for agents (`$REPO` = the OpenDream
   checkout root, one level up from here).
 - `docs/dreams/HANDOFF.md` — what the last session changed and where to resume.
 

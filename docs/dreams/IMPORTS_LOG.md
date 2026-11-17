@@ -1,6 +1,6 @@
 # PS4 imports implemented or changed for Dreams
 
-Working directory: `$REPO` (your Dreams-Recomp checkout); `port/src` below means
+Working directory: `$REPO` (your OpenDream checkout); `port/src` below means
 `$REPO/port/src`, `tests/` means `$REPO/port/tests`.
 
 One row per NID added or changed in the runtime for Dreams. Keep this in sync with the code.
@@ -150,3 +150,9 @@ GetDefaultOpenParameters/Terminate, sceContentExportInit/Term, sceNpWordFilterCr
 AbortRequest/CensorComment, sceCoredumpUnregisterCoredumpHandler, sceHmdInitialize, sceImeKeyboardClose,
 pthread_rwlock_init/destroy/tryrdlock/trywrlock, getdents.
 | (14 NIDs) | sceNetSocket/SocketClose/SocketAbort/Bind/Listen/Shutdown/Setsockopt/Getsockopt/Getsockname/Recv/Recvfrom/Accept/EpollControl/EpollWait/EpollAbort | libSceNet | `runtime_services.c` offline socket table | Unplugged-network semantics: local setup works, receives wait for SO_RCVTIMEO then EAGAIN, sends fail ENETUNREACH. Fixes the OSC thread's 100% CPU spin. Ref shadPS4 net.cpp | 2026-11-15 |
+
+## Atomic-save correction — 2026-11-16
+
+| NID | Name | Library | Implementation | Semantics/reference | Date |
+|---|---|---|---|---|---|
+| `1G3lF1Gg1k8`, `UK2Tl2DWUns` | sceKernelOpen / sceKernelClose (also POSIX aliases) | libkernel | `runtime_file.c` `open_for_commit`, `do_open`, `commit_file` | Creating or truncating a save marks its temporary copy dirty, even without a subsequent write. Close commits the empty file through the existing fsync/rename path. Opening an existing file without changes still preserves it. Reference: shadPS4 `core/libraries/kernel/file_system.cpp` `open` / `sceKernelOpen`. Six cases in `tests/test_file_commit.c` cover creation, truncation, unchanged opens, writes, exclusive-create failure and descriptor exhaustion. | 2026-11-16 |

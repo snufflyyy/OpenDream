@@ -537,3 +537,149 @@
 - Stopped a source-only scout after unauthorized scratch binary-tool experiments. Their output is not accepted evidence.
 - User redirected work to rendering speed and visual accuracy. DeepSeek implements, GPT supervises, at most three workers.
   Keep simulation semantics, Precise readbacks, shader routes, and GPU guards. All changes remain uncommitted.
+
+## 2026-11-16 — deep project audit and bounded cleanup
+
+- User requested a whole-project audit and removal of demonstrably dead code. Inventoried the root,
+  native port, renderer seam, tools, tests, inherited backend, and nested-repository provenance.
+  Root began at `33acf7f`, port at `e9b1d88`, renderer at `7d25345b`. Existing `specs/` stayed untouched.
+- Three DeepSeek inspection attempts exhausted report limits. Retries then encountered insufficient
+  provider credits. None produced an accepted audit report. The user explicitly authorized two
+  concurrent GPT Terra agents; they implemented bounded fixes and performed independent reviews.
+- Reproduced a loader SFO offset-overflow crash using synthetic metadata (SIGSEGV, no game execution).
+  Added bounds/terminator checks and a source-level C regression. ASan/UBSan could not link because
+  sanitizer libraries were missing. This is not a sanitizer pass.
+- Reproduced cleanup following `captures -> user` into synthetic protected saves. Independent review
+  also found an ancestor-replacement race in the first candidate. Terra replaced pathname traversal,
+  sizing and deletion with descriptor-relative no-follow operations. Ten fixture tests and a fresh
+  independent review cover the correction. No real cleanup `--apply` run occurred.
+- Added content-based offline preparation caching and actual pre-save Dreams validation. Review found
+  that requiring SELF alone rejected ELF formats supported by preparation. The corrected gate accepts
+  both magics and leaves detailed validation to preparation. Fourteen cache tests and seven gate tests
+  include failure paths, preserved timestamps, corrupted output, stub-wrapper ordering and cache reuse.
+- Independent audit found empty save creation and truncation were discarded when close followed without
+  a write. Terra initialized the temporary copy's dirty state on successful create/truncate. Independent
+  review approved. Six cases plus inherited file-mod tests pass; all are registered in the primary suite.
+- Removed the unused import-analysis decode helper, unused imports, duplicate fallback SFO parser and
+  superseded pathname cleanup helpers. Real import reports before/after are byte-identical. Kept dynamic
+  exports, the supported legacy backend, third-party notices, private data, backups and existing worktrees.
+- Corrected default AvPlayer, legacy build, backing-page, launcher/cache and cleanup documentation.
+  `AUDIT.md` records accepted fixes and deferred thread, savedata, capture-lifetime and shim-SFO findings.
+  Renderer/shim files remain unchanged under their external ownership claims.
+- Verification evidence is under `work/deep-audit-20261116/`. Initial integrated strict tests and preflight
+  pass with zero optional skips. Final native build and gates also pass. Direct Python discovery runs
+  222 tests with 28 legacy binary-name skips; an extended run supplies current CPU binaries through
+  temporary private-fixture adapters and passes all 222 without skips. Those adapters are removed.
+  Real offline preparation passes (one 1.11 s rebuild, 0.156 s warm cache check). Removed the 395 MB
+  generated test outputs and all three audit-created worktrees after preserving manifests, patches,
+  new-source files and review reports. Existing worktrees remain intact. Exact evidence and limits
+  are in `HANDOFF.md`. No game, physical-GPU or gameplay/editor parity claim is new.
+  All source changes remain uncommitted.
+
+## User manual update and resolution request
+
+- The user reports: "i tested please hug me and everything seems to be working correctly now."
+  Treat this as current user/manual functional validation, superseding the prior cloud-screen
+  observation as a confirmed current blocker. The cause/change, save setup and timing mode are
+  not established; automated scene coverage and original-PS4 parity remain unverified.
+  Updated the root instructions, status, scene-test requirements and latest handoff accordingly.
+- The requested next feature is true internal render resolution through `DREAMS_*` launch variables.
+  The user explicitly rejected substituting window/output sizing for internal rendering.
+  Source inspection shows the existing internal-screen fields only set VideoOut-reported status.
+  Bounded static analysis found an engine dimension constructor and a shared default-size vector,
+  but not yet a safe, validated feature mechanism. No resolution patch or GPU run has occurred.
+  Private evidence is in `work/render-resolution/`; preserve existing audit changes.
+- Internal-resolution bounded experiment (2026-11-17). Private decoder/NID/unwind-anchored generator
+  (13 offline tests, incl. real-binutils synthetic ELF and publication-failure cases) produced a
+  56-byte BBPATCH2 data patch for the selected v2.52 SELF that changes the constructor's shared
+  default vector to 1280x720; independent review approved it only for a bounded experiment.
+  A private explicit Vulkan observer was built and CPU-tested (loader forwarding, image/view
+  metadata, command-buffer lifecycle, render area, pipeline-selected state, trigger/cap; one
+  review blocker on the record cap fixed and re-approved). Launcher single-GPU locking was moved to
+  a root-global lock directory so private work/cache copies cannot bypass it; the pid/start-time/
+  fd9-inode/FLOCK/pidfd takeover checks were added, an independent review's four applicable gaps
+  were fixed, and the re-review approved. All of this stays uncommitted and default-off.
+  Bounded GPU experiment (baseline -> candidate -> restore, 3x90 s through tools/agent-run.sh,
+  private works/saves, default PS4 timing, observer + captures): candidate internal scene color and
+  render-area extents changed from 1920x1080 to 1280x720 (dependent 608x344 -> 408x232), the final
+  composite stayed 1920x1080, restore histograms were identical to baseline, cadence stayed
+  30.0 fps/p50 33.3 ms, and no guard, real assert or device loss occurred. Evidence:
+  `work/render-resolution/experiment-results.md`. Menu/preferences only; gameplay, physics,
+  sculpt/paint, logic and the editor were not exercised, and most pipeline viewport/scissor state
+  resolved as unknown, so there is no feature acceptance, scene parity or FPS claim yet.
+- Second/third bounded GPU experiments (2026-11-17), same lease protocol, warmed byte-identical
+  private save and a documented timed pad route: **Please Hug Me** reached
+  `EnterInPlayMode dbe74bfb376195e` in baseline, candidate and restore, and the hub route also
+  entered **Dream Shaping** (editor tutorial view). Gameplay internal target 1360x768 became
+  912x512 with the patch (the engine's own dynamic 1357x763 became 905x509); editor view rendered
+  at 912x512/1280x720. Baseline and restore agreed, captures were coherent (player, NPC cones,
+  platform, cloud backdrop; editor shape/frames/panels), cadence stayed 30.0 fps with p50 33.3-33.4
+  ms, and there were no guards, real asserts or device loss. Not verified: sculpt/paint/transform/
+  gadget/undo/save editor workflows, deeper scene progression, and original-PS4 comparison.
+- Production opt-in `DREAMS_RENDER_RESOLUTION` (2026-11-17): `port/tools/dreams_render_resolution.py`
+  is the reviewed private generator moved into the port (same SELF/ELF, NID, objdump, EH/FDE and
+  exclusive-publication safety design; real-dump output reproduces the exact experiment patch,
+  56 bytes, SHA-256 `5ed6a094…05ff6a0`). `run-dreams.sh` generates a per-run private patch/report
+  under `$OUT/render-resolution/<run id>/` only when the variable is set, forwards exactly one
+  `--patches`, refuses to combine it with an explicit `--patches` (exit 2 before preparation), and
+  fails closed on any generator error; unset is unchanged. 26 CPU tests, docs and doc_lint updated.
+  GPU verification with the documented Please Hug Me route: unset run produced no artifact/argument
+  and 1360x768 gameplay; `=1280x720` produced the reviewed patch (`Patches: 1 writes, 16 bytes`),
+  912x512 gameplay, coherent captures, 30 fps unchanged, no faults. Sculpt/paint workflows, other
+  scenes and PS4 parity remain unverified.
+
+## Custom-server feasibility research — 2026-11-17
+
+- User authorized thorough custom-server research and up to three DeepSeek workers. Three distinct
+  lanes covered public protocol/prior art, port integration, and backend/accuracy/effort. All used
+  `rightnow/deepseek-v4-1-flash-1017`; concurrency never exceeded three. One inspect-only source lane
+  reached its turn limit without a report; one bounded retry succeeded. Supervisor reviewed primary
+  sources and requested correction addenda for unsupported assumptions and effort conversion.
+- Added `notes/dreams-custom-server-research.md` and linked it from INDEX. ArchivingDreams publishes
+  nine service families (manual recount 98 routes), not complete native schemas. No working Dreams
+  custom server was found in examined public sources. Website API proxies cannot download scene data.
+  Official notes establish the 2.52/pre-migration versus 2.57+/2.64 boundary. Source review establishes
+  offline HTTP/NP gates and an optional inherited module seam, not working Dreams online support.
+- Recommended a bounded protocol-evidence spike, then owner-only private online round-tripping.
+  Low-confidence estimates: minimum slice 8/15/28 engineer-weeks; broad core 31.5/64/115. Historical
+  catalog, real PSN identities and exact recommendations cannot be reconstructed from protocol alone.
+- Research-only scope: no game runs, official game-service probes, PSN login, new binary analysis,
+  implementation or commits. No source, renderer, saves, game data or existing specs changed.
+  Existing uncommitted work remains preserved. Verification passed: preflight, 10 doc-lint tests,
+  21-document lint, report host-neutral/whitespace checks and root/port diff checks. These documentation
+  and hygiene checks do not prove server compatibility.
+
+## 2026-11-17
+
+- Renamed the project to **OpenDream** (a native PC port of Dreams, CUSA08010, PS4). The checkout
+  directory moved from `Dreams-Recomp` to `OpenDream`; branding, docs, tool text and notes were
+  updated. No source, shader route, guard, save or test semantics changed.
+- Absolute path rewrite: every recorded `/…/Dreams-Recomp` path (docs, scripts, `.venv`, and the
+  `port/vcore/build`, `ref/shadps4/build`, `ref/bbport/out` build trees) now names `OpenDream`.
+  Git worktree links (`port-perf`, `port-indirect`, `ai-pad-tests`, shadps4 perf/indirect) and
+  `port`'s `origin` URL were updated. `vcore` was rebuilt clean from the new path (≈2 min).
+- A compatibility symlink `Dreams-Recomp -> OpenDream` remains beside the checkout so stale
+  sessions, open logs and recorded ninja dependency paths keep resolving; remove it when unused.
+  `ref/shadps4/build` and `ref/bbport/out/gpu` will reconfigure on their next `ninja` run.
+- Verified: `port/tools/doc_lint.py` clean (21 normative docs), strict port test suite passing.
+
+### 2026-11-17 — Comic Sands (renderer accuracy) session start
+
+- User report: the Mm 2D hand-drawn platformer **Comic Sands** "looked nothing like the pictures
+  shown before starting the game"; only the skybox rendered, no scene geometry. The earlier
+  Please Hug Me cloud-backdrop observation may be the same failure class (unproven).
+- Static catalog facts (ordinary ZIP/JSON inspection of the local package, no runtime claim):
+  Comic Sands registry usage `MmContentMap_EX_ComicSands`, map `m05700e3389c056` /
+  `v198de1a22ee4de`, pinned child scene `da76f79cbd5b1aa` / `v0e9b1cbee7e8a7`, 0 directly
+  declared assets in the map entry. It is the 8th entry of `Mm Arcade` (`c2504f84b356f35`).
+- Reproducible entry found for the Mm row: with a private copy of the player save,
+  `circle` 35–36 s (offline notice), `mdx=-3 mdy=-1` 42–43 s (hub cursor to Dream Surfing),
+  `cross` 46–46.3 s (enter DreamSurfing), `ly=255` from 54 s (scrolls the Media Molecule row
+  horizontally). At ~61 s the `Comic Sands` card is on screen together with `Hammer Panic`.
+  Evidence: `$REPO/work/captures/20261117-160159/`.
+- Timing is **not** stable across settings: a second run with `VCORE_CAPTURE_WIDTH=1280` and
+  500 ms captures booted slower, so the 35 s Circle missed the offline notice and the whole
+  scripted route became a no-op (run `20261117-160522`, still on the notice at 98 s). Blind
+  wall-clock input scripts must be replaced by capture/state checkpoints before this is a test.
+- No renderer code was changed. No Comic Sands scene image exists yet, so the defect is not
+  reproduced, attributed or fixed; nothing here is a PS4-parity or pass claim.

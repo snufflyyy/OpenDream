@@ -1,15 +1,17 @@
 # Gameplay and editor regression tests
 
 Working directory: `$REPO/port` for the commands in "Commands available now" (`$REPO` = your
-Dreams-Recomp checkout); the game runner is `$REPO/tools/agent-run.sh`.
+OpenDream checkout); the game runner is `$REPO/tools/agent-run.sh`.
 
 ## Required scope
 
 The user requires real scene tests across locally included Media Molecule games and the editor.
 Menu FPS and process survival are not gameplay passes. Correctness takes priority over FPS (`ACCURACY.md`).
 
-**First target: Please Hug Me.** The user reports both interaction/progression and movement/physics problems.
-The report is not yet reproduced. Do not assume that rendering or high-FPS mode caused it.
+**First target: Please Hug Me.** The user now reports that it works correctly in manual testing.
+The earlier movement/progression and cloud-screen reports are not confirmed current blockers.
+The responsible change is unknown. Automated scenario coverage and original-PS4 comparison remain unverified.
+Do not turn this manual report into an automated or physics-parity pass.
 
 Editor coverage must include sculpting, painting, transforms, physics/logic gadgets, play/edit transitions,
 undo/redo, and save/quit/reload. Opening the editor alone is insufficient.
@@ -81,7 +83,9 @@ describes NPCs fleeing when approached, falling off the platform, and the game e
 Candidate behavioral checks: controllable player movement, NPC reaction to approach, NPC removal at the edge,
 completion after the final NPC, and reset on replay. Confirm these inside the native run before defining thresholds.
 NPCs refusing hugs is the intended premise, not by itself a defect.
-The user's report still needs reproduction and comparison. Do not dismiss movement or progression problems based on the premise alone.
+The latest user report is positive manual evidence, not a measured reference comparison.
+Keep these checks for regression coverage. Reproduce any renewed movement or progression problem
+before diagnosing it, and do not dismiss it based on the game's premise.
 
 ## Initial game candidates
 

@@ -1,7 +1,7 @@
 # Building (Linux x86-64)
 
-Working directory: `$REPO` is the repository root of your Dreams-Recomp checkout
-(`REPO=/path/to/Dreams-Recomp`). Commands below use `$REPO`; the build steps themselves run from
+Working directory: `$REPO` is the repository root of your OpenDream checkout
+(`REPO=/path/to/OpenDream`). Commands below use `$REPO`; the build steps themselves run from
 `$REPO/ref/bbport`, `$REPO/port` and `$REPO/port/vcore` as stated. Hardware and distribution
 requirements: `TEST_HARDWARE.md`. The package list is a **Fedora example**; other distributions
 have different package names but need the same libraries.
@@ -25,7 +25,7 @@ files, glslang, CMake, Ninja, GCC and Clang. On Debian-family systems the names 
 `libvulkan-dev`, `libsdl3-dev`, `libfmt-dev`, `libmagic-enum-dev`, `libspirv-headers-dev`;
 check your distribution's package search.
 
-## 2. GPU library (temporary: bbport's libbbgpu.so in ref/bbport)
+## 2. Optional legacy GPU library (bbport's libbbgpu.so in ref/bbport)
 
 Four workarounds were needed on Fedora versus bbport's nix environment. All are outside `port/`;
 they are distro-layout fixes, so a different host may need none, some, or analogous ones:
@@ -37,10 +37,11 @@ they are distro-layout fixes, so a different host may need none, some, or analog
 | `vk::PhysicalDeviceShaderMixedFloatDotProductFeaturesVALVE` missing: Fedora Vulkan headers are 1.4.341 | latest Khronos headers (1.4.368) in `ref/vulkan-headers` | `-isystem $REPO/ref/vulkan-headers/include` (must come first) |
 | link error: `ffxVkShaderOverride` / `ffxVkJobMark` undefined (pinned FSR-Vulkan submodule + bbport patches don't define them) | null definitions in `ref/bbport/gpu/upscale/zz_ffx_hook_defs.cpp` (local, uncommitted file in the ref clone) | file picked up by `upscale/*.cpp` glob |
 
+Skip this section for the default vcore build. Keep this backend for comparison runs.
 Commands (run once; CMake caches the flags, so `build.sh` reuses them):
 
 ```
-REPO=/path/to/Dreams-Recomp
+REPO=/path/to/OpenDream
 cd $REPO/ref/bbport
 cmake -S gpu -B out/gpu -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBB_NET=OFF -DBB_LTO=OFF \
   -DBB_PGO=off -DCMAKE_MODULE_PATH=$REPO/cmake \
@@ -78,7 +79,8 @@ edits) **in place**, plus glue in `port/vcore/shim/`. Full design: `docs/dreams/
 - None of the bbport Fedora workarounds (FindZydis, magic_enum compat, ref/vulkan-headers) are
   needed: vcore uses shadPS4's own copies.
 - CMake options: `SHADPS4_DIR` (default `../ref/shadps4`), `VCORE_MARCH` (default `x86-64-v3`),
-  `VCORE_BBPORT_AVPLAYER` (default ON, interim AvPlayer).
+  `VCORE_BBPORT_AVPLAYER` (default OFF, optional legacy fallback). The runtime supplies AvPlayer
+  through `src/runtime_avplayer.c` and `out/libdreams-av.so`.
 - `libvcore.so` leaves `runtime_*` undefined on purpose (`--allow-shlib-undefined`); they come from
   `dreams-probe` (`-rdynamic`). Check: `nm -D -u vcore/build/libvcore.so | grep -v @` should list
   only `runtime_*` (+ weak `__gmon_start__`/`_ITM_*`).

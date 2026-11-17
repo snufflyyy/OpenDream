@@ -1,8 +1,10 @@
-# Docs index (Dreams-Recomp, `port/docs/dreams/`)
+# Docs index (OpenDream, `port/docs/dreams/`)
+
+**OpenDream** — a native PC port of Dreams (CUSA08010) for the PS4.
 
 Entry point for agents. Read the rows you need; do not read the whole directory.
 
-Working directory: `$REPO` is your Dreams-Recomp checkout. Docs state their own cwd; project-root
+Working directory: `$REPO` is your OpenDream checkout. Docs state their own cwd; project-root
 tools are `$REPO/tools/`, port tools are `$REPO/port/tools/`.
 
 Two kinds of document:
@@ -14,7 +16,7 @@ Two kinds of document:
 
 | Document | Purpose | Read it when | Kind | Last updated |
 |---|---|---|---|---|
-| `INDEX.md` | This map | Starting any task | Normative | 2026-11-16 |
+| `INDEX.md` | This map | Starting any task | Normative | 2026-11-17 |
 | `CONVENTIONS.md` | Agent rules: freshness, path/hardware-neutral phrasing, ownership, gates, how to add an import/route/scene test/doc | Before editing or adding a doc, test or route | Normative | 2026-11-16 |
 | `TEST_HARDWARE.md` | The current reference test machine and what is a real requirement vs a convenience; how to report results from another host | A number or a hardware claim needs context; testing on a different machine | Normative (hardware facts) | 2026-11-16 |
 | `AI_DEVELOPMENT.md` | Operating policy: model roles, concurrency, ownership, dispatch contract, GPU run lease, acceptance gates | Delegating, reviewing, or accepting AI work | Normative | 2026-11-16 |
@@ -45,6 +47,9 @@ Related entry points outside this directory:
 - `$REPO/port/README.DREAMS.md` — short Dreams entry point inside `port/`.
 - `$REPO/port/README.md` — upstream bbport (Bloodborne) README, not Dreams documentation.
 - `$REPO/notes/` — research reports (imports, rebase, input, high-fps, lantern).
+- `$REPO/notes/dreams-custom-server-research.md` — dated custom-server feasibility research,
+  native protocol/prior art, version boundary, compatibility gates and effort ranges. Research only,
+  not an implemented online mode or permission to contact official services.
 - `$REPO/port/docs/` — bbport's own upstream docs (mostly Russian), not Dreams documentation.
 
 ## Documentation gates
