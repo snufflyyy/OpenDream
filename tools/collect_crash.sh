@@ -5,6 +5,8 @@
 #
 #   --minutes N       window for the filtered kernel log slice (default 30)
 #   --previous-boot   also collect `journalctl -k -b -1` (use after a reboot/forced reset)
+# Env: DREAMS_WORK (run outputs, default <root>/work) and DREAMS_RUN_LOCK_DIR (the root-global
+#      run lock directory whose .dreams-run.who is collected; default <root>/work).
 # Collects: amdgpu devcoredump (vanishes on reboot), kernel journal (full + amdgpu-filtered recent
 # slice), newest work/logs/run-*.log tail, newest capture index + last 20 PNGs, run owner file,
 # uname, vulkaninfo --summary, and README.txt summarizing hang signatures.
@@ -12,12 +14,14 @@
 set -uo pipefail
 ROOT=$(cd -- "$(dirname -- "$0")/.." && pwd)
 WORK=${DREAMS_WORK:-$ROOT/work}
+# The run lock is root-global (independent of DREAMS_WORK), so its owner file lives there too.
+LOCK_DIR=${DREAMS_RUN_LOCK_DIR:-$ROOT/work}
 MIN=30; PREV=0
 while (($#)); do
   case $1 in
     --minutes) MIN=$2; shift ;;
     --previous-boot) PREV=1 ;;
-    -h|--help) sed -n '2,11p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
     *) echo "unknown option $1" >&2; exit 2 ;;
   esac; shift
 done
@@ -58,7 +62,7 @@ if [[ -n $CAP ]]; then
 else note "capture: none"; fi
 
 # system context
-{ echo "# who"; cat "$WORK/.dreams-run.who" 2>/dev/null || echo "(no .dreams-run.who)"; echo; uname -a; } > "$D/system.txt"
+{ echo "# who"; cat "$LOCK_DIR/.dreams-run.who" 2>/dev/null || echo "(no .dreams-run.who in $LOCK_DIR)"; echo; uname -a; } > "$D/system.txt"
 if command -v vulkaninfo >/dev/null; then timeout 20 vulkaninfo --summary > "$D/vulkaninfo.txt" 2>&1 || true; fi
 
 # signatures

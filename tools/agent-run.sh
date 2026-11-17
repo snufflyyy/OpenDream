@@ -62,6 +62,7 @@ timeout -s KILL "$SECONDS_MAX" "${SCOPE[@]}" \
     env -u DISPLAY -u WAYLAND_DISPLAY -u PULSE_SERVER -u PIPEWIRE_REMOTE -u DBUS_SESSION_BUS_ADDRESS \
     XDG_RUNTIME_DIR="$RUN_DIR" WAYLAND_DISPLAY="$SOCKET" SDL_VIDEO_DRIVER=wayland \
     SDL_AUDIO_DRIVER=dummy BB_AUDIO=none DREAMS_RUN_ROLE=agent BB_GAME_PROFILE=none \
+    DREAMS_RUN_LOCK_DIR="$ROOT/work" DREAMS_ALLOW_PARALLEL=0 \
     DREAMS_CAPTURE="${DREAMS_CAPTURE:-500}" DREAMS_TIMEOUT="${DREAMS_TIMEOUT:-0}" \
     DREAMS_USER_DIR="${DREAMS_USER_DIR:-$WORK/agent-user}" DREAMS_SKIP_INTRO="${DREAMS_SKIP_INTRO:-1}" \
     "${SANDBOX[@]}" "${DREAMS_PORT_DIR:-$ROOT/port}/run-dreams.sh" "$@"
@@ -69,10 +70,13 @@ status=$?
 set -e
 # A timeout can kill the wrapper while the scope's game process survives. The game inherits the
 # single-instance flock (run-dreams.sh fd 9), so a survivor blocks every later run. Kill only a
-# game whose --user is THIS run's private dir; the user's own run can never match.
+# game whose --user is THIS run's private dir (an exact adjacent argv match).
 private_user=${DREAMS_USER_DIR:-$WORK/agent-user}
 for pid in $(pgrep -f 'dreams-probe' 2>/dev/null || true); do
-    if tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | grep -q -- "--user $private_user"; then
+    # Exact argv match: the argument after --user must equal THIS run's private dir, so a
+    # lookalike dir (e.g. work/agent-user-2) is never killed.
+    if tr '\0' '\n' < "/proc/$pid/cmdline" 2>/dev/null |
+        awk -v u="$private_user" '$0 == u && prev == "--user" { found = 1 } { prev = $0 } END { exit !found }'; then
         kill -KILL "$pid" 2>/dev/null || true
     fi
 done
