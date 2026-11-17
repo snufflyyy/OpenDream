@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+# SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Is this folder a Dreams game dump the port can run?  dreams_game_check.py GAME_DIR
 
 Replaces the Bloodborne-only game_check.py (BB_SKIP_GAME_CHECK) for Dreams. Reads sce_sys/param.sfo
 and prints TITLE_ID, region (from the CONTENT_ID prefix: UP=US, EP=EU), VERSION (the game version) and APP_VER, SYSTEM_VER (minimum firmware), and whether eboot.bin
-and sce_module/{libc,libSceFios2,libSceJobManager}.prx exist and are plaintext SELF (magic
-4f153d1d: encrypted/fake-signed dumps are not supported).
+and sce_module/{libc,libSceFios2,libSceJobManager}.prx have recognized SELF or ELF magic.
+Detailed format validation happens during preparation; encrypted dumps are not supported.
 
-Exit 0: a Dreams title with all files present. Exit 2: not Dreams, or files missing/not SELF.
+Exit 0: a Dreams title with all files present. Exit 2: not Dreams, or files missing/unsupported.
 Versions: 2.52 (CUSA08010, the first target) and 2.64 (the Dreams fork's target) are known; any other
 version is accepted with a warning (nothing here is version specific). Run with `python3 -I`.
 """
-import struct
+import re
 import sys
 from pathlib import Path
 
 SELF_MAGIC = bytes.fromhex('4f153d1d')
+ELF_MAGIC = b'\x7fELF'
 REQUIRED = ('eboot.bin', 'sce_module/libc.prx', 'sce_module/libSceFios2.prx',
             'sce_module/libSceJobManager.prx')
 KNOWN_VERSIONS = ('02.52', '02.64')
@@ -32,24 +33,9 @@ TITLES = {
 REGIONS = {'UP': 'US', 'EP': 'EU', 'JP': 'JP', 'HP': 'Asia', 'KP': 'Korea', 'IP': 'Intl'}
 
 
-def sfo(data):
-    """Parse a param.sfo; reuses prepare.py's parser when importable."""
-    try:
-        sys.path.insert(0, str(Path(__file__).resolve().parent))
-        import prepare
-        return prepare.sfo(data)
-    except Exception:
-        pass
-    magic, _, keys, values, count = struct.unpack_from('<4sIIII', data, 0)
-    if magic != b'\0PSF':
-        raise ValueError('bad SFO signature')
-    out = {}
-    for i in range(count):
-        key, fmt, size, _, off = struct.unpack_from('<HHIII', data, 20 + i * 16)
-        k = data[keys + key:data.index(0, keys + key)].decode()
-        v = data[values + off:values + off + size]
-        out[k] = struct.unpack('<I', v)[0] if fmt == 0x404 else v.rstrip(b'\0').decode('utf8', 'replace')
-    return out
+# Isolated mode omits the script directory from sys.path.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from prepare import sfo
 
 
 def region(content_id):
@@ -82,6 +68,8 @@ def check(game):
     out += [f'TITLE      {title}', f'TITLE_ID   {tid}', f'CONTENT_ID {cid}', f'region     {region(cid)}',
             f'VERSION    {version}   (APP_VER {app_ver})',
             f'SYSTEM_VER {fw(p.get("SYSTEM_VER", "?"))}']
+    if not re.fullmatch(r'CUSA[0-9]{5}', tid):
+        return 2, out + ['FAIL: missing or invalid TITLE_ID']
     known = tid in TITLES
     if known:
         desc, verified = TITLES[tid]
@@ -98,8 +86,8 @@ def check(game):
             continue
         with open(path, 'rb') as f:
             magic = f.read(4)
-        if magic != SELF_MAGIC:
-            out.append(f'BAD        {rel}: magic {magic.hex()} is not a plaintext SELF (4f153d1d)')
+        if magic not in (SELF_MAGIC, ELF_MAGIC):
+            out.append(f'BAD        {rel}: magic {magic.hex()} is not recognized SELF or ELF magic')
             ok = False
         else:
             out.append(f'ok         {rel}')
@@ -111,8 +99,13 @@ def check(game):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
+    serial_only = len(sys.argv) == 3 and sys.argv[1] == '--serial'
+    if not serial_only and len(sys.argv) != 2:
         sys.exit(__doc__)
-    code, lines = check(sys.argv[1])
-    print('\n'.join(lines))
+    game = sys.argv[-1]
+    code, lines = check(game)
+    if code or not serial_only:
+        print('\n'.join(lines), file=sys.stderr if serial_only else sys.stdout)
+    else:
+        print(sfo((Path(game) / 'sce_sys' / 'param.sfo').read_bytes())['TITLE_ID'])
     sys.exit(code)
