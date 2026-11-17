@@ -36,7 +36,20 @@ python3 -I tests/test_route_table.py
 python3 -I tests/test_import_names.py
 python3 -I tests/test_doc_lint.py
 python3 -I tests/test_run_mangohud.py
+python3 -I tests/test_dreams_run_lock.py
 python3 -I tests/test_dreams_game_check.py
+python3 -I tests/test_dreams_prepare.py
+python3 -I tests/test_render_resolution.py
+if [[ -f ../tools/clean_work.py ]]; then
+    python3 -I tests/test_clean_work.py
+else
+    echo "skip clean-work-test: needs project-root tools/clean_work.py"
+    skipped=$((skipped + 1))
+fi
+read -r -a probe_cflags <<< "$(pkg-config --cflags vulkan sdl3)"
+"$CC" "${flags[@]}" "${probe_cflags[@]}" -ffunction-sections -fdata-sections \
+    tests/test_probe_sfo.c -Wl,--gc-sections -o out/tests/probe-sfo-test
+out/tests/probe-sfo-test
 # Optional GPU-fault regression on Mesa's CPU device only (not a software-GPU game run).
 host_shaders="${VCORE_BUILD_DIR:-vcore/build}/host_shaders/include"
 lavapipe=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
@@ -63,6 +76,13 @@ else
 fi
 "$CC" "${flags[@]}" tests/test_eventflag.c -o out/tests/eventflag-test
 out/tests/eventflag-test
+# Atomic saves: creating/truncating is a mutation even when no write follows.
+"$CC" "${flags[@]}" tests/test_file_commit.c src/runtime_remote.c -o out/tests/file-commit-test
+for case in create truncate clean write exclusive exhaustion; do
+    out/tests/file-commit-test "$case"
+done
+"$CC" "${flags[@]}" tests/test_file_mods.c src/runtime_remote.c -o out/tests/file-mods-test
+out/tests/file-mods-test
 "$CC" "${flags[@]}" tests/test_audio3d.c -lm -o out/tests/audio3d-test
 out/tests/audio3d-test
 "$CC" "${flags[@]}" tests/test_dreams_services.c -ldl -o out/tests/dreams-services-test
