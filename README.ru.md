@@ -1,4 +1,4 @@
-> **Форк Dreams-Recomp — начните отсюда.** Это дерево — база bbport для нативного порта **Dreams**.
+> **Форк OpenDream — начните отсюда.** Это дерево — база bbport для нативного порта **Dreams**.
 > Точки входа Dreams: `build-dreams.sh` и `run-dreams.sh`; документация начинается с
 > [`docs/dreams/INDEX.md`](docs/dreams/INDEX.md) и [`README.DREAMS.md`](README.DREAMS.md).
 > Текст ниже — собственный README bbport для Bloodborne, сохранён для истории. `gpu/` — старый

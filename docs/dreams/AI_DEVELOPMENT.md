@@ -1,12 +1,12 @@
 # AI development architecture
 
-Working directory: `$REPO` (your Dreams-Recomp checkout). This policy is host-independent: it
+Working directory: `$REPO` (your OpenDream checkout). This policy is host-independent: it
 applies to agents on any machine. The reference machine for measurements is
 `TEST_HARDWARE.md`.
 
 ## Purpose and scope
 
-This document defines responsibility, delegation, and acceptance rules for AI work on Dreams-Recomp.
+This document defines responsibility, delegation, and acceptance rules for AI work on OpenDream.
 The user assigns the main Pi assistant as orchestrator and authorizes it to dispatch DeepSeek subagents.
 The user now assigns most implementation and debugging to DeepSeek to reduce inference cost.
 The orchestrator advises, assigns work, reviews evidence, and keeps agents on track.
@@ -15,7 +15,7 @@ This supervisor-first policy replaces the earlier lead-as-primary-implementer ar
 This is an operating policy, not an installed model-routing configuration.
 This document does not launch agents or claim that any model endpoint is configured.
 
-Dreams-Recomp runs the PS4 executable natively on x86-64.
+OpenDream runs the PS4 executable natively on x86-64.
 Its main compatibility work concerns PS4 services, GPU shader translation, memory, synchronization, and engine behavior.
 Refer to [ARCHITECTURE.md](ARCHITECTURE.md) for the port design.
 

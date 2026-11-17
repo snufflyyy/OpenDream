@@ -1,6 +1,6 @@
 # Performance: smooth frame pacing and high fps
 
-Working directory: `$REPO` (your Dreams-Recomp checkout). Measurements were taken on the reference
+Working directory: `$REPO` (your OpenDream checkout). Measurements were taken on the reference
 machine (`TEST_HARDWARE.md`); numbers from another host are not comparable without saying so.
 
 User goal (2026-11-15): "smooth frame pacing, with high fps" on the reference machine's CPU + GPU.

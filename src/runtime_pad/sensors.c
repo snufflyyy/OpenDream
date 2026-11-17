@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* runtime_pad.c part (Dreams port): the controller's real motion sensors.
  * #included by runtime_pad.c after motion.c (one translation unit: it shares that file's statics,

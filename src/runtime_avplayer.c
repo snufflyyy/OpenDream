@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* libSceAvPlayer: the PS4 system video player, on the CPU side of the native port.
  *

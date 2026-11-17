@@ -509,7 +509,7 @@ STUB: thDt9upZlp8#libSceHmd = sceHmdGetDeviceInformation returns 0 (first call f
 Runtime: gamepad connected: PS4 Controller
 Trophies: no trophy key (BB_TROPHY_KEY in the environment or .env): shown by number
 STUB: f2bcpK6kJfg#libSceMove = sceMoveReadStateRecent returns 0 (first call from eboot+0x7bdd54, arg0=0x0)
-Trophies: NPWR10796_00, 0 known, 0 unlocked here (/home/braden/Documents/Programming/Dreams-Recomp/work/user/trophy/NPWR10796_00)
+Trophies: NPWR10796_00, 0 known, 0 unlocked here (/home/braden/Documents/Programming/OpenDream/work/user/trophy/NPWR10796_00)
 STUB: GNcF4oidY0Y#l#m = sceNpTrophyDestroyHandle returns 0 (first call from eboot+0x6262d1, arg0=0x7)
 STUB: zuxWAg3HAac#libSceMove = sceMoveResetLightSphere returns 0 (first call from eboot+0xccfbc0, arg0=0x0)
 Runtime: open(/app0/dbg_data/imp/imp_cfg_metadata.dat) -> not found
@@ -536,18 +536,18 @@ gpu error (Render.Recompiler): Unknown opcode DS_ORDERED_COUNT (1681, category =
 gpu critical (Debug): Assertion Failed!
 Shader translation has failed [recompiler.cpp:46]
 Assertion call stack:
-/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(+0xf6e9e) [0x7efd8d4f6e9e]
-/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(+0xf6f4d) [0x7efd8d4f6f4d]
-/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN6Shader16TranslateProgramERKSt4spanIKjLm18446744073709551615EERNS_5PoolsERNS_4InfoERNS_11RuntimeInfoERKNS_7ProfileE+0x1210) [0x7efd8d4f4160]
-/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN6Vulkan13PipelineCache13CompileModuleERN6Shader4InfoERNS1_11RuntimeInfoESt4spanIKjLm18446744073709551615EEmRNS1_7Backend8BindingsE+0x273) [0x7efd8d6f4133]
-/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN6Vulkan13PipelineCache10GetProgramERNS_17PipelineSelectionEN6Shader7HwStageENS3_7SwStageERKNS3_12ShaderParamsERNS3_7Backend8BindingsE+0xcf5) [0x7efd8d706e45]
-/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN6Vulkan13PipelineCache17RefreshComputeKeyEv+0x1ae) [0x7efd8d7008ce]
-/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN6Vulkan13PipelineCache18GetComputePipelineEv+0x17) [0x7efd8d6f1157]
-/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN6Vulkan10Rasterizer14DispatchDirectEv+0x4d) [0x7efd8d73b5ed]
-/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN4BbCp16CommandProcessor8GraphicsERNS0_4WorkERNS0_5LevelEPKjj+0x18a0) [0x7efd8d632540]
-/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN4BbCp16CommandProcessor11RunGraphicsERNS0_4WorkE+0x16d) [0x7efd8d63277d]
-/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(_ZN4BbCp16CommandProcessor3RunESt10stop_token+0x4aa) [0x7efd8d6230ea]
-/home/braden/Documents/Programming/Dreams-Recomp/ref/bbport/out/gpu/libbbgpu.so(+0x223431) [0x7efd8d623431]
+/home/braden/Documents/Programming/OpenDream/ref/bbport/out/gpu/libbbgpu.so(+0xf6e9e) [0x7efd8d4f6e9e]
+/home/braden/Documents/Programming/OpenDream/ref/bbport/out/gpu/libbbgpu.so(+0xf6f4d) [0x7efd8d4f6f4d]
+/home/braden/Documents/Programming/OpenDream/ref/bbport/out/gpu/libbbgpu.so(_ZN6Shader16TranslateProgramERKSt4spanIKjLm18446744073709551615EERNS_5PoolsERNS_4InfoERNS_11RuntimeInfoERKNS_7ProfileE+0x1210) [0x7efd8d4f4160]
+/home/braden/Documents/Programming/OpenDream/ref/bbport/out/gpu/libbbgpu.so(_ZN6Vulkan13PipelineCache13CompileModuleERN6Shader4InfoERNS1_11RuntimeInfoESt4spanIKjLm18446744073709551615EEmRNS1_7Backend8BindingsE+0x273) [0x7efd8d6f4133]
+/home/braden/Documents/Programming/OpenDream/ref/bbport/out/gpu/libbbgpu.so(_ZN6Vulkan13PipelineCache10GetProgramERNS_17PipelineSelectionEN6Shader7HwStageENS3_7SwStageERKNS3_12ShaderParamsERNS3_7Backend8BindingsE+0xcf5) [0x7efd8d706e45]
+/home/braden/Documents/Programming/OpenDream/ref/bbport/out/gpu/libbbgpu.so(_ZN6Vulkan13PipelineCache17RefreshComputeKeyEv+0x1ae) [0x7efd8d7008ce]
+/home/braden/Documents/Programming/OpenDream/ref/bbport/out/gpu/libbbgpu.so(_ZN6Vulkan13PipelineCache18GetComputePipelineEv+0x17) [0x7efd8d6f1157]
+/home/braden/Documents/Programming/OpenDream/ref/bbport/out/gpu/libbbgpu.so(_ZN6Vulkan10Rasterizer14DispatchDirectEv+0x4d) [0x7efd8d73b5ed]
+/home/braden/Documents/Programming/OpenDream/ref/bbport/out/gpu/libbbgpu.so(_ZN4BbCp16CommandProcessor8GraphicsERNS0_4WorkERNS0_5LevelEPKjj+0x18a0) [0x7efd8d632540]
+/home/braden/Documents/Programming/OpenDream/ref/bbport/out/gpu/libbbgpu.so(_ZN4BbCp16CommandProcessor11RunGraphicsERNS0_4WorkE+0x16d) [0x7efd8d63277d]
+/home/braden/Documents/Programming/OpenDream/ref/bbport/out/gpu/libbbgpu.so(_ZN4BbCp16CommandProcessor3RunESt10stop_token+0x4aa) [0x7efd8d6230ea]
+/home/braden/Documents/Programming/OpenDream/ref/bbport/out/gpu/libbbgpu.so(+0x223431) [0x7efd8d623431]
 /lib64/libstdc++.so.6(+0x51436) [0x7efd8a851436]
 /lib64/libc.so.6(+0x72c42) [0x7efd8ce79c42]
 /lib64/libc.so.6(+0xf65ac) [0x7efd8cefd5ac]

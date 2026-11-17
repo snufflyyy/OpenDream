@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Runtime-backed page lookup used by shadPS4 texture_cache.cpp::HashBackingMemory.
 #include <cstdlib>

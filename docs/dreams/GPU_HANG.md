@@ -1,6 +1,6 @@
 # GPU hang in the first-time intro (2026-11-15): investigation notes
 
-Working directory: `$REPO/port` unless a command says otherwise (`$REPO` = your Dreams-Recomp
+Working directory: `$REPO/port` unless a command says otherwise (`$REPO` = your OpenDream
 checkout; `$REPO/work` and `$REPO/notes` are one level up). Timings and frame rates below are from
 the reference machine (`TEST_HARDWARE.md`).
 

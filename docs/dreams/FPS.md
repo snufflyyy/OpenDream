@@ -1,6 +1,6 @@
 # Frame rate (60 / 120 fps) and faster test boots
 
-Working directory: `$REPO/port` (`$REPO` = your Dreams-Recomp checkout). Every measurement below
+Working directory: `$REPO/port` (`$REPO` = your OpenDream checkout). Every measurement below
 was taken on the reference machine (`TEST_HARDWARE.md`).
 
 Status 2026-11-15, CUSA08010 v2.52, sandboxed agent runs (`$REPO/tools/agent-run.sh`: headless

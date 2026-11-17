@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* libkernel event flags (sceKernel{Create,Delete,Set,Clear,Wait,Poll,Cancel}EventFlag).
  * Dreams' bundled libSceJobManager.prx imports them; with the loader's return-0 fallback a Create

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Test the production adapter at the runtime C API boundary, without Vulkan or game data.
 #include <array>

@@ -1,6 +1,6 @@
 # Seeing a run: test frame capture
 
-Working directory: `$REPO/port` (`$REPO` = your Dreams-Recomp checkout). Project-root tools are
+Working directory: `$REPO/port` (`$REPO` = your OpenDream checkout). Project-root tools are
 `$REPO/tools/`, port tools are `$REPO/port/tools/`.
 
 Agents can't watch the game window, so a native run can record small images of what it presents.

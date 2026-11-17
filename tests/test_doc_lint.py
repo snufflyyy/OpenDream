@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+# SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Fixtures for tools/doc_lint.py: host-independent normative docs, indexed and scanned."""
 import contextlib
@@ -46,7 +46,7 @@ class DocLintTests(unittest.TestCase):
         self.assertTrue(any(p.startswith("BUILD.md:3:host-username") for p in problems), problems)
 
     def test_checkout_written_as_home_path_is_a_violation(self):
-        self.write_docs({"RUNNING.md": "See ~/Documents/Programming/Dreams-Recomp/game.\n"})
+        self.write_docs({"RUNNING.md": "See ~/Documents/Programming/OpenDream/game.\n"})
         self.assertTrue(any(p.startswith("RUNNING.md:2:absolute-home-path")
                             for p in doc_lint.check(self.docs)))
 

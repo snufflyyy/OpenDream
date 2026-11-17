@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore shim: replaces shadPS4 src/sdl_window.h. The emulator's window also owns input (pads,
 // keyboard/mouse remapping); in the native port input belongs to the runtime

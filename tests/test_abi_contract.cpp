@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Runtime<->vcore ABI contract (AUDIT A3): every function vcore/shim/runtime_api.h declares must
 // have exactly the signature the runtime side defines, and libvcore resolves these symbols from

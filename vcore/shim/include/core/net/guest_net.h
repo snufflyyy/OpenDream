@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore shim: replaces shadPS4 src/core/net/guest_net.h for equeue.cpp. Sockets belong to the
 // native runtime (port/src/runtime_net.c; Dreams is offline). Socket kevents report EBADF.

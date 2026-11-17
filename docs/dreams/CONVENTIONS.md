@@ -1,10 +1,10 @@
-# Conventions for agents (Dreams-Recomp docs and code)
+# Conventions for agents (OpenDream docs and code)
 
 Rules that keep the documentation and tooling usable by agents that work on different machines
 and in different sessions. `INDEX.md` maps the documents; `TEST_HARDWARE.md` holds the one
 machine description.
 
-Working directory: `$REPO` is your Dreams-Recomp checkout. The port is `$REPO/port`, project-root
+Working directory: `$REPO` is your OpenDream checkout. The port is `$REPO/port`, project-root
 tools are `$REPO/tools/`, port tools are `$REPO/port/tools/`.
 
 ## Documentation freshness
@@ -23,7 +23,7 @@ tools are `$REPO/tools/`, port tools are `$REPO/port/tools/`.
 ## Host-independent wording (normative docs)
 
 - No absolute user paths. Write `$REPO` for the checkout root and define it once per document
-  (`REPO=/path/to/Dreams-Recomp`); otherwise use paths relative to the cwd the doc states. The
+  (`REPO=/path/to/OpenDream`); otherwise use paths relative to the cwd the doc states. The
   only allowed home-relative form is a portable one such as `~/.local/bin/clang`.
 - Every document states its working directory near the top and uses it consistently
   (`$REPO`, `$REPO/port`, `$REPO/port/vcore`, ...).

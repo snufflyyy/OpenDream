@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore shim: replaces shadPS4 src/core/memory.h. In the native port the guest's memory is mapped
 // and owned by the C runtime (port/src/runtime_memory/*). This MemoryManager keeps exactly the

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore: Core::MemoryManager / Core::AddressSpace (shim/include/core/{memory,address_space}.h)
 // over the native runtime's guest-memory C API. Modelled on bbport's gpu/shim/bbgpu.cpp

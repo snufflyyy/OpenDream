@@ -1,6 +1,6 @@
 # PS4 behavior and accuracy
 
-Working directory: `$REPO/port` (`$REPO` = your Dreams-Recomp checkout). Measurements below come
+Working directory: `$REPO/port` (`$REPO` = your OpenDream checkout). Measurements below come
 from the reference machine (`TEST_HARDWARE.md`).
 
 The user requires original-PS4 behavior (2026-11-16). Dreams is an engine: rendering alone does not prove correctness.

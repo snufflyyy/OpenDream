@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* Glue compiled into out/libdreams-codecs.so (build-deps.sh), NOT into dreams-probe: a small C
  * API over fdk-aac's public decoder interface (aacdecoder_lib.h) for runtime_ajm.c. The ATRAC9

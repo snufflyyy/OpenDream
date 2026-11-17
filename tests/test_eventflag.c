@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* Event flags (src/runtime_eventflag.c), built standalone by tests/run-dreams-tests.sh. */
 #include "../src/runtime_eventflag.c"

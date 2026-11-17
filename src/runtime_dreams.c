@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* PS4 functions Dreams calls that bbport's runtime (written for Bloodborne) didn't implement and
  * whose result matters, so the loader's generic return-0 fallback (probe.c unresolved()) would be

@@ -1,6 +1,6 @@
 # Dreams versions: applying the fork's shader routes to any game build
 
-Working directory: `$REPO/port` (`$REPO` = your Dreams-Recomp checkout). `ref/` and `game/` are
+Working directory: `$REPO/port` (`$REPO` = your OpenDream checkout). `ref/` and `game/` are
 under `$REPO`.
 
 Status 2026-11-15. Code: `ref/shadps4` branch `vcore`

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore: replacements for shadPS4 src/common/{assert,thread}.cpp and src/core/signals.cpp, whose
 // upstream versions reach into the emulator (Core::Emulator, guest pthreads, the process-wide

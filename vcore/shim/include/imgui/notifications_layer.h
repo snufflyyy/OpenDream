@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore shim: replaces shadPS4 src/imgui/notifications_layer.h (no ImGui overlay in vcore):
 // notifications are printed to stdout instead.

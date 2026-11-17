@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore shim: replaces shadPS4 src/core/file_sys/fs.h for core/libraries/kernel/equeue.cpp only.
 // The native runtime owns guest files (port/src/runtime_file.c); here the handle table only hands

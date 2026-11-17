@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+# SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 # SPDX-License-Identifier: GPL-2.0-or-later
 #
 # vcore: the Dreams port's GPU library (libvcore.so). It implements the bbport 0.7 runtime<->GPU

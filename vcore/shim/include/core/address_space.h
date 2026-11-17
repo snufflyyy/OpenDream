@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore shim: replaces shadPS4 src/core/address_space.h. The guest address space belongs to the
 // native loader/runtime (port/src/runtime_memory/*), not to the GPU library. This class keeps the

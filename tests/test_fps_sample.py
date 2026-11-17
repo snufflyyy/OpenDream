@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+# SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Read-only timing diagnostics must recognize both original and high-FPS code."""
 import importlib.util

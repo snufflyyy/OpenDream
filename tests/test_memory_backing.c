@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // CPU-only backing-view contracts. Include the runtime to exercise the real mappings without
 // linking a GPU, loader or game. Unused entry points are discarded by --gc-sections.

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore shim: replaces shadPS4 src/core/libraries/kernel/kernel.h (which pulls in the emulator's
 // linker). Only what the compiled GPU-side libraries use: the guest errno (served by the native

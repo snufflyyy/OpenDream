@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore: the bbport 0.7 runtime<->GPU C API (port/gpu/bbgpu.h) on top of shadPS4's GPU code.
 // Structure follows bbport's gpu/shim/bbgpu.cpp (GPL-2.0-or-later); the initialisation order

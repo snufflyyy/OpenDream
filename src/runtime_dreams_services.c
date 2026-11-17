@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* System services Dreams calls at boot that bbport's runtime didn't implement (audit of the
  * loader's return-0 fallback, docs/dreams/STUBS.md, 2026-11-15). Two kinds of entries:

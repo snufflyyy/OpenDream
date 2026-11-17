@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+# SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Report the metadata-visible content closure of one Dream from packaged game data.
 

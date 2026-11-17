@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* Dreams port: FFmpeg side of libSceAvPlayer (src/runtime_avplayer.c). Built by ./build-deps.sh
  * into out/libdreams-av.so against the system FFmpeg (pkg-config libavformat libavcodec

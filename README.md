@@ -1,4 +1,4 @@
-> **Dreams-Recomp fork — read this first.** This tree is the bbport base for the native **Dreams**
+> **OpenDream fork — read this first.** This tree is the bbport base for the native **Dreams**
 > port. The Dreams entry points are `build-dreams.sh` and `run-dreams.sh`; start at
 > [`docs/dreams/INDEX.md`](docs/dreams/INDEX.md) or [`README.DREAMS.md`](README.DREAMS.md).
 > The text below is upstream bbport's own Bloodborne README, kept for provenance. `gpu/` is

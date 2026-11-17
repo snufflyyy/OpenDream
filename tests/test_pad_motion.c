@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* Pad motion (src/runtime_pad/sensors.c through src/runtime_pad.c): the integration math, tilt
  * correction and bias, then the whole path with an SDL virtual gamepad that has a gyro and an

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore: the game window (shim/include/sdl_window.h). Reduced from bbport's gpu/shim/window.cpp
 // (GPL-2.0-or-later): no overlay menu or cursor art. Gamepads and the keyboard are sampled by the

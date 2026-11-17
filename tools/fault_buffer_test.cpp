@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Exercise the production fault parser on a CPU Vulkan device. No game or physical GPU.
 /* Build: g++ -std=c++20 -O2 tools/fault_buffer_test.cpp -lvulkan

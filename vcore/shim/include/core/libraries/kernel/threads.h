@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 bbport contributors, Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 bbport contributors, OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore shim: replaces shadPS4 src/core/libraries/kernel/threads.h (the emulator's guest pthread
 // implementation; no compiled shadPS4 file needs it). Copied from bbport 0.7

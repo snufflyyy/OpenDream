@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+# SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 # SPDX-License-Identifier: GPL-2.0-or-later
 """run-dreams.sh's per-game config copy (DREAMS_VCORE_CONFIG override) must not touch the template."""
 import hashlib

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* libSceAvPlayer (src/runtime_avplayer.c + out/libdreams-av.so) on a small generated MP4, the way
  * Dreams drives it: InitEx with allocators and an event callback, AddSource, StateReady, stream

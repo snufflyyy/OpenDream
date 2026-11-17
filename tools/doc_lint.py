@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+# SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Check that the normative Dreams docs stay host-independent and indexed.
 
@@ -11,7 +11,7 @@ logs that may name the machine, and raw log files are evidence; neither is scann
 
 Rules:
 
-  absolute-home-path   `/home/<user>/...` or `~/Documents/Programming/Dreams-Recomp`: use $REPO
+  absolute-home-path   `/home/<user>/...` or `~/Documents/Programming/OpenDream`: use $REPO
   host-username        the reference machine's user name: use "the user"
   host-hardware        a CPU/GPU model of the reference machine (TEST_HARDWARE.md has the list)
   host-system          a distribution-version or desktop-compositor name of that machine
@@ -69,7 +69,7 @@ HOST_HARDWARE = re.compile(
 # Distribution version / desktop compositor that only one host has.
 HOST_SYSTEM = re.compile(r"\b(?:Fedora\s+44|Hyprland)\b", re.IGNORECASE)
 
-ABSOLUTE_HOME = re.compile(r"(?:/home/[A-Za-z0-9._-]+/|~/Documents/Programming/Dreams-Recomp)")
+ABSOLUTE_HOME = re.compile(r"(?:/home/[A-Za-z0-9._-]+/|~/Documents/Programming/OpenDream)")
 # The reference machine's user name, as it appears in old absolute paths and logs.
 HOST_USERNAME_TEXT = "braden"
 HOST_USERNAME = re.compile(r"\b" + HOST_USERNAME_TEXT + r"\b", re.IGNORECASE)

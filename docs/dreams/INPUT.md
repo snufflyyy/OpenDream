@@ -1,6 +1,6 @@
 # Input: DualShock 4 / DualSense, keyboard and mouse
 
-Working directory: `$REPO/port` (`$REPO` = your Dreams-Recomp checkout).
+Working directory: `$REPO/port` (`$REPO` = your OpenDream checkout).
 
 How the port feeds Dreams' controls. Research behind it: `$REPO/notes/input-research.md` (disassembly
 of how Dreams reads the pad and moves the imp).

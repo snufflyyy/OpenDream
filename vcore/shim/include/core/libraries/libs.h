@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore shim: replaces shadPS4 src/core/libraries/libs.h. LIB_FUNCTION/LIB_OBJ fill vcore's NID
 // table (shim/symbols.cpp), which the native loader queries through bbgpu_resolve(). The game

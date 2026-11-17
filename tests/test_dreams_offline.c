@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* Offline NP / sign-in dialog / kernel sync semantics (src/runtime_dreams.c), standalone. */
 #include "../src/runtime_dreams.c"

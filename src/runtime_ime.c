@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* libSceIme: the in-game IME (sceImeOpen, used by Dreams to name creations and for search/text
  * fields) and the USB keyboard (sceImeKeyboardOpen, opened by Dreams at boot). Both deliver their

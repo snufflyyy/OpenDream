@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* libSceIme (src/runtime_ime.c): sceImeOpen text entry through a fake game window (the
  * bbgpu_text_input_* calls), the no-window and DREAMS_IME_TEXT paths, and USB keyboard events

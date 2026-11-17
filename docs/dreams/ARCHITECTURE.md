@@ -1,6 +1,6 @@
 # Architecture and decisions
 
-Working directory: `$REPO` (your Dreams-Recomp checkout). All paths are relative to it.
+Working directory: `$REPO` (your OpenDream checkout). All paths are relative to it.
 
 ## Execution model (inherited from bbport)
 

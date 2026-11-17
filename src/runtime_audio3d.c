@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* libSceAudio3d: Dreams' main audio output path. Port of shadPS4's software implementation
  * (ref/shadps4/src/core/libraries/audio3d/audio3d.cpp, not the OpenAL variant), routed to our

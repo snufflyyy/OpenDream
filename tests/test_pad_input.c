@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* Keyboard and mouse for Dreams (src/runtime_pad.c and parts; docs/dreams/INPUT.md):
  *   - the Dreams profile's keys (Space = Cross, Backspace = Circle, Left Shift = L3, not a Circle

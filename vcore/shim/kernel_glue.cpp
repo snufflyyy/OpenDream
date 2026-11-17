@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore: the few shadPS4 functions outside the GPU sources that video_core, gnmdriver, videoout
 // and equeue call, implemented against the native runtime or as documented no-ops

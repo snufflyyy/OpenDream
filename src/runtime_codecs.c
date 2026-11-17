@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* Optional codec library: out/libdreams-codecs.so, built by ./build-deps.sh from
  * ref/shadps4/externals (fdk-aac, artswap ATRAC9 encoder) + src/runtime_codecs/codecs_glue.c.

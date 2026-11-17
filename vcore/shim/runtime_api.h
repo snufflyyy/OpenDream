@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore: the native runtime's C functions the GPU library calls (defined in port/src/runtime*.c,
 // resolved at load time against the dreams-probe executable: -Wl,--allow-shlib-undefined).

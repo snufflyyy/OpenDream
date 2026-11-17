@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 /* Codec library (out/libdreams-codecs.so) through the runtime: fdk-aac via the glue (ADTS and
  * raw access units), the Ajm AAC job path of src/runtime_ajm.c (init, multi-frame decode,

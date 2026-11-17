@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: Copyright 2026 Dreams-Recomp contributors
+// SPDX-FileCopyrightText: Copyright 2026 OpenDream contributors
 // SPDX-License-Identifier: GPL-2.0-or-later
 // vcore shim: replaces shadPS4 src/imgui/imgui_texture.h. vcore has no Dear ImGui: the presenter
 // blits the game frame straight to the swapchain (`// vcore:` edit in vk_presenter.cpp).

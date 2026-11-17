@@ -4,7 +4,7 @@ Normative docs are written for any Linux x86-64 host. This file is the only plac
 the machine the project has been measured on. Other docs say "the reference machine (this file)"
 when a number depends on it.
 
-Working directory: `$REPO` (the Dreams-Recomp project root; examples run from `$REPO/port` where
+Working directory: `$REPO` (the OpenDream project root; examples run from `$REPO/port` where
 stated).
 
 ## The current reference machine (not a requirement)
