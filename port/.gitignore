@@ -1,0 +1,42 @@
+# Build output
+out/
+vcore/build/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local runtime/config state
+user/
+bbport.ini
+last_run.log
+dist/
+packaging/runtime-paths.nix
+vkd3d-proton.cache
+tools/fsr4cap/*.exe
+perf.data
+
+# Media and generated assets
+*.mp4
+*.png
+fsr4_shaders/
+fsr4_411/
+*.dll
+
+# Local leftovers: patch backups, generated SPIR-V, analysis outputs, test saves and routes
+*.orig
+/*.spv
+/1060/
+/docs/savedata_route/
+/docs/route*.txt
+/docs/route_run.log
+/bloodborne_upscalers_*.md
+mods.json
+patches.json
+
+# Local: game logs, messages and archives from users, internal plans
+/logs/
+/message*.txt
+/*.zip
+/docs/ISSUE_ACTION_PLAN_*.md
