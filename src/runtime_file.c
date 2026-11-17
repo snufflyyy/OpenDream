@@ -282,7 +282,7 @@ static void current_copy(char *path,size_t size,int write) {
     pthread_mutex_unlock(&lock);
 }
 /* Returns the descriptor of the copy, or -(errno). */
-static int open_for_commit(const char *path,const char *source,int flags,int mode,char **commit,char **temp) {
+static int open_for_commit(const char *path,const char *source,int flags,int mode,char **commit,char **temp,int *dirty) {
     int hf=host_flags(flags);
     struct stat s;
     int exists=!stat(source,&s);
@@ -307,7 +307,9 @@ static int open_for_commit(const char *path,const char *source,int flags,int mod
         unlink(t); free(t); free(c);
         return -e;
     }
-    *commit=c; *temp=t;
+    /* shadPS4 core/libraries/kernel/file_system.cpp open/sceKernelOpen applies
+     * creation and truncation on open, even if no writes follow. */
+    *commit=c; *temp=t; *dirty=!exists || (hf&O_TRUNC);
     return host;
 }
 static void sync_directory(const char *file) {
@@ -475,11 +477,12 @@ static int64_t do_open(const char *guest,int flags,int mode) {
     int e=translate(guest,path,sizeof(path));
     if (e) return -e;
     char *commit=NULL, *temp=NULL, current[1024];
+    int dirty=0;
     snprintf(current,sizeof(current),"%s",path);
     if (save_path(guest)) current_copy(current,sizeof(current),0);
     int host;
     if (save_path(guest) && (flags&3)) {
-        host=open_for_commit(path,current,flags,mode,&commit,&temp);
+        host=open_for_commit(path,current,flags,mode,&commit,&temp,&dirty);
         if (host<0) { errno=-host; host=-1; }
     } else {
         if (game_path(guest) && (e=runtime_remote_fetch(current))) return -e;
@@ -510,7 +513,7 @@ static int64_t do_open(const char *guest,int flags,int mode) {
         if (temp) unlink(temp);
         free(commit); free(temp); return -EMFILE;
     }
-    files[fd]=(File){.used=1,.host=host,.dir=dir,.commit=commit,.temp=temp};
+    files[fd]=(File){.used=1,.host=host,.dirty=dirty,.dir=dir,.commit=commit,.temp=temp};
     snprintf(files[fd].path,sizeof(files[fd].path),"%s",guest);
     ++opens;
     pthread_mutex_unlock(&lock);
