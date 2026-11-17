@@ -43,13 +43,6 @@ DT = dict(NEEDED=1, INIT=0xC, FINI=0xD, INIT_ARRAY=0x19, FINI_ARRAY=0x1A, PREINI
           HASHSZ=0x6100003D, SYMTABSZ=0x6100003F)
 
 
-def decode_id(s):
-    v = 0
-    for ch in s:
-        v = v * 64 + ALPHABET.index(ch)
-    return v
-
-
 def encode_id(value):
     r = ALPHABET[value & 63]
     value >>= 6
