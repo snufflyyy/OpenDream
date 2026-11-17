@@ -9,7 +9,6 @@ no loop-carried value that feeds that exit condition is a simple counter (phi up
 IAdd/ISub with a constant).  Each loop also reports whether the read address is loop-invariant.
 """
 import re, sys
-from collections import defaultdict
 
 def parse(path):
     lines = open(path).read().splitlines()

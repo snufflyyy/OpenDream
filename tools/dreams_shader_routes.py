@@ -36,7 +36,6 @@ import argparse
 import json
 import os
 import struct
-import sys
 
 MASK64 = (1 << 64) - 1
 ROUTES_JSON = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dreams_routes.json')
