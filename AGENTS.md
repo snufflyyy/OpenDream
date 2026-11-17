@@ -1,4 +1,6 @@
-# Dreams-Recomp — start here
+# OpenDream — start here
+
+**OpenDream** — a native PC port of Dreams (CUSA08010) for the PS4.
 
 Native Linux x86-64 port of **Dreams** (Media Molecule, PS4) in the style of **bbport**
 (deadinside28's native Bloodborne port): the game's own x86-64 code runs directly on the host CPU,
@@ -42,7 +44,7 @@ table for new game versions, VERSIONS.md), `spirv_val.c`/`loop_guard_test.cpp`/`
   change simulation speed. Treat hang guards as safety nets, not accuracy fixes.
 - **Regression coverage:** test real scenes in every locally available built-in Mm game **and the
   editor**, with profiling, behavioral checks, fixes, and reruns. First gameplay target:
-  **Please Hug Me** (user reports interaction/progression and movement/physics problems).
+  **Please Hug Me** (original movement/progression report; the user now reports it working).
   Keep the harness easy for future agents: one documented command, private save setup, stable
   machine-readable reports, and separate pass/fail/blocked/unverified outcomes. See `SCENE_TESTS.md`.
 - GPU base must be **latest official shadPS4** + **all patches from the Dreams fork**
@@ -51,8 +53,9 @@ table for new game versions, VERSIONS.md), `spirv_val.c`/`loop_guard_test.cpp`/`
   that is the version the Dreams fork targets (its fixes are gated on CUSA04301 + 2.64 shader
   hashes). Avoid hard-coding anything specific to the 2.52 executable.
 - **Current work priority:** improve rendering speed and visual accuracy. Preserve engine semantics,
-  Precise readbacks, shader routes, and GPU guards. The Please Hug Me cloud-screen blocker remains
-  unresolved and deferred, not fixed. Read the current `HANDOFF.md` before new work.
+  Precise readbacks, shader routes, and GPU guards. The user now reports Please Hug Me working
+  correctly in manual testing; the earlier cloud screen is not a confirmed current blocker.
+  Automated scene coverage and original-PS4 parity remain unverified. Read `HANDOFF.md` first.
 - Keep docs detailed and current for future agents (this file + `port/docs/dreams/`). New/changed
   normative docs must pass `python3 -I port/tools/doc_lint.py` and must not hard-code a host, user,
   distro or GPU model. Put machine facts in `TEST_HARDWARE.md` and historical facts in `WORKLOG.md`.
@@ -60,7 +63,9 @@ table for new game versions, VERSIONS.md), `spirv_val.c`/`loop_guard_test.cpp`/`
   debugging, tests, and tooling to reduce cost.** The main GPT Pi assistant supervises, advises,
   assigns new tasks, reviews evidence, and accepts patches. It does not reserve difficult fixes
   for itself by default. Read `port/docs/dreams/AI_DEVELOPMENT.md` before delegation for routes,
-  ownership, review gates, and the exclusive GPU run lease.
+  ownership, review gates, and the exclusive GPU run lease. For the current session, the user
+  also authorizes at most **two concurrent GPT Terra workers** (`openai-codex/gpt-6.1-terra`).
+  The same ownership, review and single-GPU rules apply.
 
 ## Directory layout
 
@@ -71,7 +76,7 @@ table for new game versions, VERSIONS.md), `spirv_val.c`/`loop_guard_test.cpp`/`
 | `game/CUSA08010/` | Extracted game (13 GB, 1,591 PFS files + sce_sys). The user's own copy — never distribute | no |
 | `game/CUSA08010.extract.json` | Per-file SHA-256 manifest of the extraction | no |
 | `work/` | Run outputs: `work/out/` (boot-linked.bin, link.json, content.bin), `work/user/` (saves), run logs | no |
-| `ref/bbport/` | Pristine-ish clone of deadinside28/bloodborne_pc (one local build fix, see BUILD.md); its `out/gpu/libbbgpu.so` is linked by the port for now | upstream clone |
+| `ref/bbport/` | Legacy/reference Bloodborne port (one local build fix, see BUILD.md); its `out/gpu/libbbgpu.so` is used only with `DREAMS_GPU=bbport` | upstream clone |
 | `ref/shadps4/` | Official shadPS4 clone; branch `dreams` = latest upstream + Dreams fork patches (see `notes/shadps4-dreams-rebase.md`) | upstream clone |
 | `ref/dreams-fork/` | Blobless clone of the Dreams fork (patch files + builds; do NOT full-checkout, it is GBs of .exe) | upstream clone |
 | `ref/vulkan-headers/` | Latest Khronos Vulkan-Headers (distro packages can be too old for bbport) | upstream clone |
@@ -81,17 +86,18 @@ table for new game versions, VERSIONS.md), `spirv_val.c`/`loop_guard_test.cpp`/`
 
 ## Current state (keep this paragraph short and current)
 
-**Dreams boots and plays natively** (2026-11-15, port `dreams` e741924, shadPS4 `vcore` 17e99fee).
-Loader + C runtime run the game's own code; GPU library **vcore** = latest shadPS4 + Dreams fork
-patches. Done: boot to main menu/homespace, DS4 motion + keyboard/mouse (INPUT.md), AvPlayer, IME,
-offline NP/sign-in/sockets, intro skip and 60 Hz/high-fps switches (FPS.md), Mailbox presentation,
-**fork shader routes matched by code on any game version** (VERSIONS.md: fixes the holes/blocks in
-objects on 2.52), **GPU hang guard** (loop guard + indirect clamps, GPU_HANG.md: the intro hang scene
-now survives; root cause lead = indirect draws with 1,949,696 instances), frame stats in every run
-(PERF.md). **2026-11-16 working tree:** clear the uninitialized GPU fault bitmap (fixes progressive
-5 → <1 FPS slowdown), shared-backing texture hashing, ~94 FPS menu with gameplay still 30 Hz.
-Accuracy requirements and unverified engine behavior: ACCURACY.md. Next: find the writer of that bad instance count; performance (readback stalls, submit
-batching, allocation churn: PERF.md); editor testing; v2.64 when the user has it.
+**Dreams boots natively** (port base `dreams` e9b1d88, renderer `vcore` 7d25345b).
+The loader/runtime execute guest x86-64 code; vcore supplies the shadPS4/Dreams-fork GPU path.
+Boot/menu/homespace, input, AvPlayer, offline services, shader routes and hang guards work.
+Fault-bitmap initialization and shared backing prevent the earlier progressive slowdown;
+previous menu measurements reach ~94 render FPS with gameplay still at 30 Hz (`PERF.md`).
+**Current audit changes are uncommitted:** bounded SFO parsing, content-based preparation cache,
+pre-save game validation, race-resistant cleanup and empty-save create/truncate persistence.
+CPU regressions do not prove gameplay/editor parity. Please Hug Me is user-reported working;
+automated scenario and original-PS4 comparison coverage remain unverified.
+Read `HANDOFF.md` and `AUDIT.md` for evidence, remaining thread/savedata/renderer risks, and resume
+instructions. Rendering performance/accuracy remains the priority; preserve Precise readbacks,
+routes, synchronization, guards and simulation cadence.
 
 **GPU hang risk:** a native run once hung the GPU and amdgpu's full reset killed the desktop
 (2026-11-15, see WORKLOG incident). `run-dreams.sh` allows one instance at a time, logs every run
@@ -102,8 +108,9 @@ start a run while the user may be playing (the lock will refuse it anyway).
 this clone. Don't delete/re-clone `ref/shadps4`. Backup: `backups/shadps4-dreams-vcore.bundle`
 (commits `main..dreams` + `main..vcore`, prerequisite upstream `f3687cc4`; restore with
 `git fetch backups/shadps4-dreams-vcore.bundle dreams:dreams vcore:vcore` in a shadPS4 clone).
-Re-create the bundle after new commits on those branches. The uncommitted fault-bitmap fix also
-has a patch backup: `backups/shadps4-vcore-fault-bitmap-init.patch`.
+Re-create the bundle after new commits on those branches. The bundle matches the current branch
+heads. The fault-bitmap fix is committed (`0ca8d051`); its older patch backup remains at
+`backups/shadps4-vcore-fault-bitmap-init.patch`.
 
 ## Rules for agents
 

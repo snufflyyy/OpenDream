@@ -1,4 +1,4 @@
-# Dreams-Recomp project root: only our scripts, notes and agent docs are tracked here.
+# OpenDream project root: only our scripts, notes and agent docs are tracked here.
 # The port has its own repo (port/); reference clones, game data and run output are local only.
 /game/
 /work/

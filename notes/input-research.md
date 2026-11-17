@@ -235,7 +235,7 @@ Other things I checked that are **not** the cause:
 
 ## 5. Diagnostic worktree (ready, not yet run)
 
-`/home/braden/Documents/Programming/Dreams-Recomp/port-diag` is a detached git worktree of `port`
+`/home/braden/Documents/Programming/OpenDream/port-diag` is a detached git worktree of `port`
 at `3b5cb71`. It sits next to `port/` so `run-dreams.sh`'s `ROOT=..` resolves; remove it with
 `git -C port worktree remove ../port-diag`. Changes (uncommitted, in the worktree only):
 * `src/runtime_pad/sensors.c`: `DREAMS_PAD_SYNTH_MOTION=<deg>[,<period s>[,<delay s>]]`. It
