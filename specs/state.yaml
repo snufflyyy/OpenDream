@@ -1,0 +1,55 @@
+active_flow: improve_performance_and_visual_accuracy
+active_issue: "Improve render speed and visual fidelity without changing PS4 engine semantics"
+phase: baseline
+deferred_issues:
+  please_hug_me_cloud_backdrop:
+    status: blocked_unresolved
+    report: work/deepseek-hug/probe5-report.md
+    gameplay_physics_progression: unverified
+ai_development:
+  policy: port/docs/dreams/AI_DEVELOPMENT.md
+  lead: openai-codex/gpt-6.1-sol
+  worker: rightnow/deepseek-v4-1-flash-1017
+  maximum_parallel_subagents: 3
+  operating_mode: supervisor_first
+  delegated_scope: "DeepSeek owns most implementation, debugging, tests, and tooling. GPT assigns tasks and reviews results."
+  gpu_policy: "One named runtime worker can run bounded sandbox tests under an exclusive orchestrator-issued lease."
+  gpu_lease:
+    worker_run: "0aacc4a3-3cd8-4caf-b217-8f4f24082210/task-3"
+    allowed_runs: 1
+    maximum_run_seconds: 70
+    render_fps_cap: 120
+    preserve_simulation_semantics: true
+    early_pid_confirmation_seconds: 15
+    status: completed
+    completed_run: 20261116-132301
+    previous_completed_run: 20261116-130730
+    purpose: current_hotpath_stack_profile
+verification:
+  gameplay_status: blocked
+  launch_request_status: "Observed for the pinned scene in three valid runs; not proof of playable entry"
+  loading_progress_status: "Render/game-update threads active; named loader threads idle in sampled cloud window. Root cause unverified."
+  live_sampler_status: "Matched executable/private save/private pad; 60 observed samples"
+  live_sampler_evidence: work/deepseek-hug/sampler-probe4-20261116-122339.jsonl
+  profiler_evidence: work/deepseek-hug/probe5-report.md
+  profiler_observation: "Cloud window still submits compute and one expensive indirect draw; pass ownership and root cause remain unknown."
+  closure_tool_status: integrated_passed_17_tests
+  closure_tool_evidence: work/content-closure-worker/integrated-suite.log
+  closure_real_report: "2 dreams, 2 versions, 217 unique declared assets, 0 missing; metadata-visible only"
+  performance_baseline: "93.0 mean render FPS; measured 30.0 gameplay updates/s; menu/offline notice only"
+  performance_baseline_evidence: work/perf-visual-baseline/report.json
+  performance_prototype: "Digest/reentrancy/allocation tests pass in isolation; parked and unmerged because frame-time relevance is unproven"
+  hotpath_evidence: work/perf-hotpath-profile/report.md
+  hotpath_observation: "Six samples point to buffer synchronization/access and texture uploads; not a quantified time distribution"
+  visual_audit: "Exact alias252 module unavailable; private config override isolated pending review; official API wrappers validated on golden and malformed modules; no proof bypass approved"
+  shader_tooling_evidence: work/visual-252-audit/tooling/STATUS.md
+  engine_fix_status: not_started
+  baseline_tests: passed
+  sampler_cpu_tests: "21 passed, including real renamed-process selection and missed-process regressions"
+  integrated_pad_tests: passed
+  integrated_codec_and_avplayer_tests: passed
+  hostile_input_environment_controls: passed
+  evidence: work/ai-pad-worker/integrated-suite.log
+handoff:
+  next_skill: assess-impact
+  next_action: "Review the isolated config override and shader-tool smoke tests, then decide one bounded combined dump/probe lease. Keep hashing prototype unmerged and proof checks intact."
