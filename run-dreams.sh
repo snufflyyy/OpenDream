@@ -18,6 +18,9 @@
 #      notes/shadps4-dreams-runtime/CUSA04301.json), e.g. a copy with GPU.dump_shaders=true.
 #      DREAMS_MANGOHUD=1: keep MangoHud loaded. Default: disable it, because its Vulkan layer can
 #      leave the window showing an older frame even though the game renders the newest one.
+#      DREAMS_RENDER_RESOLUTION=<WxH>: experimental internal scene resolution (1280x720; default
+#      unset = off) as a one-write loader patch generated for this run only; refused together with
+#      an explicit --patches argument. docs/dreams/RUNNING.md "Internal render resolution".
 # See docs/dreams/RUNNING.md and docs/dreams/VCORE.md.
 set -euo pipefail
 cd -- "$(dirname -- "$0")"
@@ -26,36 +29,35 @@ GAME=${DREAMS_GAME:-$ROOT/game/CUSA08010}
 WORK=${DREAMS_WORK:-$ROOT/work}
 OUT=$WORK/out
 USERDIR=${DREAMS_USER_DIR:-$WORK/user}
-mkdir -p "$OUT" "$WORK/logs"
 RUN_ID=$(date +%Y%m%d-%H%M%S)
-SERIAL=$(python3 -I -c 'import sys
-d=open(sys.argv[1],"rb").read()
-i=d.find(b"CUSA"); print(d[i:i+9].decode())' "$GAME/sce_sys/param.sfo")
 
-# One Dreams run at a time (2026-11-15: a user run and an agent test run overlapped on the GPU,
-# then the user's run hung the GPU and the amdgpu full reset took the desktop down). The lock is
-# held on fd 9, which survives the exec below, so it lasts exactly as long as dreams-probe.
-# DREAMS_ALLOW_PARALLEL=1 skips it (don't, unless you know why).
-# Roles (DREAMS_RUN_ROLE): "user" (default: the person at the PC) or "agent" (set by
-# tools/agent-run.sh: sandboxed, headless). The user always wins: a user launch stops a running
-# agent run and takes the GPU; an agent launch while anything runs exits 75 (retry later).
-ROLE=${DREAMS_RUN_ROLE:-user}
-if [[ ${DREAMS_ALLOW_PARALLEL:-0} != 1 ]]; then
-    exec 9>"$WORK/.dreams-run.lock"
-    if ! flock -n 9; then
-        holder=$(cat "$WORK/.dreams-run.who" 2>/dev/null || echo unknown)
-        if [[ $ROLE == user && $holder == *"role agent"* ]]; then
-            hpid=$(sed -E 's/^pid ([0-9]+).*/\1/' <<< "$holder")
-            echo "run-dreams.sh: stopping the agent test run ($holder) so you can play" >&2
-            kill -TERM "$hpid" 2>/dev/null || true
-            if ! flock -w 20 9; then kill -KILL "$hpid" 2>/dev/null || true; flock -w 10 9 || { echo "run-dreams.sh: could not take over from the agent run" >&2; exit 75; }; fi
-        else
-            echo "run-dreams.sh: another Dreams run is active ($holder); not starting a second one" >&2
-            exit 75
-        fi
-    fi
-    echo "pid $$ role $ROLE since $RUN_ID" > "$WORK/.dreams-run.who"
+# DREAMS_RENDER_RESOLUTION (docs/dreams/RUNNING.md) is one patch file per loader invocation, so an
+# explicit --patches is refused instead of being dropped or merged. Checked before any work.
+RESOLUTION=${DREAMS_RENDER_RESOLUTION:-}
+if [[ -n $RESOLUTION ]]; then
+    for arg in "$@"; do
+        case $arg in
+            --patches|--patches=*)
+                echo "run-dreams.sh: DREAMS_RENDER_RESOLUTION and an explicit --patches argument cannot be combined (the loader applies one patch file per run); drop one of them" >&2
+                exit 2 ;;
+        esac
+    done
 fi
+
+# All data WORK directories share the root lock unless explicitly configured.
+# Agents cannot opt out. User override remains an explicit unsafe escape hatch.
+ROLE=${DREAMS_RUN_ROLE:-user}
+LOCK_DIR=${DREAMS_RUN_LOCK_DIR:-$ROOT/work}
+if [[ $ROLE == agent && ${DREAMS_ALLOW_PARALLEL:-0} != 0 ]]; then
+    echo "run-dreams.sh: agents cannot bypass the run lock" >&2
+    exit 2
+fi
+if [[ ${DREAMS_ALLOW_PARALLEL:-0} != 1 ]]; then
+    mkdir -p "$LOCK_DIR"
+    exec 9>"$LOCK_DIR/.dreams-run.lock"
+    python3 -I scripts/dreams_run_lock.py "$LOCK_DIR" "$ROLE" "$RUN_ID" "$$"
+fi
+mkdir -p "$OUT" "$WORK/logs"
 
 # Every run keeps its own log, also when launched from a terminal: work/logs/run-<RUN_ID>.log
 # (DREAMS_LOG=0 disables). After a crash, this and the capture below are the evidence.
@@ -64,6 +66,10 @@ if [[ ${DREAMS_LOG:-1} != 0 ]]; then
     exec > >(tee -a "$LOG") 2>&1
     echo "run-dreams.sh: run $RUN_ID, log $LOG"
 fi
+# Validate and prepare under the run lock before touching guest saves.
+python3 -I scripts/dreams_game_check.py "$GAME"
+SERIAL=$(python3 -I scripts/dreams_game_check.py --serial "$GAME")
+python3 -I scripts/dreams_prepare.py "$GAME" --out "$OUT"
 # A separate guest user dir (DREAMS_USER_DIR) starts as a copy of the player's; DREAMS_SKIP_INTRO=1
 # marks its tutorial as done. The player's own dir is never edited here.
 if [[ $(realpath -m "$USERDIR") != $(realpath -m "$WORK/user") ]]; then
@@ -77,14 +83,25 @@ elif [[ ${DREAMS_SKIP_INTRO:-0} == 1 ]]; then
 fi
 mkdir -p "$USERDIR"
 
-# Offline prep: SELF -> flat image, link the game's own libc/Fios2/JobManager prx, AppContent profile.
-# BB_SKIP_GAME_CHECK=1: bbport's game_check.py only knows Bloodborne's image hash
-# (Dreams game check is TODO, docs/dreams/STATUS.md).
-if [[ ! -f $OUT/boot-linked.bin || $GAME/eboot.bin -nt $OUT/boot-linked.bin || scripts/link_modules.py -nt $OUT/boot-linked.bin ]]; then
-    BB_SKIP_GAME_CHECK=1 python3 scripts/prepare.py "$GAME" --out "$OUT"
-    BB_SKIP_GAME_CHECK=1 python3 scripts/link_modules.py "$GAME" --out "$OUT" \
-        --modules libc.prx libSceFios2.prx libSceJobManager.prx
-    python3 scripts/content_profile.py "$GAME" --out "$OUT"
+# DREAMS_RENDER_RESOLUTION (experimental, docs/dreams/RUNNING.md): one BBPATCH2 data write applied
+# by the loader's --patches. The patch and its JSON report are generated for this run only into a
+# private directory under OUT, so the game folder, the prepared outputs and the shader cache are
+# never written; the variable unset keeps the launch unchanged. Any generator error, invalid value
+# or missing patch stops the launch before the game starts.
+resolution_patch=()
+if [[ -n $RESOLUTION ]]; then
+    res_dir=$OUT/render-resolution/$RUN_ID
+    mkdir -p "$res_dir"
+    res_patch=$res_dir/render-resolution.bbpatch
+    res_report=$res_dir/render-resolution.json
+    python3 -I tools/dreams_render_resolution.py "$GAME/eboot.bin" --resolution "$RESOLUTION" \
+        --patch "$res_patch" --report "$res_report"
+    if [[ ! -f $res_patch ]]; then
+        echo "run-dreams.sh: DREAMS_RENDER_RESOLUTION=$RESOLUTION: no patch was published ($res_patch)" >&2
+        exit 1
+    fi
+    resolution_patch=(--patches "$res_patch")
+    echo "run-dreams.sh: DREAMS_RENDER_RESOLUTION=$RESOLUTION: loader patch $res_patch (report $res_report)"
 fi
 
 # vcore (the shadPS4-based GPU library, docs/dreams/VCORE.md): the same configuration the Dreams
@@ -181,4 +198,5 @@ if [[ ${DREAMS_MANGOHUD:-0} != 1 ]]; then
 fi
 # --- mangohud-end
 exec out/dreams-probe "$OUT/boot-linked.bin" --content-profile "$OUT/content.bin" \
-    --app0 "$GAME" --user "$USERDIR" --timeout "${DREAMS_TIMEOUT:-0}" "$@"
+    --app0 "$GAME" --user "$USERDIR" --timeout "${DREAMS_TIMEOUT:-0}" \
+    ${resolution_patch[@]+"${resolution_patch[@]}"} "$@"
