@@ -704,3 +704,23 @@
   one bounded snapshot of effective dispatch sizes and populated indirect commands per checkpoint.
 - Preflight and strict runtime suite passed (zero optional skips). No production renderer or
   save changes and no fix or PS4 parity claim. Private patch/captures: `work/comic-sands/`.
+
+### 2026-11-21 — Public checkout build fixed and verified; repository consolidated
+
+- `master` could not build from a fresh clone: the build assumed the maintainer's unpublished
+  `ref/shadps4` renderer branches. Released with a tracked source overlay instead:
+  `port/tools/setup-build.sh` fetches the pinned upstream shadPS4 base plus the required
+  external submodules and applies `port/vcore/patches/shadps4-vcore.patch`; the resulting Git
+  tree must equal the value pinned in `port/vcore/source-lock.sh` (`778fc542`, base `f3687cc4`).
+- `build-dreams.sh` now resolves `SHADPS4_DIR`, detects a managed overlay, records the overlay
+  tree in `out/gpu-revision.txt`, and stops with a setup hint when a dependency is missing.
+  `vcore` links OpenSSL Crypto for the audited shader fingerprint. `build-deps.sh` passes codec
+  sources through NUL-separated `xargs`, so names with spaces no longer break the build.
+- Verified in a separate clone of `master` (no maintainer renderer, no game data at first):
+  `port/tools/setup-build.sh` and `port/build-dreams.sh` completed from scratch and produced
+  `dreams-probe`, `libvcore.so`, `libdreams-av.so` and `libdreams-codecs.so`; preflight passed;
+  the Dreams runtime suite passed with one optional skip (the private-cache loop-guard fixture,
+  which needs a local shader cache). The shader route-table sync test also skips without a local
+  game shader pack; it matched the user's v2.52 pack in a run that had one.
+- No game launch, GPU smoke test or renderer-behaviour claim: this entry is build provenance
+  only. The Comic Sands diagnosis is unchanged and still open.
