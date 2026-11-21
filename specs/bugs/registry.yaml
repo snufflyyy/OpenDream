@@ -1,0 +1,8 @@
+bugs:
+  - bug_id: BUG-20261118T105424
+    date: 2026-11-18
+    severity: high
+    priority: high
+    scope: renderer
+    summary: Comic Sands opens with only the sky visible
+    path: BUG-20261118T105424-comic-sands-render.md

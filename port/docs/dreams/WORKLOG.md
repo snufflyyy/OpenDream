@@ -683,3 +683,24 @@
   wall-clock input scripts must be replaced by capture/state checkpoints before this is a test.
 - No renderer code was changed. No Comic Sands scene image exists yet, so the defect is not
   reproduced, attributed or fixed; nothing here is a PS4-parity or pass claim.
+
+### 2026-11-18 — Comic Sands reproduction and draw isolation
+
+- Reproduced the sky-only defect on the reference test machine in the native v2.52 build, at
+  default PS4 timing with copied saves. A frame-driven pad script navigates to Comic Sands and
+  launches it with L1+Cross. The scene preload, title, pencil, and jump hint are all visible in
+  `work/comic-sands/trace-3/`. The symptom also occurs in the older user capture `20261116-171852`.
+- In `gameplay-2`, Cross dismissed the jump hint; moving right and jumping again did not make the
+  scene appear. Sprite-cull and indirect-argument compute passes ran; the geometry itself was not
+  visible. Metadata closure found all 533 declared assets but cannot prove runtime loading.
+- Three pinned DeepSeek agents: first suggested existing trace tools, second timed out with no
+  accepted report, third built the private draw-window diagnostic. The observer compiled and linked
+  separately; `observer-1/runner.log` compares Homespace to the jump-prompt window. Known proxy and
+  fleck draw keys are absent in the latter; a sculpt draw is attempted at both checkpoints.
+  The probe does not read GPU-written indirect counts. No clamp trips or device loss were logged
+  in the completed scene captures.
+- The deeper built-in sprite readback trace stalled in Homespace and the watchdog ended it. It
+  did not reach Comic Sands and does not isolate the cause. Do not reuse it unchanged. Next step:
+  one bounded snapshot of effective dispatch sizes and populated indirect commands per checkpoint.
+- Preflight and strict runtime suite passed (zero optional skips). No production renderer or
+  save changes and no fix or PS4 parity claim. Private patch/captures: `work/comic-sands/`.
