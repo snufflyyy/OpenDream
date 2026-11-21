@@ -61,11 +61,10 @@ The responsible change, save setup and timing mode are not established by that r
 Automated scene entry/checkpoints and original-PS4 physics/progression comparisons remain unverified.
 See `SCENE_TESTS.md`; retain the earlier diagnostics as historical evidence.
 
-New user report (2026-11-17): **Comic Sands** (Mm 2D hand-drawn platformer) renders only the
-skybox, not the scene. Not reproduced, diagnosed or fixed — no Comic Sands frame exists yet.
-The partial pad route to its card in the Mm row is in `HANDOFF.md`, together with the warning that
-its timing is not stable across capture settings. Treat this as the current renderer-accuracy
-target until it is reproduced.
+**Comic Sands** (Mm 2D platformer): the sky-only defect is reproduced on v2.52 at default
+PS4 timing. The pinned scene loads, shows its title and pencil, and reaches the jump prompt,
+but the character and ground do not render. The rendering cause is unresolved; no fix is applied.
+See `HANDOFF.md` for the reproducible headless route and captures.
 
 ## Current blocker
 

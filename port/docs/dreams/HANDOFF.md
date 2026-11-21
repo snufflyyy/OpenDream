@@ -1,6 +1,82 @@
-# Handoff — 2026-11-16
+# Handoff — 2026-11-20
 
-## Renderer accuracy — Comic Sands (user report, 2026-11-17)
+## Comic Sands — latest diagnosis (still failing)
+
+Default 30 Hz and opt-in 60 Hz both reach the pinned scene and reproduce the same sky-only
+result (`work/comic-sands/round2-runtime/{default-4,hz60-2}/`). Successful archive reads cover
+all 21 declared scene members (1,305,934 bytes); that rules out skipped or short reads of those
+members, not misinterpretation of their contents. The older renderer (`0ca8d051`) also fails on
+this private save (`work/comic-sands/fix-lane/hist-2/`). Its uncontrolled historical capture is
+not a known-good reference.
+
+At the jump prompt, the observed sculpt draw has zero instances; the visibility dispatch count
+is zero upstream. This is not proof that it owns the missing 2D art. The B535 terminal selector
+branch never executes in the membership capture, so its zero-valued diagnostic fields do not
+prove a failed load. The backing selector constant was resident and nonzero. The existing
+clip-disabled viewport fallback does not apply to the targeted direct draws: the measured clip
+and viewport state is normal (`round2-runtime/fallback-5/`). No production patch was accepted.
+
+The before/after image dumps in `fallback-5` through `fallback-7` lack a known-writing control;
+they do **not** prove that the profiled draws are no-ops. The audited dumps had one layer and
+used the same mip-zero image as their draw; the change observed in the final frame could come
+from a different pass. The later attachment probe tracked the presenter to the fullscreen
+composite of HDR scene color. A controlled shader readback (`work/comic-sands/attachment-probe/run-4/`)
+showed the visible pencil and jump prompt already in the input to that composite, without the
+missing art. Scene color changed across the sampled compute dispatch in both windows, validating
+that readback. This rules out the measured final composite step as the point of loss. The
+prompt-phase draw has a valid vertex layer and correctly bound R8_SNORM atlases; a private
+mip-zero experiment removed the prompt text and did not restore the scene. Do not merge it.
+A two-output graphics pair disappears after the pencil, but every attempt was accepted and a
+compute shader writes the same scene-color input in both phases. Its flags and material IDs
+come from another render pass: `attachment-probe/bits-1/` shows world-hit flags on 5.47% of the
+pixels during the pencil and zero after Cross. The material IDs collapse to one sentinel.
+The first bad record input or rejection is not yet known. The CPU audit identified an early
+bounds test in shader `6948d1`, before its image and record reads. Next, compare the actual guest
+user data with the flattened SRT selector and bounds (`4`, `54`–`58`, `59`, `62`, `64`–`67`)
+at the pencil and post-Cross checkpoints. Evaluate that predicate before blaming record data.
+This probe was not run: the DeepSeek provider ran out of credits and the user asked to wrap up.
+No test or agent is active. Do not run the heavy sprite tracer again. Resume reports and a
+verified-to-apply snapshot of the **private diagnostic patch, not a fix**, are in
+`work/comic-sands/handoff/`. OpenDream has one local branch (`master`); the separate shadPS4
+reference clone and its renderer history were left intact.
+
+## Comic Sands — confirmed on the current native build (2026-11-18)
+
+`work/comic-sands/trace-3/` reproduces the defect at default PS4 timing on CUSA08010 v2.52.
+`runner.log` records `EnterInPlayMode da76f79cbd5b1aa v0e9b1cbee7e8a7`; `scene.jpg` shows
+both the title/pencil sequence and the sky with a **Press X to jump!** prompt but no ground or
+character. This is actual scene entry, not an offline notice or an uncompleted load. A historical
+user run `20261116-171852` shows the same symptom. No renderer source was changed.
+
+Repro from the project root: `bash work/comic-sands/repro-run.sh <new-run-name>`.
+The diagnostic driver lives under `work/`, uses prior menu frame templates and an agent-only
+save, and launches through `tools/agent-run.sh`. It checkpoints the shelf card title, waits
+for scrolling to settle, then holds L1 and presses Cross for direct launch. The inner watchdog
+can end a normal capture with exit 142; use the preload marker and frames to judge scene entry.
+
+The shader-pair inventory was enabled with `VCORE_KEEP_SHADPS4_ENV=1` and
+`SHADPS4_DREAMS_GRAPHICS_PIPELINE_TRACE=1`. The new post-entry direct draw pairs include
+`9f972fdb/290b3580` and `681d6c65/bf38ced5`. The inventory deduplicates unchanged draws; missing
+lines do not prove that a pass did not run. The pre-existing `252ccde6` fallback occurs at boot,
+not at the scene transition; nothing yet links it to the missing artwork. Content metadata
+closure found 533 declared assets and no missing package entries, not proof of runtime reads.
+`work/comic-sands/gameplay-2/` shows Cross dismisses the jump prompt; moving and jumping do not
+make the scene appear. A two-second window at the prompt sees both sprite-cull dispatches and
+indirect-argument generation, not their outputs. Keep routes, Precise readbacks, guards and
+default timing unchanged. A private DeepSeek draw-window observer (`work/comic-sands/draw-window.patch`)
+counts all pipeline-selected draw attempts during the trace interval, with no GPU readbacks. In
+`observer-1/runner.log`, the Homespace control has 31 draw keys and the Comic Sands jump-prompt
+window has 20, with no omissions due to the cap. The known sprite-proxy (`3706083c`) and fleck
+(`dcc325c2`) draw paths appear in the control but not at the jump prompt. Sculpt (`ce3b8413`) is
+attempted 120 times in both; this does not prove nonzero indirect counts. The existing
+sprite-cull readback tracer stalled Homespace until the watchdog (`sprite-1/runner.log`); the
+zero-width dispatches it reported there do not explain Comic Sands. Do not rerun that heavy
+probe unchanged. Next, measure the effective indirect dispatch dimensions and populated draw
+counts with one bounded snapshot at the jump prompt and a working control. No production
+renderer fix is applied. Preflight and strict Dreams runtime tests pass (zero skips); neither
+asserts visual correctness.
+
+## Renderer accuracy — Comic Sands (original user report, 2026-11-17)
 
 The user reports that the shipped Media Molecule 2D hand-drawn platformer **Comic Sands** renders
 incorrectly: only the skybox appears, no scene content ("it looked nothing like the pictures shown

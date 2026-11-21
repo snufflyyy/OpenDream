@@ -1,6 +1,19 @@
-active_flow: improve_performance_and_visual_accuracy
-active_issue: "Improve render speed and visual fidelity without changing PS4 engine semantics"
-phase: baseline
+active_flow: fix_bug
+active_issue: "Comic Sands shows only the sky instead of the opening scene"
+phase: paused_diagnosis
+bug_cycle:
+  current_step: 2
+  comic_sands_reproduction: work/comic-sands/trace-3/scene.jpg
+  comic_sands_gameplay_input: work/comic-sands/gameplay-2/gameplay.jpg
+  comic_sands_fix_status: no_production_change
+  comic_sands_verified: scalar root is resident and nonzero; terminal PC not reached; one sculpt draw has zero instances
+  comic_sands_declared_asset_reads: 21 of 21 complete at default and 60 Hz timing; interpretation unverified
+  comic_sands_viewport: normal clip and full viewport on the targeted draw; existing fallback did not engage
+  comic_sands_world_visibility: bits-1 shows flags disappear after Cross; source record or predicate still unverified
+  comic_sands_next_probe: compare 6948d1 selector and SRT bounds against guest values at the pencil and post-Cross checkpoints
+  comic_sands_last_workflow: 45a1b1b5-2740-4065-928b-9f8263a0ec4a
+  comic_sands_runtime_blocker: DeepSeek provider returned insufficient credits before the next run
+  comic_sands_evidence: work/comic-sands/handoff/
 deferred_issues:
   please_hug_me_cloud_backdrop:
     status: blocked_unresolved
@@ -51,5 +64,5 @@ verification:
   hostile_input_environment_controls: passed
   evidence: work/ai-pad-worker/integrated-suite.log
 handoff:
-  next_skill: assess-impact
-  next_action: "Review the isolated config override and shader-tool smoke tests, then decide one bounded combined dump/probe lease. Keep hashing prototype unmerged and proof checks intact."
+  next_skill: diagnose-root
+  next_action: "Comic Sands paused at user request. Read port/docs/dreams/HANDOFF.md and work/comic-sands/handoff/6948d1-record-gate.md before resuming. No active agents or GPU lease; no production fix."
