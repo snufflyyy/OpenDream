@@ -1,5 +1,22 @@
 # Handoff — 2026-11-16
 
+## Fresh Git checkout build — 2026-11-20
+
+The published `master` build failed in a clean checkout because it assumed the maintainer's
+unpublished `ref/shadps4` renderer. The fix is staged locally on `build/github-checkout` in
+`work/github-build.tAoY3q/`; it is not committed or pushed. The maintainer renderer was left intact.
+
+`port/tools/setup-build.sh` fetches a pinned upstream base and its build dependencies and applies
+and verifies the tracked renderer overlay. Anonymous setup ran twice successfully in a separate
+clone. The full build linked `dreams-probe`, `libvcore.so`, and both codec libraries. Preflight
+and runtime tests passed; the private-cache loop-guard fixture was skipped. The shader route
+table matched the user's v2.52 shader pack, and the extracted game validated and prepared in the
+isolated checkout. No game launch or hardware GPU smoke test was run.
+
+Resume in the build worktree: review the staged diff, commit it on `build/github-checkout`, and
+integrate it into `master` before publishing. Do not include local output or game data. See
+`BUILD.md` for the fresh-clone instructions.
+
 ## Renderer accuracy — Comic Sands (user report, 2026-11-17)
 
 The user reports that the shipped Media Molecule 2D hand-drawn platformer **Comic Sands** renders

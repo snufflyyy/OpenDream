@@ -14,30 +14,60 @@ cd -- "$(dirname -- "$0")"
 ROOT=$(cd .. && pwd)
 GPU=${DREAMS_GPU:-vcore}
 CC=${CC:-gcc}
+shadps4_dir=${SHADPS4_DIR:-$ROOT/ref/shadps4}
+if [[ ! -f third_party/LibAtrac9/C/src/decoder.c ]]; then
+    echo 'Missing LibAtrac9 sources. Run port/tools/setup-build.sh from the checkout root.' >&2
+    exit 1
+fi
+if ! command -v pkg-config >/dev/null || ! pkg-config --exists vulkan sdl3; then
+    echo 'Missing pkg-config, Vulkan or SDL3 development files (see port/docs/dreams/BUILD.md).' >&2
+    exit 1
+fi
 mkdir -p out
 case $GPU in
 vcore)
+    if [[ ! -f $shadps4_dir/src/shader_recompiler/dreams_route_table.inc ]]; then
+        printf 'Missing Dreams renderer in %s. Run port/tools/setup-build.sh from the checkout root.\n' "$shadps4_dir" >&2
+        exit 1
+    fi
+    shadps4_dir=$(cd -- "$shadps4_dir" && pwd -P)
+    managed=no
+    if [[ -f $shadps4_dir/.git/opendream-vcore ]]; then
+        source vcore/source-lock.sh
+        if ! check_vcore_overlay "$shadps4_dir"; then
+            echo 'The renderer does not match the pinned source tree. Use a fresh checkout.' >&2
+            exit 1
+        fi
+        managed=yes
+    fi
     VCORE_BUILD_DIR=${VCORE_BUILD_DIR:-$PWD/vcore/build}
-    if [[ ! -f $VCORE_BUILD_DIR/build.ninja ]]; then
+    mkdir -p -- "$VCORE_BUILD_DIR"
+    VCORE_BUILD_DIR=$(cd -- "$VCORE_BUILD_DIR" && pwd -P)
+    if [[ ! -f $VCORE_BUILD_DIR/build.ninja ]] ||
+        ! grep -Fxq "SHADPS4_DIR:PATH=$shadps4_dir" "$VCORE_BUILD_DIR/CMakeCache.txt"; then
         vcc=${VCORE_CC:-}; vcxx=${VCORE_CXX:-}
-        if [[ -z $vcc && -x $HOME/.local/bin/clang ]]; then vcc=$HOME/.local/bin/clang; vcxx=$HOME/.local/bin/clang++; fi
-        CC=${vcc:-cc} CXX=${vcxx:-c++} cmake -S vcore -B "$VCORE_BUILD_DIR" -G Ninja \
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSHADPS4_DIR="${SHADPS4_DIR:-$ROOT/ref/shadps4}" -Wno-dev
+        if [[ -z $vcc && -x $HOME/.local/bin/clang ]]; then vcc=$HOME/.local/bin/clang; fi
+        if [[ -z $vcxx && -x $HOME/.local/bin/clang++ ]]; then vcxx=$HOME/.local/bin/clang++; fi
+        CC=${vcc:-clang} CXX=${vcxx:-clang++} cmake -S vcore -B "$VCORE_BUILD_DIR" -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSHADPS4_DIR="$shadps4_dir" -Wno-dev
     fi
     ninja -C "$VCORE_BUILD_DIR" -j"${VCORE_JOBS:-15}" vcore
     GPU_DIR=$VCORE_BUILD_DIR GPU_LIB=vcore
     # AUDIT A7: provenance of the GPU renderer a build linked, so a test result can be traced to
     # exact vcore sources (the fault manager is called out because the audit's hang fix lives there).
-    shadps4_dir=${SHADPS4_DIR:-$ROOT/ref/shadps4}
     gpu_branch=$(git -C "$shadps4_dir" branch --show-current)
     gpu_head=$(git -C "$shadps4_dir" rev-parse HEAD)
     # Tracked modifications only: the reference tree has a required untracked marker file
     # (i-didnt-check-my-work.md); an untracked file must not make every build look dirty.
-    if [[ -n $(git -C "$shadps4_dir" status --porcelain --untracked-files=no) ]]; then gpu_dirty=yes; else gpu_dirty=no; fi
+    gpu_dirty=no
+    if [[ $managed != yes && -n $(git -C "$shadps4_dir" status --porcelain --untracked-files=no) ]]; then
+        gpu_dirty=yes
+    fi
     gpu_fault_manager_blob=$(git -C "$shadps4_dir" hash-object src/video_core/buffer_cache/fault_manager.cpp)
     gpu_built=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     revision=("branch=$gpu_branch" "head=$gpu_head" "dirty=$gpu_dirty"
               "fault_manager_blob=$gpu_fault_manager_blob" "built=$gpu_built")
+    if [[ $managed == yes ]]; then revision+=("overlay_tree=$VCORE_TREE"); fi
     printf '%s\n' "${revision[@]}" > out/gpu-revision.txt
     # AUDIT A2: libvcore.so must expose the bbgpu C API, not shadPS4's emulator/front-end classes
     # (that would mean a shim pulled in the wrong layer). Advisory: prints the symbols and warns.
@@ -76,7 +106,7 @@ if [[ ! -f out/libatrac9.a || -n $(find third_party/LibAtrac9/C/src -newer out/l
 fi
 # Optional run-time codec library (out/libdreams-codecs.so: fdk-aac, ATRAC9 encoder), dlopen'ed by
 # src/runtime_codecs.c; skips work when up to date. No link flags.
-./build-deps.sh
+SHADPS4_EXTERNALS=${SHADPS4_EXTERNALS:-$shadps4_dir/externals} ./build-deps.sh
 # -no-pie is required: host heap must stay below 1 TiB (src/probe.c, 40-bit pointer packing).
 "$CC" -std=c11 -O2 -g -Wall -Wextra -Werror -pthread -no-pie "${includes[@]}" -I. -Isrc \
     src/probe.c src/runtime*.c src/vulkan_smoke.c out/libatrac9.a -lm \
@@ -86,7 +116,7 @@ echo "Built $PWD/out/dreams-probe (GPU library: $GPU, $GPU_DIR/lib$GPU_LIB.so)"
 if [[ $GPU == vcore ]]; then
     echo "GPU revision ($shadps4_dir, copied to out/gpu-revision.txt):"
     printf '  %s\n' "${revision[@]}"
-    if [[ $gpu_branch != vcore || $gpu_dirty == yes ]]; then
+    if [[ $managed != yes && ( $gpu_branch != vcore || $gpu_dirty == yes ) ]]; then
         echo "WARNING: vcore sources in $shadps4_dir are not a clean 'vcore' branch (branch=$gpu_branch dirty=$gpu_dirty); this build is not reproducible from a commit alone." >&2
         if [[ ${DREAMS_REQUIRE_CLEAN_GPU:-0} == 1 ]]; then
             echo "DREAMS_REQUIRE_CLEAN_GPU=1: refusing a build of dirty/non-vcore GPU sources." >&2

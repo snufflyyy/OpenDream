@@ -68,6 +68,7 @@ set(ABSL_PROPAGATE_CXX_STD ON)
 set(ABSL_ENABLE_INSTALL OFF)
 add_subdirectory(${EXT}/abseil-cpp ext/abseil EXCLUDE_FROM_ALL)
 find_package(Vulkan REQUIRED)                 # system loader (libvulkan.so)
+find_package(OpenSSL REQUIRED COMPONENTS Crypto) # fingerprint for the audited shader
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SDL3 REQUIRED IMPORTED_TARGET sdl3)
 find_program(GLSLANG_COMPILER NAMES glslang glslangValidator REQUIRED)
@@ -165,7 +166,7 @@ target_link_libraries(vcore PRIVATE
     Boost::headers fmt::fmt Vulkan::Headers GPUOpen::VulkanMemoryAllocator tsl::robin_map
     xbyak::xbyak magic_enum::magic_enum toml11::toml11 nlohmann_json::nlohmann_json vcore_xxhash
     Zydis::Zydis sirit miniz absl::flat_hash_map absl::flat_hash_set absl::hash
-    PkgConfig::SDL3 ${CMAKE_DL_LIBS} pthread)
+    PkgConfig::SDL3 OpenSSL::Crypto ${CMAKE_DL_LIBS} pthread)
 if (VCORE_BBPORT_AVPLAYER)
     target_link_libraries(vcore PRIVATE PkgConfig::FFMPEG)
     target_compile_definitions(vcore PRIVATE VCORE_BBPORT_AVPLAYER=1)

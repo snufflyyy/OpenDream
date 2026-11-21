@@ -11,8 +11,20 @@ can reach built-in Media Molecule games and the Dream Shaping editor. It is a wo
 rendering accuracy, scene coverage and original-PS4 parity are still being worked on, and many
 scene workflows are unverified. The priority feature is the **offline editor / creation tools**.
 
-Start reading at [`AGENTS.md`](AGENTS.md), then `port/docs/dreams/INDEX.md`. No game data is
-included or distributed here — you need your own copy of Dreams.
+## Build and run
+
+Use a Git clone, not GitHub's source ZIP. Install the [Linux build dependencies](port/docs/dreams/BUILD.md#1-system-packages), then run from the checkout root:
+
+```sh
+port/tools/setup-build.sh
+port/build-dreams.sh
+DREAMS_GAME=/path/to/extracted/Dreams port/run-dreams.sh
+```
+
+The build fetches no game files and needs none. For the last command, use your own extracted game
+folder containing `eboot.bin`, `sce_sys/param.sfo`, `sce_module/`, `data/`, and `shaders/`.
+The [running guide](port/docs/dreams/RUNNING.md) describes the required layout and launch options.
+Project documentation starts at [`port/docs/dreams/INDEX.md`](port/docs/dreams/INDEX.md).
 
 ---
 

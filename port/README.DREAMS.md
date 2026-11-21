@@ -19,9 +19,9 @@ Start with the documentation map, not this file:
 | Path | What it is |
 |---|---|
 | `src/` | The loader (`probe.c`), the C runtime (`runtime_*.c`) and the guest-facing service implementations |
-| `vcore/` | The GPU library used by default: shadPS4's `video_core`/`shader_recompiler` (from `../ref/shadps4` branch `vcore`) compiled in place behind bbport's C API (`docs/dreams/VCORE.md`) |
+| `vcore/` | The default GPU library: the patched shadPS4 sources in `../ref/shadps4` compiled in place behind bbport's C API (`docs/dreams/VCORE.md`) |
 | `gpu/` | **Legacy, non-default backend**: bbport's own renderer (`libbbgpu.so`) plus its AvPlayer sources. Selected with `DREAMS_GPU=bbport`; it stops at Dreams' `DS_ORDERED_COUNT` compute passes. Kept for A/B reference and because the runtime's AvPlayer sources and the `bbgpu.h` seam live here. |
-| `run-dreams.sh`, `build-dreams.sh`, `build-deps.sh` | Run and build entry points (`docs/dreams/RUNNING.md`, `docs/dreams/BUILD.md`) |
+| `tools/setup-build.sh`, `build-dreams.sh`, `run-dreams.sh` | Fetch dependencies, build, and run (`docs/dreams/BUILD.md`, `docs/dreams/RUNNING.md`) |
 | `tools/` | Port-specific tooling: route table, content inventory/closure, SPIR-V helpers, capture/config helpers. Project-wide tools are one level up in `$REPO/tools/`. |
 | `tests/` | Unit tests and `run-dreams-tests.sh`; `tools/preflight.sh` is the cheap pre-submit gate (`docs/dreams/CONVENTIONS.md`) |
 | `docs/dreams/` | The Dreams documentation (`docs/dreams/INDEX.md`) |

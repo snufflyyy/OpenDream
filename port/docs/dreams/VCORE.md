@@ -11,8 +11,11 @@ reference emulator reaches (controller-introduction/first menus).
 vcore is `port/vcore/`: a CMake project that produces `libvcore.so`, the GPU library the native
 loader (`port/src/probe.c`) and C runtime (`port/src/runtime_*.c`) link against instead of bbport's
 `libbbgpu.so`. It implements bbport 0.7's runtime<->GPU C API (`port/gpu/bbgpu.h`) using the GPU
-code of **ref/shadps4 branch `vcore`** = branch `dreams` (latest upstream shadPS4 `f3687cc4` + all
-Dreams-ShadPS4 fork patches, `$REPO/notes/shadps4-dreams-rebase.md`) + 1 commit of `// vcore:` edits.
+code in **`ref/shadps4`**. For fresh checkouts, `port/tools/setup-build.sh` applies the pinned
+vcore source patch to upstream shadPS4 `f3687cc4`. The patch is derived from the maintainer's
+local `vcore` revision `7d25345b` and includes the Dreams fork changes used by the port, the
+native fixes and GPU guards. See `BUILD.md` for setup and `$REPO/notes/shadps4-dreams-rebase.md`
+for the maintained renderer history.
 
 ## 1. Design
 
@@ -110,7 +113,15 @@ Other stubs/limitations inside the shim:
 - RenderDoc capture is off.
 - `IsValidMapping` means "really mapped" (upstream: "inside the reserved guest space").
 
-## 4. ref/shadps4 branch `vcore` (local commits, never pushed)
+## 4. Renderer source provenance
+
+The public build uses `port/vcore/patches/shadps4-vcore.patch`. The source lock verifies the
+upstream commit and the resulting Git tree, including external dependency pins. The patch has
+no game dumps, private test artifacts or prebuilt executables. The alias252 proof compares the
+size and SHA-256 fingerprint of the translated shader instead of shipping its bytecode; a
+mismatch still rejects the route.
+
+### Maintainer's local `vcore` history
 
 `git -C ref/shadps4 log dreams..vcore`: one commit `5f10ad43` "vcore: native-port edits".
 
@@ -119,7 +130,8 @@ Other stubs/limitations inside the shim:
 | `src/common/path_util.cpp` | `SHADPS4_USER_DIR` env overrides the user directory | the library must not create/read `./user` or `~/.local/share/shadPS4` (an installed emulator's data) |
 | `src/video_core/renderer_vulkan/vk_presenter.cpp` | `#ifndef VCORE_NATIVE` around ImGui/devtools/shadNet includes, layer registration, ImGui texture add/remove; `#ifdef VCORE_NATIVE` blit of the frame image into the swapchain instead of the ImGui "Display" window | upstream draws the game frame only through Dear ImGui; vcore has no ImGui |
 
-Everything else is upstream/fork code byte for byte. To re-sync: rebase `vcore` onto a new `dreams`.
+To update the maintainer branch, rebase `vcore` onto a new `dreams`. To update the public build,
+refresh the source-only patch and the lock, and verify the result in a fresh Git checkout.
 
 The GPU hang guard (merged into `vcore`; port merge `e741924`) adds: loop guard in the SPIR-V
 backend, indirect-argument clamp, CopyImage extent clamp, plus small hooks in the compute/graphics
@@ -129,7 +141,9 @@ Env: `VCORE_LOOP_GUARD`, `VCORE_INDIRECT_CLAMP`, `VCORE_INDIRECT_MAX_GROUPS`. Se
 ## 5. Build and run
 
 ```
-cd $REPO/port
+cd "$REPO"
+port/tools/setup-build.sh         # once per fresh Git checkout; see BUILD.md
+cd port
 ./build-dreams.sh                 # DREAMS_GPU=vcore is the default: configures vcore/build once
                                   # (clang from ~/.local/bin when present), ninja libvcore.so,
                                   # ./build-deps.sh (codec library), links dreams-probe

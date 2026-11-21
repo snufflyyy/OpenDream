@@ -77,7 +77,7 @@ table for new game versions, VERSIONS.md), `spirv_val.c`/`loop_guard_test.cpp`/`
 | `game/CUSA08010.extract.json` | Per-file SHA-256 manifest of the extraction | no |
 | `work/` | Run outputs: `work/out/` (boot-linked.bin, link.json, content.bin), `work/user/` (saves), run logs | no |
 | `ref/bbport/` | Legacy/reference Bloodborne port (one local build fix, see BUILD.md); its `out/gpu/libbbgpu.so` is used only with `DREAMS_GPU=bbport` | upstream clone |
-| `ref/shadps4/` | Official shadPS4 clone; branch `dreams` = latest upstream + Dreams fork patches (see `notes/shadps4-dreams-rebase.md`) | upstream clone |
+| `ref/shadps4/` | Pinned build sources from `port/tools/setup-build.sh`, or the maintainer's existing shadPS4 clone with local renderer branches | separate checkout |
 | `ref/dreams-fork/` | Blobless clone of the Dreams fork (patch files + builds; do NOT full-checkout, it is GBs of .exe) | upstream clone |
 | `ref/vulkan-headers/` | Latest Khronos Vulkan-Headers (distro packages can be too old for bbport) | upstream clone |
 | `cmake/` | Build-environment shims (FindZydis.cmake, magic_enum include compat); distro-independent | — |
@@ -104,8 +104,11 @@ routes, synchronization, guards and simulation cadence.
 to `work/logs/` and captures frames to `work/captures/`. Commit/save before long GPU runs, and never
 start a run while the user may be playing (the lock will refuse it anyway).
 
-**Fragile dependency:** `ref/shadps4` branch `vcore` (and `dreams`) exist only as local commits in
-this clone. Don't delete/re-clone `ref/shadps4`. Backup: `backups/shadps4-dreams-vcore.bundle`
+**Fresh builds:** see `port/docs/dreams/BUILD.md`. `port/tools/setup-build.sh` reconstructs the
+pinned source overlay from public dependencies without the maintainer's local branches.
+
+**Maintainer history:** the `vcore` and `dreams` branches exist only in the maintainer's clone.
+Don't replace that clone with the public build checkout. Backup: `backups/shadps4-dreams-vcore.bundle`
 (commits `main..dreams` + `main..vcore`, prerequisite upstream `f3687cc4`; restore with
 `git fetch backups/shadps4-dreams-vcore.bundle dreams:dreams vcore:vcore` in a shadPS4 clone).
 Re-create the bundle after new commits on those branches. The bundle matches the current branch

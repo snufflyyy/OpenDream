@@ -1,29 +1,42 @@
 # Building (Linux x86-64)
 
 Working directory: `$REPO` is the repository root of your OpenDream checkout
-(`REPO=/path/to/OpenDream`). Commands below use `$REPO`; the build steps themselves run from
-`$REPO/ref/bbport`, `$REPO/port` and `$REPO/port/vcore` as stated. Hardware and distribution
-requirements: `TEST_HARDWARE.md`. The package list is a **Fedora example**; other distributions
-have different package names but need the same libraries.
+(`REPO=/path/to/OpenDream`). Unless noted, run commands from `$REPO`. Use a Git clone, not a
+source ZIP. You do not need the game to build the port. See `TEST_HARDWARE.md` for runtime
+requirements and `RUNNING.md` for the game folder.
 
 ## 1. System packages
 
-Fedora example (needs sudo; installed 2026-11-15 on the reference machine):
+For the default build, install Git, CMake 3.24+, Ninja, pkg-config, glslang/`glslangValidator`,
+GCC/G++ and Clang with C++23 support (Clang 20 was tested). Install the development packages
+for the Vulkan loader and headers, SDL3, and OpenSSL. Install FFmpeg development files to
+build the video decoder. The build can omit that decoder, but your game may then skip videos.
+Launching also requires Python 3, `flock` (util-linux), and a working Vulkan driver.
 
-```
-sudo dnf install vulkan-loader-devel SDL3-devel libdecor-devel boost-devel fmt-devel \
-  magic_enum-devel robin-map-devel xxhash-devel VulkanMemoryAllocator-devel spirv-headers-devel \
-  xbyak-devel zydis-devel miniz-devel
-```
-Already present on that machine: gcc/g++ 16, cmake, ninja-build, glslang, ffmpeg-devel (RPM Fusion),
-X11/xcb/wayland/alsa devel, vulkan-headers, vulkan-tools, clang (in `~/.local/bin` there; any
-Clang recent enough for C++23 works — override with `CC`/`CXX` or `VCORE_CC`/`VCORE_CXX`).
+Fedora example:
 
-Generic equivalent: a Vulkan loader and headers, SDL3, libdecor, boost, fmt, magic_enum,
-robin-map, xxhash, VulkanMemoryAllocator, SPIRV-Headers, xbyak, Zydis, miniz, FFmpeg development
-files, glslang, CMake, Ninja, GCC and Clang. On Debian-family systems the names are e.g.
-`libvulkan-dev`, `libsdl3-dev`, `libfmt-dev`, `libmagic-enum-dev`, `libspirv-headers-dev`;
-check your distribution's package search.
+```sh
+sudo dnf install git cmake ninja-build pkgconf-pkg-config glslang gcc gcc-c++ clang \
+  vulkan-loader-devel vulkan-headers SDL3-devel openssl-devel ffmpeg-free-devel python3 util-linux
+```
+
+Use `ffmpeg-devel` instead if you use FFmpeg from RPM Fusion. Package names differ on other
+distributions (for example `libvulkan-dev`, `libsdl3-dev`, `libssl-dev`, and `glslang-tools`).
+Some older distributions do not package SDL3 or a recent enough Clang. SDL2 is not a substitute.
+The renderer's other libraries come from pinned Git submodules, not system packages.
+
+For the default build in a fresh checkout, fetch them once before building:
+
+```sh
+port/tools/setup-build.sh
+```
+
+This downloads public sources from GitHub and the Android Open Source Project. No GitHub login
+is needed. It checks out the pinned shadPS4 base, applies the tracked vcore patch, checks the
+result against `port/vcore/source-lock.sh`, and initializes only the needed submodules. Rerun it
+if a dependency download fails. It does not replace an existing developer renderer checkout.
+If you already have the local `vcore` branch and its submodules, keep it; initialize the port's
+`LibAtrac9` separately with `git submodule update --init -- port/third_party/LibAtrac9`.
 
 ## 2. Optional legacy GPU library (bbport's libbbgpu.so in ref/bbport)
 
@@ -55,27 +68,30 @@ iteration.
 ## 3. The port (loader + C runtime) + GPU library
 
 ```
-cd $REPO/port
-./build-dreams.sh                 # default DREAMS_GPU=vcore: builds vcore/build/libvcore.so,
-                                  # ./build-deps.sh (codec library), then out/dreams-probe
-DREAMS_GPU=bbport ./build-dreams.sh   # links $REPO/ref/bbport/out/gpu/libbbgpu.so instead (section 2)
+port/build-dreams.sh               # GPU library, codecs and port/out/dreams-probe
+# If the compiler runs out of memory, use fewer jobs:
+VCORE_JOBS=2 JOBS=2 port/build-dreams.sh
+# Legacy backend only, after section 2:
+DREAMS_GPU=bbport port/build-dreams.sh
 ```
 `out/gpu-library.txt` records which one was linked (run-dreams.sh reads it). Override bbport's
 library location with `BBGPU_DIR=...`. The C side must stay `-no-pie`.
 
 ## 4. vcore (milestone 6, done 2026-11-15)
 
-`port/vcore/` compiles the GPU sources of `ref/shadps4` branch **`vcore`** (= `dreams` + 2 native
-edits) **in place**, plus glue in `port/vcore/shim/`. Full design: `docs/dreams/VCORE.md`.
+`port/vcore/` compiles the pinned patched shadPS4 renderer **in place** in `ref/shadps4`,
+plus glue in `port/vcore/shim/`. The public setup does not need the maintainer's local `vcore`
+branch. Full design: `VCORE.md`. `port/out/gpu-revision.txt` records the upstream commit and
+verified overlay tree for that setup.
 
 - The first `./build-dreams.sh` configures it with the equivalent of
   `CC=<clang> CXX=<clang++> cmake -S vcore -B vcore/build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo`
-  (it prefers `~/.local/bin/clang{,++}` when present: clang 20, the reference shadPS4 compiler;
-  override with `VCORE_CC`/`VCORE_CXX`), then
+  (it prefers `~/.local/bin/clang{,++}` when present, otherwise uses Clang from `PATH`;
+  override with `VCORE_CC`/`VCORE_CXX` and use a fresh `VCORE_BUILD_DIR` to change compilers), then
   `ninja -C vcore/build vcore` (`VCORE_JOBS`, default 15). Clean build ≈ 6 min on the reference
   machine (`TEST_HARDWARE.md`), ~300 MB.
-- Third-party code comes from `ref/shadps4/externals` (pinned versions, no extra packages). System:
-  Vulkan loader, SDL3, FFmpeg dev packages (RPM Fusion on Fedora; installed already), glslang.
+- The pinned third-party code comes from `ref/shadps4/externals`. The required system packages
+  are listed in section 1.
 - None of the bbport Fedora workarounds (FindZydis, magic_enum compat, ref/vulkan-headers) are
   needed: vcore uses shadPS4's own copies.
 - CMake options: `SHADPS4_DIR` (default `../ref/shadps4`), `VCORE_MARCH` (default `x86-64-v3`),

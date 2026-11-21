@@ -6,17 +6,24 @@ Working directory: `$REPO/port` (`$REPO` = your OpenDream checkout, e.g.
 
 ## Game files
 
-The extracted game lives in `$REPO/game/CUSA08010/` (eboot.bin, sce_module/{libc,libSceFios2,
-libSceJobManager}.prx, sce_sys/, data/, shaders/, ...). It was extracted from the user's fpkg with
-`$REPO/tools/pkg_extract.py` (own extractor; fake-PKG keys read from shadPS4 v0.5.0's keys.h in
-`$REPO/tools/thirdparty/`). Verification:
-- PFS image SHA-256 matched the pkg header digest;
-- all 56,237 zlib blocks decompressed to 64 KiB with valid checksums;
-- every file re-hashed against `game/CUSA08010.extract.json` (1,591 files, 0 mismatches);
-- `sce_sys/` (21 files) comes from the PKG entry table, not the PFS, so it's not in the manifest.
-The original .pkg was deleted afterwards at the user's request.
+Build the port first (see `BUILD.md`). OpenDream takes an extracted game folder, not a `.pkg`,
+archive or standalone `eboot.bin`. Use your own copy. The launcher looks in
+`$REPO/game/CUSA08010/` by default. To use another folder, set `DREAMS_GAME` to its absolute path.
+Point it at the folder that contains these files and directories directly:
 
-To use a different dump (e.g. v2.64), extract it to its own folder and set `DREAMS_GAME`.
+```text
+eboot.bin
+sce_sys/param.sfo
+sce_module/libc.prx
+sce_module/libSceFios2.prx
+sce_module/libSceJobManager.prx
+data/
+shaders/
+```
+
+The reference game is CUSA08010 v2.52. Keep other versions in separate folders. See `VERSIONS.md`
+for shader compatibility. The optional `tools/pkg_extract.py` is a development tool with separate
+prerequisites; it is not part of the normal build or launch.
 
 ## Commands
 

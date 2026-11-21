@@ -22,7 +22,10 @@ CXX=${CXX:-g++}
 JOBS=${JOBS:-$(nproc)}
 OUT=out/codecs
 LIB=out/libdreams-codecs.so
-[[ -d $FDK/libAACdec && -f $AT9/at9.c ]] || { echo "missing $FDK or $AT9 (clone ref/shadps4 with externals)" >&2; exit 1; }
+if [[ ! -d $FDK/libAACdec || ! -f $AT9/at9.c ]]; then
+    printf 'Missing codec sources in %s. Run port/tools/setup-build.sh from the checkout root.\n' "$EXT" >&2
+    exit 1
+fi
 # The library list matches ref/shadps4/externals/aacdec/CMakeLists.txt (decoder side only).
 mods=(libAACdec libFDK libSYS libArithCoding libMpegTPDec libSBRdec libPCMutils libDRCdec libSACdec)
 includes=()
@@ -53,8 +56,14 @@ fi
 mkdir -p "$OUT"
 export CXX OUT FDK
 # fdk-aac: C++ without exceptions/RTTI, warnings off (third-party), hidden by default.
-printf '%s\n' "${sources[@]}" | xargs -P "$JOBS" -I{} sh -c \
-    'o="$OUT/$(echo "$1" | sed "s|^$FDK/||; s|/|_|g; s|\.cpp$|.o|")"; [ "$o" -nt "$1" ] || $CXX -O2 -fPIC -w -fno-exceptions -fno-rtti -fvisibility=hidden '"${includes[*]}"' -c "$1" -o "$o"' _ {}
+printf '%s\0' "${sources[@]}" | xargs -0 -P "$JOBS" -n 1 bash -c '
+    source=${!#}
+    rel=${source#"$FDK/"}
+    o="$OUT/${rel//\//_}"
+    o=${o%.cpp}.o
+    [[ $o -nt $source ]] || "$CXX" -O2 -fPIC -w -fno-exceptions -fno-rtti -fvisibility=hidden \
+        "${@:1:$#-1}" -c "$source" -o "$o"
+' _ "${includes[@]}"
 "$CC" -std=c11 -O2 -fPIC -w -c "$AT9/at9.c" -o "$OUT/at9.o"
 "$CC" -std=c11 -O2 -fPIC -w -c "$AT9/at9_tables.c" -o "$OUT/at9_tables.o"
 "$CC" -std=c11 -O2 -fPIC -Wall -Wextra -Werror -Wno-unused-function "${includes[@]}" -Isrc -c "$glue" -o "$OUT/codecs_glue.o"

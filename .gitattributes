@@ -1,0 +1,2 @@
+# An upstream unified diff must keep the source's original line endings and whitespace.
+port/vcore/patches/shadps4-vcore.patch -text -whitespace
