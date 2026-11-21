@@ -1,6 +1,35 @@
 # Handoff — 2026-11-20
 
-## Comic Sands — latest diagnosis (still failing)
+## Comic Sands — missing geometry confirmed upstream of the world pass (still failing)
+
+The private 30 Hz depth/tag probe (`work/comic-sands/depth-tag-probe/run-3/`) reached the pinned
+scene and downloaded the four exact mip-zero, single-sample/layer views just after recording the
+`6948d1` consumer draw. It verified backing identity, format, aspect, component mapping and
+separate tag/depth pitches. The pencil control has 56,101 type-1 tag pixels with nonzero depth;
+type-2 tag is empty. After Cross, both tag and both depth images are zero across the visible
+1360×768 region. This puts the measured loss at or upstream of geometry production, not later
+fragment record arbitration or final composition. The underlying game hit its expected bounded
+watchdog after capture; no production renderer changes were made.
+
+Next: identify the effective indexed indirect commands for the three matched type-1 draws
+(`1b6745ac` and `ce3b8413`) and count buffer for the type-2 draw (`73434b2b`) on the same
+producer epoch. Use the pencil control, not the trace's direct-draw n/inst fields. If counts are
+nonzero, distinguish no raster coverage from clear/alias/writer ordering; if zero, trace the
+specific producer and its inputs instead. Do not use the heavy sprite tracer or relax safeguards.
+
+## Comic Sands — initial shader bounds accept the sampled frames (still failing)
+
+One isolated 30 Hz run reached the pinned scene and captured four `6948d1` SRT uploads per
+window (pencil, jump prompt, after Cross). In CPU replay, the first fragment predicate accepts
+all 1,044,480 pixels in all 12 samples. The uploaded selector was zero and matched inline user
+data, with finite transforms and effectively unbounded limits. This rules against the proposed
+zeroed-bounds explanation for these inputs, not every GPU-visible binding or later branch.
+Evidence: `work/comic-sands/srt-probe-20261120/run-1/` and `work/comic-sands/parent-srt-analysis/`.
+
+This motivated the depth/tag comparison above. The separate captured SRT inputs do not establish
+shader-visible bytes or which producer failed. No production change.
+
+## Comic Sands — prior diagnosis (still failing)
 
 Default 30 Hz and opt-in 60 Hz both reach the pinned scene and reproduce the same sky-only
 result (`work/comic-sands/round2-runtime/{default-4,hz60-2}/`). Successful archive reads cover

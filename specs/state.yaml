@@ -1,6 +1,6 @@
 active_flow: fix_bug
 active_issue: "Comic Sands shows only the sky instead of the opening scene"
-phase: paused_diagnosis
+phase: active_diagnosis
 bug_cycle:
   current_step: 2
   comic_sands_reproduction: work/comic-sands/trace-3/scene.jpg
@@ -10,10 +10,16 @@ bug_cycle:
   comic_sands_declared_asset_reads: 21 of 21 complete at default and 60 Hz timing; interpretation unverified
   comic_sands_viewport: normal clip and full viewport on the targeted draw; existing fallback did not engage
   comic_sands_world_visibility: bits-1 shows flags disappear after Cross; source record or predicate still unverified
-  comic_sands_next_probe: compare 6948d1 selector and SRT bounds against guest values at the pencil and post-Cross checkpoints
+  comic_sands_next_probe: compare effective indirect draw commands at pencil and post-Cross for the mapped geometry writers
   comic_sands_last_workflow: 45a1b1b5-2740-4065-928b-9f8263a0ec4a
-  comic_sands_runtime_blocker: DeepSeek provider returned insufficient credits before the next run
+  comic_sands_srt_probe: completed, 12 CPU uploads replay to full-frame first-gate acceptance
+  comic_sands_depth_tag_worker: df8f265d-d3ca-446a-ad61-bcefe94e3f30 (completed CPU decoder, no GPU run)
+  comic_sands_depth_tag_probe: completed; run-3 pencil had 56,101 type-1 pixels with depth, all four visible images zero post-Cross
+  comic_sands_depth_tag_probe_lease: ended, GPU lock released
+  comic_sands_active_indirect_plan: 7969dc40-21b1-478d-9b1a-e9feb6d477a0 (read-only CPU)
+  comic_sands_runtime_blocker: DeepSeek returned insufficient credits in the prior session; current probe uses the explicitly authorized Terra route
   comic_sands_evidence: work/comic-sands/handoff/
+  comic_sands_bounds_replay: work/comic-sands/parent-srt-analysis/README.md
 deferred_issues:
   please_hug_me_cloud_backdrop:
     status: blocked_unresolved
@@ -65,4 +71,4 @@ verification:
   evidence: work/ai-pad-worker/integrated-suite.log
 handoff:
   next_skill: diagnose-root
-  next_action: "Comic Sands paused at user request. Read port/docs/dreams/HANDOFF.md and work/comic-sands/handoff/6948d1-record-gate.md before resuming. No active agents or GPU lease; no production fix."
+  next_action: "Review the indirect snapshot plan and then capture the actual matched draw commands (not direct-draw metadata). Prior depth/tag snapshots place the loss upstream of 6948d1, but do not distinguish zero work from raster/clear/alias issues. No production fix."
